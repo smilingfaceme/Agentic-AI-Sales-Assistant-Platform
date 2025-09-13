@@ -7,7 +7,7 @@ export default function Navbar() {
         {/* Logo + Brand */}
         <div className="flex items-center gap-2">
           <span className="inline-block h-8 sm:h-10 md:h-12 lg:h-14">
-            <Image src="/log.svg" alt="DoshiAI Logo" width={40} height={40} className="w-full h-full object-contain" />
+            <Image src="/logo.svg" alt="DoshiAI Logo" width={40} height={40} className="w-full h-full object-contain" />
           </span>
         </div>
         {/* Desktop Links */}

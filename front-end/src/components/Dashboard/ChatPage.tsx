@@ -1,7 +1,7 @@
-import React from 'react';
+"use client";
 import { useState } from "react";
-import { FaComments} from 'react-icons/fa';
-// Next.js + Tailwind Chat Page
+import { FaComments } from "react-icons/fa";
+
 const navButtons = [
   { label: "All", notify: 1 },
   { label: "Unassigned", notify: 0 },
@@ -61,7 +61,7 @@ interface ChatPageProps {
   onSidebarToggle?: () => void;
 }
 
-const ChatPage: React.FC<ChatPageProps> = ({ sidebarHidden, onSidebarToggle }) => {
+export default function ChatPage({ sidebarHidden, onSidebarToggle }: ChatPageProps) {
   const [active, setActive] = useState<string>("All");
 
   return (
@@ -73,7 +73,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ sidebarHidden, onSidebarToggle }) =
           <button
             className="md:hidden bg-white border border-gray-300 rounded-full p-2 shadow-lg mr-2"
             onClick={onSidebarToggle}
-            aria-label={sidebarHidden ? 'Show sidebar' : 'Hide sidebar'}
+            aria-label={sidebarHidden ? "Show sidebar" : "Hide sidebar"}
           >
             <FaComments />
           </button>
@@ -84,17 +84,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ sidebarHidden, onSidebarToggle }) =
       {/* Main content: 2 columns, responsive */}
       <main className="flex flex-1 h-full flex-col md:flex-row">
         {/* Left sidebar - collapses on mobile */}
-        <aside className="w-full md:w-100 min-w-[220px] border-r border-gray-300 bg-white flex flex-col md:block  md:flex">
+        <aside className="w-full md:w-100 min-w-[220px] border-r border-gray-300 bg-white flex flex-col md:block md:flex">
           {/* Filter Navbar */}
           <div className="flex gap-2 px-4 border-b border-gray-300">
             {navButtons.map((btn) => (
               <button
                 key={btn.label}
-                className={`relative px-3 py-3 text-sm font-medium ${active == btn.label ? 'border-b' : 'hover:bg-gray-100'}`}
+                className={`relative px-3 py-3 text-sm font-medium ${active === btn.label ? "border-b border-blue-500" : "hover:bg-gray-100"}`}
                 onClick={() => setActive(btn.label)}
               >
                 {btn.label}
-                <span className={`ml-1 text-xs px-1 rounded-full ${btn.notify > 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-400'}`}>{btn.notify}</span>
+                <span className={`ml-1 text-xs px-1 rounded-full ${btn.notify > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-200 text-gray-400"}`}>{btn.notify}</span>
               </button>
             ))}
           </div>
@@ -103,10 +103,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ sidebarHidden, onSidebarToggle }) =
           <div className="flex items-center px-4 py-2 gap-2 text-gray-400">
             <span>All chats <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">1</span></span>
             <div className="ml-auto flex gap-2">
-              <button className="p-1 hover:bg-gray-100 rounded">
+              <button className="p-1 hover:bg-gray-100 rounded" aria-label="Search">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
               </button>
-              <button className="p-1 hover:bg-gray-100 rounded">
+              <button className="p-1 hover:bg-gray-100 rounded" aria-label="Add chat">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" /></svg>
               </button>
             </div>
@@ -153,23 +153,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ sidebarHidden, onSidebarToggle }) =
             {/* Messages */}
             <section className="flex flex-col gap-6">
               {chatMessages.map((msg, idx) => (
-                <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-start ' : 'justify-end'}`}>
-                  <div className={`max-w-[90vw] md:max-w-[40%] text-sm flex flex-col `}>
-                    <div className={`rounded-tl-xl rounded-tr-xl px-4 py-3 ${msg.sender === 'bot' ? 'bg-[#23263b] text-white rounded-bl-xl' : 'bg-gray-200 text-gray-900 rounded-br-xl'}`}>
+                <div key={idx} className={`flex ${msg.sender === "user" ? "justify-start" : "justify-end"}`}>
+                  <div className={`max-w-[90vw] md:max-w-[40%] text-sm flex flex-col`}>
+                    <div className={`rounded-tl-xl rounded-tr-xl px-4 py-3 ${msg.sender === "bot" ? "bg-[#23263b] text-white rounded-bl-xl" : "bg-gray-200 text-gray-900 rounded-br-xl"}`}>
                       <span dangerouslySetInnerHTML={{ __html: msg.text }} />
                     </div>
-                    
-                    <span className="text-xs text-gray-600 mt-1 self-end">{msg.time}{msg.sender === 'bot' && <span className="ml-2">• {msg.email}</span>}</span>
-                    {/* {msg.sender === 'bot' && (
-                      <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
-                        {msg.sources.length > 0 && (
-                          <span>Source</span>
-                        )}
-                        {msg.sources.map((s, i) => (
-                          <span key={i} className="underline cursor-pointer text-gray-600">{s}</span>
-                        ))}
-                      </div>
-                    )} */}
+                    <span className="text-xs text-gray-600 mt-1 self-end">
+                      {msg.time}
+                      {msg.sender === "bot" && <span className="ml-2">• {msg.email}</span>}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -177,14 +169,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ sidebarHidden, onSidebarToggle }) =
           </div>
           {/* Message Input Area */}
           <footer className="flex items-center gap-2 border-t border-gray-200 bg-white px-4 md:px-6 py-4">
-            <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500">
+            <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500" aria-label="Attach">
               <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" /></svg>
             </button>
             <input
               className="flex-1 px-4 py-2 rounded-full border bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
               placeholder="Type message or '/' for quick response"
+              type="text"
             />
-            <button className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white">
+            <button className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white" aria-label="Send">
               <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
             </button>
           </footer>
@@ -192,6 +185,4 @@ const ChatPage: React.FC<ChatPageProps> = ({ sidebarHidden, onSidebarToggle }) =
       </main>
     </div>
   );
-};
-
-export default ChatPage;
+}

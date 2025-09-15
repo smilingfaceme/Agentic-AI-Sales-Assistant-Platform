@@ -1,8 +1,9 @@
 "use client";
 import React, { useState } from 'react';
 import DashboardSidebar from '../../components/Dashboard/DashboardSidebar';
-import ChatPage from '../../components/Dashboard/ChatPage';
-import ChatbotPage from '../../components/Dashboard/ChatbotPage';
+import DashboardChat from './chat/page';
+import DashboardChatbot from './chatbot/page';
+import DashboardGoLive from './golive/page';
 
 export default function DashboardPage() {
   const [sidebarHidden, setSidebarHidden] = useState(false);
@@ -22,18 +23,20 @@ export default function DashboardPage() {
       <main className="flex-1 text-gray-900 h-screen w-full p-0 m-0">
           {activeKey === 'chats' ? (
             <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-              <ChatPage sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
+              <DashboardChat sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
             </div>
           ) : activeKey === 'chatbot' ? (
             <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-              {/* ChatbotPage styled like ChatPage */}
-                 <ChatbotPage sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
+              <DashboardChatbot sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
+            </div>
+          ) : activeKey === 'go-live' ? (
+            <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
+              <DashboardGoLive sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)}/>
             </div>
           ) : (
             <>
               <h1 className="text-2xl md:text-3xl font-bold mb-6">Main Dashboard</h1>
               <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-                {/* Main window content goes here */}
                 <p>Select a feature from the sidebar.</p>
               </div>
             </>

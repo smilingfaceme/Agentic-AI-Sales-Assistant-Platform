@@ -23,11 +23,17 @@ export default function RegisterPage() {
     return pw.length >= 8 && /[A-Za-z]/.test(pw) && /[0-9]/.test(pw);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  const [loading, setLoading] = React.useState(false);
+  const [registerError, setRegisterError] = React.useState("");
+  const [success, setSuccess] = React.useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     let valid = true;
     setEmailError("");
     setPasswordMatchError("");
+    setRegisterError("");
+    setSuccess(false);
 
     if (!validateEmail(email)) {
       setEmailError("Please enter a valid email address.");
@@ -37,9 +43,23 @@ export default function RegisterPage() {
       setPasswordMatchError("Passwords do not match.");
       valid = false;
     }
-    // You can add further submit logic here if valid
+    if (!isStrongPassword(password)) {
+      valid = false;
+    }
     if (valid) {
-      // Submit form or call API
+      setLoading(true);
+      try {
+        const res = await import("@/utils").then(m => m.register(name, email, password));
+        if (res.user) {
+          setSuccess(true);
+        } else {
+          setRegisterError(res.message || "Registration failed");
+        }
+      } catch {
+        setRegisterError("Registration failed");
+      } finally {
+        setLoading(false);
+      }
     }
   }
 
@@ -123,11 +143,14 @@ export default function RegisterPage() {
               <div className="text-red-500 text-xs mt-1">{passwordMatchError}</div>
             )}
           </div>
+          {registerError && <div className="text-red-500 text-sm">{registerError}</div>}
+          {success && <div className="text-green-600 text-sm">Registration successful! You can now login.</div>}
           <button
             type="submit"
             className="w-full py-3 mt-2 rounded-lg bg-black text-white font-bold shadow-none hover:bg-white hover:text-black hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white transition-all"
+            disabled={loading}
           >
-            Register
+            {loading ? "Registering..." : "Register"}
           </button>
         </form>
         <div className="mt-6 text-sm text-gray-600">

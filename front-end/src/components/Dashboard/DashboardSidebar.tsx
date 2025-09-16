@@ -1,5 +1,9 @@
 "use client";
-import { FaBuilding, FaChevronDown, FaComments, FaBroadcastTower, FaRobot, FaLink, FaProjectDiagram, FaHeadset, FaSignOutAlt, FaHeart } from "react-icons/fa";
+import React from "react";
+import { useRouter } from "next/navigation";
+import { FaBuilding, FaChevronDown, FaChevronLeft, FaComments, FaBroadcastTower, FaRobot, FaProjectDiagram, FaHeadset, FaSignOutAlt, FaHeart } from "react-icons/fa";
+import { apiRequest } from "@/utils";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000/api';
 
 const navItems = [
   { label: "Chats", icon: <FaComments />, activeKey: "chats" },
@@ -21,7 +25,51 @@ type DashboardSidebarProps = {
   onToggle?: () => void;
 };
 
+
 export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden, onToggle }: DashboardSidebarProps) {
+  const router = useRouter();
+  type Org = { name: string;[key: string]: unknown };
+  const [projects, setProjects] = React.useState<Org[]>([]);
+  const [selectedOrg, setSelectedOrg] = React.useState<Org>({ name: "" });
+  const [orgDropdownOpen, setOrgDropdownOpen] = React.useState(false);
+
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+  // Fetch projects from backend
+  const fetchProjects = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await apiRequest(`${API_BASE}/project/get`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.projects)) {
+        if ((data.projects.length) == 0) {
+          router.push("/dashboard/new-project")
+        } else {
+          setProjects(data.projects);
+          setSelectedOrg(data.projects[0] || "");
+        }
+
+      } else {
+        setError(data.error || "Failed to fetch projects.");
+      }
+    } catch {
+      setError("Server error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch projects on mount
+  React.useEffect(() => {
+    fetchProjects();
+  }, []);
+
   return (
     <aside
       className={`flex flex-col h-screen ${hidden ? "w-0 md:w-16" : "w-64"} bg-white border-r border-gray-300 shadow-lg pt-3 p-0 relative text-gray-900 transition-all duration-300
@@ -32,12 +80,53 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
       style={{ minWidth: hidden ? 0 : undefined }}
     >
       {/* Header / Organization */}
-      <div className={`flex items-center ${hidden ? "justify-center m-4" : "m-4 ml-8"}`}> 
+      <div className={`flex items-center border-b border-gray-300 ${hidden ? "justify-center p-4 pt-3" : "p-4 pt-2 pl-8"}`}>
         <span onClick={onToggle} title={hidden ? "Show sidebar" : "Hide sidebar"} className="cursor-pointer">
           <FaBuilding className="text-xl" />
         </span>
-        {!hidden && <span className="font-bold text-lg ml-2">Doshigroup</span>}
-        {!hidden && <FaChevronDown className="ml-2 text-gray-500" />}
+        {!hidden && (
+          <div className="relative ml-2">
+            <button
+              className="text-md flex items-center focus:outline-none"
+              onClick={async () => {
+                setOrgDropdownOpen((open) => !open);
+                if (!orgDropdownOpen) {
+                  await fetchProjects();
+                }
+              }}
+            >
+              {selectedOrg.name || "Loading..."}
+              {orgDropdownOpen ? <FaChevronDown className="ml-2 text-gray-500" /> : <FaChevronLeft className="ml-2 text-gray-500"/>}
+            </button>
+            {orgDropdownOpen && (
+              <div className="absolute left-0 mt-2 w-45 bg-white border border-gray-200 rounded shadow-lg z-50">
+                {loading && <div className="px-4 py-2 text-gray-400">Loading...</div>}
+                {error && <div className="px-4 py-2 text-red-500">{error}</div>}
+                {!loading && !error && projects.map((org) => (
+                  <div
+                    key={org.name}
+                    className={`px-4 py-2 cursor-pointer hover:bg-gray-100 ${org === selectedOrg ? "bg-blue-50" : ""}`}
+                    onClick={() => {
+                      setSelectedOrg(org);
+                      setOrgDropdownOpen(false);
+                    }}
+                  >
+                    {org.name}
+                  </div>
+                ))}
+                <div
+                  className="px-4 py-2 cursor-pointer text-blue-600 hover:bg-blue-50 border-t border-gray-100 font-medium"
+                  onClick={() => {
+                    setOrgDropdownOpen(false);
+                    window.location.href = "/dashboard/new-project";
+                  }}
+                >
+                  + New Organization
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {/* Main Navigation */}
       <nav className={`flex-1 flex flex-col gap-2 ${hidden ? "items-center" : "ml-5 mr-2"}`}>

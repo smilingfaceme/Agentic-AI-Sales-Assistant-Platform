@@ -25,8 +25,7 @@ export default function DashboardPage() {
       setLoading(true);
       setError("");
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : undefined;
-        const data = await getDashboardData(token || undefined);
+        const data = await getDashboardData();
         setDashboardData(data);
       } catch {
         setError("Failed to load dashboard data");
@@ -49,39 +48,39 @@ export default function DashboardPage() {
         />
       </div>
       <main className="flex-1 text-gray-900 h-screen w-full p-0 m-0">
-          {activeKey === 'chats' ? (
+        {activeKey === 'chats' ? (
+          <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
+            <DashboardChat sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
+          </div>
+        ) : activeKey === 'chatbot' ? (
+          <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
+            <DashboardChatbot sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
+          </div>
+        ) : activeKey === 'go-live' ? (
+          <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
+            <DashboardGoLive sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
+          </div>
+        ) : (
+          <>
+            <h1 className="text-2xl md:text-3xl font-bold mb-6">Main Dashboard</h1>
             <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-              <DashboardChat sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
+              {loading ? (
+                <p>Loading dashboard data...</p>
+              ) : error ? (
+                <p className="text-red-500">{error}</p>
+              ) : dashboardData ? (
+                <div className="space-y-4 p-6">
+                  <div>Users: {dashboardData.usersCount}</div>
+                  <div>Active Chats: {dashboardData.activeChats}</div>
+                  <div>Bots Online: {dashboardData.botsOnline}</div>
+                  <div>Revenue: ${dashboardData.revenue}</div>
+                </div>
+              ) : (
+                <p>Select a feature from the sidebar.</p>
+              )}
             </div>
-          ) : activeKey === 'chatbot' ? (
-            <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-              <DashboardChatbot sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
-            </div>
-          ) : activeKey === 'go-live' ? (
-            <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-              <DashboardGoLive sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)}/>
-            </div>
-          ) : (
-            <>
-              <h1 className="text-2xl md:text-3xl font-bold mb-6">Main Dashboard</h1>
-              <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-                {loading ? (
-                  <p>Loading dashboard data...</p>
-                ) : error ? (
-                  <p className="text-red-500">{error}</p>
-                ) : dashboardData ? (
-                  <div className="space-y-4 p-6">
-                    <div>Users: {dashboardData.usersCount}</div>
-                    <div>Active Chats: {dashboardData.activeChats}</div>
-                    <div>Bots Online: {dashboardData.botsOnline}</div>
-                    <div>Revenue: ${dashboardData.revenue}</div>
-                  </div>
-                ) : (
-                  <p>Select a feature from the sidebar.</p>
-                )}
-              </div>
-            </>
-          )}
+          </>
+        )}
       </main>
     </div>
   );

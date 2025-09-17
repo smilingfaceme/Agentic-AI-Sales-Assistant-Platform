@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { FaRobot , FaBook, FaRegComment, FaRegHandPointRight, FaSyncAlt, } from "react-icons/fa";
-import Table from "../Table";
+import Table from "@/components/Table";
 
 const chatbotTableData = [
   {

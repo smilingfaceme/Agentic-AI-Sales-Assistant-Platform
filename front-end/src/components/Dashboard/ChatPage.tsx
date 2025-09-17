@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { FaComments, FaWhatsapp, FaGlobe, FaRedo } from "react-icons/fa";
-import ChatArea from "./ChatArea";
+import ChatArea from "@/components/Dashboard/ChatArea";
 
 import { apiRequest } from "@/utils";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000/api';
@@ -40,7 +40,17 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, productId }: 
   });
 
   const [active, setActive] = useState<NotifyKey>('All');
-  const [activeConversation, setActiveConversation] = useState<string>("");
+  const [activeConversation, setActiveConversation] = useState<Project>(
+    {
+      conversation_id: '',
+      project_id: '',
+      conversation_name: '',
+      ai_reply: true,
+      started_at: '',
+      ended_at: null,
+      source: ''
+    }
+  );
   const [chatChannels, setChatChannels] = useState<Project[]>([]);
 
   const fetchConversations = async () => {
@@ -149,8 +159,8 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, productId }: 
                 {getshowConversations(active).map((channel) => (
                   <button
                     key={channel.conversation_id}
-                    className={`flex items-center justify-between w-full gap-2 px-4 py-3 cursor-pointer border-b border-gray-300 hover:bg-gray-50 ${activeConversation == channel.conversation_id ? 'bg-gray-200' : 'bg-white'}`}
-                    onClick={() => setActiveConversation(channel.conversation_id)}
+                    className={`flex items-center justify-between w-full gap-2 px-4 py-3 cursor-pointer border-b border-gray-300 hover:bg-gray-50 ${activeConversation.conversation_id == channel.conversation_id ? 'bg-gray-200' : 'bg-white'}`}
+                    onClick={() => setActiveConversation(channel)}
                   >
                     <div className="flex">
                       <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
@@ -171,7 +181,7 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, productId }: 
         </aside>
 
         {/* Right chat area */}
-        <ChatArea />
+        {activeConversation && <ChatArea key={activeConversation.conversation_id} conversationId={activeConversation.conversation_id} conversationName={activeConversation.conversation_name} conversationSource={activeConversation.source} />}
       </main>
     </div>
   );

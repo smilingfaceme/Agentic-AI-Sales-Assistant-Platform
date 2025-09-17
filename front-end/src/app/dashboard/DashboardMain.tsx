@@ -1,10 +1,10 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { getDashboardData } from '@/utils';
-import DashboardSidebar from '../../components/Dashboard/DashboardSidebar';
-import DashboardChat from './chat/page';
-import DashboardChatbot from './chatbot/page';
-import DashboardGoLive from './golive/page';
+import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
+import DashboardChat from '@/app/dashboard/chat/page';
+import DashboardChatbot from '@/app/dashboard/chatbot/page';
+import DashboardGoLive from '@/app/dashboard/golive/page';
 
 type DashboardData = {
   usersCount: number;

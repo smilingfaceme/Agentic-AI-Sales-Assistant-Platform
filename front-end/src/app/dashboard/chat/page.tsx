@@ -1,4 +1,4 @@
-import ChatPage from '../../../components/Dashboard/ChatPage';
+import ChatPage from '@/components/Dashboard/ChatPage';
 
 interface ChatPageProps {
   sidebarHidden?: boolean;

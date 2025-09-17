@@ -23,14 +23,15 @@ type DashboardSidebarProps = {
   onNav?: (key: string) => void;
   hidden?: boolean;
   onToggle?: () => void;
+  onProductSelect?: (productId: string) => void;
 };
 
 
-export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden, onToggle }: DashboardSidebarProps) {
+export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden, onToggle, onProductSelect }: DashboardSidebarProps) {
   const router = useRouter();
-  type Org = { name: string;[key: string]: unknown };
+  type Org = { name: string; project_id: string; [key: string]: unknown };
   const [projects, setProjects] = React.useState<Org[]>([]);
-  const [selectedOrg, setSelectedOrg] = React.useState<Org>({ name: "" });
+  const [selectedOrg, setSelectedOrg] = React.useState<Org>({ name: "", project_id: "" });
   const [orgDropdownOpen, setOrgDropdownOpen] = React.useState(false);
 
   const [loading, setLoading] = React.useState(false);
@@ -53,6 +54,9 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
         } else {
           setProjects(data.projects);
           setSelectedOrg(data.projects[0] || "");
+          if (onProductSelect) {
+            onProductSelect(data.projects[0].project_id);
+          }
         }
 
       } else {
@@ -96,7 +100,7 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
               }}
             >
               {selectedOrg.name || "Loading..."}
-              {orgDropdownOpen ? <FaChevronDown className="ml-2 text-gray-500" /> : <FaChevronLeft className="ml-2 text-gray-500"/>}
+              {orgDropdownOpen ? <FaChevronDown className="ml-2 text-gray-500" /> : <FaChevronLeft className="ml-2 text-gray-500" />}
             </button>
             {orgDropdownOpen && (
               <div className="absolute left-0 mt-2 w-45 bg-white border border-gray-200 rounded shadow-lg z-50">
@@ -109,6 +113,9 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
                     onClick={() => {
                       setSelectedOrg(org);
                       setOrgDropdownOpen(false);
+                      if (onProductSelect) {
+                        onProductSelect(org.project_id);
+                      }
                     }}
                   >
                     {org.name}

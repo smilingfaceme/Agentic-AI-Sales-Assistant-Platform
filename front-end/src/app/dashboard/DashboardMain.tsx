@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [productId, setProductId] = useState<string>("");
 
   useEffect(() => {
     async function fetchData() {
@@ -45,12 +46,13 @@ export default function DashboardPage() {
           onToggle={() => setSidebarHidden(!sidebarHidden)}
           activeKey={activeKey}
           onNav={setActiveKey}
+          onProductSelect={(id) => setProductId(String(id))}
         />
       </div>
       <main className="flex-1 text-gray-900 h-screen w-full p-0 m-0">
         {activeKey === 'chats' ? (
           <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-            <DashboardChat sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
+            <DashboardChat sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} productId={productId} />
           </div>
         ) : activeKey === 'chatbot' ? (
           <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">

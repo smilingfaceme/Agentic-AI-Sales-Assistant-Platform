@@ -1,68 +1,98 @@
 "use client";
-import { useState } from "react";
-import { FaComments } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { FaComments, FaWhatsapp, FaGlobe, FaRedo } from "react-icons/fa";
+import ChatArea from "./ChatArea";
 
-const navButtons = [
-  { label: "All", notify: 1 },
-  { label: "Unassigned", notify: 0 },
-  { label: "My chats", notify: 1 },
-  { label: "Bot", notify: 0 },
+import { apiRequest } from "@/utils";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000/api';
+
+type NotifyKey = 'All' | 'Unassigned' | 'WhatsApp' | 'Test';
+
+const navButtons: { label: string; key: NotifyKey }[] = [
+  { label: "All", key: "All" },
+  { label: "Unassigned", key: "Unassigned" },
+  { label: "My chats", key: "Test" },
+  { label: "Bot", key: "WhatsApp" },
 ];
-
-const chatChannels = [
-  {
-    name: "disturbed-teal-roadrunner",
-    lastMessage: "Hi",
-    lastActivity: "2d",
-    unread: 0,
-  },
-];
-
-const chatMessages = [
-  {
-    sender: "user",
-    text: "Hi, Do you know daniel",
-    time: "12:34 PM",
-    date: "2025-09-12",
-    sources: [],
-    email: "",
-  },
-  {
-    sender: "bot",
-    text:
-      "Yes, I know Daniel Hiroshi. He is a Machine Learning Engineer with 8 years of experience, specializing in NLP, Computer Vision, and Machine Learning technologies. You can reach him at <a href='mailto:hiroshidaniel112@gmail.com' class='underline'>hiroshidaniel112@gmail.com</a> or connect on <a href='https://linkedin.com/in/daniel-hiroshi-21533936b' class='underline'>linkedin.com/in/daniel-hiroshi-21533936b</a>.",
-    time: "12:34 PM",
-    date: "2025-09-12",
-    sources: ["Source", "1", "2", "3"],
-    email: "Chatbot",
-  },
-  {
-    sender: "bot",
-    text: "Hi",
-    time: "12:37 PM",
-    date: "2025-09-12",
-    sources: [],
-    email: "vectorsuperdev@gmail.com",
-  },
-];
-
-function formatDate(date: string) {
-  const d = new Date(date);
-  return d.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
 
 interface ChatPageProps {
   sidebarHidden?: boolean;
   onSidebarToggle?: () => void;
+  productId?: string;
 }
 
-export default function ChatPage({ sidebarHidden, onSidebarToggle }: ChatPageProps) {
-  const [active, setActive] = useState<string>("All");
+export default function ChatPage({ sidebarHidden, onSidebarToggle, productId }: ChatPageProps) {
+  type Project = {
+    conversation_id: string,
+    project_id: string,
+    conversation_name: string,
+    ai_reply: true,
+    started_at: string,
+    ended_at: null,
+    source: string
+  }
+
+  const [notifies, setNotifies] = useState({
+    'All': 0,
+    'Unassigned': 0,
+    'WhatsApp': 0,
+    'Test': 0
+  });
+
+  const [active, setActive] = useState<NotifyKey>('All');
+  const [activeConversation, setActiveConversation] = useState<string>("");
+  const [chatChannels, setChatChannels] = useState<Project[]>([]);
+
+  const fetchConversations = async () => {
+    try {
+      const res = await apiRequest(`${API_BASE}/conversation?product_id=${productId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      if (!res.ok) throw new Error("Failed to fetch conversations");
+      const data = await res.json();
+      if (data.conversations) {
+        setChatChannels(data.conversations)
+        setActiveConversation(data.conversations[0].conversation_id)
+        countBySource(data.conversations)
+      }
+    } catch {
+      setChatChannels([]);
+    }
+  }
+
+  const getshowConversations = (filter_key: string) => {
+    if (filter_key === 'All') {
+      return chatChannels
+    } else {
+      const whatsappConversations: Project[] = chatChannels.filter(
+        (convo: Project) => convo.source.toLowerCase() === filter_key.toLowerCase()
+      );
+      return whatsappConversations
+    }
+  }
+
+  const countBySource = (projects: Project[]) => {
+    const counts: Record<string, number> = projects.reduce<Record<string, number>>((acc, { source }) => {
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {});
+
+    const notifiesObj = {
+      All: projects.length,
+      Unassigned: counts['Unassigned'] || 0,
+      WhatsApp: counts['WhatsApp'] || 0,
+      Test: counts['Test'] || 0
+    };
+
+    setNotifies(notifiesObj)
+  };
+
+  useEffect(() => {
+    fetchConversations();
+  }, []);
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#fafbfc]">
@@ -91,97 +121,57 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle }: ChatPagePro
               <button
                 key={btn.label}
                 className={`relative px-3 py-3 text-sm font-medium ${active === btn.label ? "border-b border-blue-500" : "hover:bg-gray-100"}`}
-                onClick={() => setActive(btn.label)}
+                onClick={() => setActive(btn.key)}
               >
                 {btn.label}
-                <span className={`ml-1 text-xs px-1 rounded-full ${btn.notify > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-200 text-gray-400"}`}>{btn.notify}</span>
+                <span className={`ml-1 text-xs px-1 rounded-full ${notifies[btn.key] > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-200 text-gray-400"}`}>{notifies[btn.key]}</span>
               </button>
             ))}
           </div>
 
           {/* Search and filter */}
-          <div className="flex items-center px-4 py-2 gap-2 text-gray-400">
-            <span>All chats <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">1</span></span>
+          <div className="flex items-center px-4 py-2 gap-2 text-gray-400 border-b border-gray-300">
+            <span>{active} Chats <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">{notifies[active]}</span></span>
             <div className="ml-auto flex gap-2">
               <button className="p-1 hover:bg-gray-100 rounded" aria-label="Search">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
               </button>
-              <button className="p-1 hover:bg-gray-100 rounded" aria-label="Add chat">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" /></svg>
+              <button className="p-1 hover:bg-gray-100 rounded" aria-label="Add chat" onClick={fetchConversations}>
+                <FaRedo />
               </button>
             </div>
           </div>
           {/* Chat channel list */}
           <section className="flex-1 overflow-y-auto">
-            {chatChannels.map((channel) => (
-              <div
-                key={channel.name}
-                className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-gray-50 bg-[#f3f4f6]"
-              >
-                <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-sm text-gray-800">{channel.name}</div>
-                  <div className="text-xs text-gray-500">{channel.lastMessage}</div>
-                </div>
-                <div className="text-xs text-gray-400">{channel.lastActivity}</div>
-              </div>
-            ))}
+            {chatChannels.length == 0 ?
+              <div> </div> :
+              <>
+                {getshowConversations(active).map((channel) => (
+                  <button
+                    key={channel.conversation_id}
+                    className={`flex items-center justify-between w-full gap-2 px-4 py-3 cursor-pointer border-b border-gray-300 hover:bg-gray-50 ${activeConversation == channel.conversation_id ? 'bg-gray-200' : 'bg-white'}`}
+                    onClick={() => setActiveConversation(channel.conversation_id)}
+                  >
+                    <div className="flex">
+                      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                        {channel.source == "WhatsApp" ? <FaWhatsapp size={25} color="green" /> : <FaGlobe size={25} />}
+                      </div>
+                      <div className="flex-1 text-left ml-2">
+                        <div className="font-semibold text-sm text-gray-800">{channel.conversation_name}</div>
+                        <div className="text-xs text-gray-500">Source: {channel.source}</div>
+                        <div className="text-xs text-gray-500">AI Reply: {channel.ai_reply ? "Yes" : "No"}</div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400">{channel.started_at ? new Date(channel.started_at).toLocaleString() : ""}</div>
+                  </button>
+                ))}
+              </>
+            }
           </section>
         </aside>
 
         {/* Right chat area */}
-        <section className="flex-1 flex flex-col bg-[#fafbfc] w-full">
-          {/* Chat header */}
-          <header className="flex items-center gap-2 px-4 md:px-6 py-4 border-b border-gray-300 bg-white">
-            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>
-            </div>
-            <span className="font-semibold text-md text-gray-800">disturbed-teal-roadrunner</span>
-          </header>
-          {/* Main chat area */}
-          <div className="flex-1 px-2 md:px-10 py-4 md:py-6 overflow-y-auto bg-[#fafbfc] flex flex-col">
-            {/* Date Separator */}
-            <div className="flex items-center mb-6">
-              <hr className="flex-1 border-t border-gray-300" />
-              <span className="bg-gray-200 text-gray-600 px-4 py-1 rounded-full text-xs font-medium mx-4">
-                {formatDate(chatMessages[0].date)}
-              </span>
-              <hr className="flex-1 border-t border-gray-300" />
-            </div>
-            {/* Messages */}
-            <section className="flex flex-col gap-6">
-              {chatMessages.map((msg, idx) => (
-                <div key={idx} className={`flex ${msg.sender === "user" ? "justify-start" : "justify-end"}`}>
-                  <div className={`max-w-[90vw] md:max-w-[40%] text-sm flex flex-col`}>
-                    <div className={`rounded-tl-xl rounded-tr-xl px-4 py-3 ${msg.sender === "bot" ? "bg-[#23263b] text-white rounded-bl-xl" : "bg-gray-200 text-gray-900 rounded-br-xl"}`}>
-                      <span dangerouslySetInnerHTML={{ __html: msg.text }} />
-                    </div>
-                    <span className="text-xs text-gray-600 mt-1 self-end">
-                      {msg.time}
-                      {msg.sender === "bot" && <span className="ml-2">• {msg.email}</span>}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </section>
-          </div>
-          {/* Message Input Area */}
-          <footer className="flex items-center gap-2 border-t border-gray-200 bg-white px-4 md:px-6 py-4">
-            <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500" aria-label="Attach">
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" /></svg>
-            </button>
-            <input
-              className="flex-1 px-4 py-2 rounded-full border bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              placeholder="Type message or '/' for quick response"
-              type="text"
-            />
-            <button className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white" aria-label="Send">
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-            </button>
-          </footer>
-        </section>
+        <ChatArea />
       </main>
     </div>
   );

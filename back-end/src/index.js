@@ -5,6 +5,7 @@ import cors from 'cors';
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
 import conversationRoutes from './routes/conversation.js';
+import chatsRoutes from './routes/chat.js';
 import projectRoutes from './routes/project.js';
 
 const app = express();
@@ -17,6 +18,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/project', projectRoutes);
 
 app.use('/api/conversation', conversationRoutes);
+
+app.use('/api/chats', chatsRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

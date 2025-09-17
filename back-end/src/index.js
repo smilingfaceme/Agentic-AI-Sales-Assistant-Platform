@@ -4,7 +4,7 @@ dotenv.config();
 import cors from 'cors';
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
-
+import conversationRoutes from './routes/conversation.js';
 import projectRoutes from './routes/project.js';
 
 const app = express();
@@ -15,6 +15,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 app.use('/api/project', projectRoutes);
+
+app.use('/api/conversation', conversationRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

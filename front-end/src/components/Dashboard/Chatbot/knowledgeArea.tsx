@@ -3,6 +3,9 @@ import { useState, useEffect, useCallback } from "react";
 import { FaSyncAlt, FaCloudUploadAlt, FaEdit, FaTrash } from "react-icons/fa";
 import Table, { TableAction } from "@/components/Table";
 import { apiRequest } from "@/utils";
+import LoadingWrapper from "@/components/LoadingWrapper";
+import Loading from "@/components/Loading";
+import { useApiCall } from "@/hooks/useApiCall";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000/api";
 
@@ -62,8 +65,13 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
   const [showModal, setShowModal] = useState(false);
   const [file, setFile] = useState<File | null>(null);
 
+  // Loading states for different operations
+  const { isLoading: isLoadingList, error: listError, execute: executeListAsync } = useApiCall();
+  const { isLoading: isUploading, error: uploadError, execute: executeUploadAsync } = useApiCall();
+  const { isLoading: isDeleting, execute: executeDeleteAsync } = useApiCall();
+
   const fetchKnowledgeFileList = useCallback(async () => {
-    try {
+    const result = await executeListAsync(async () => {
       const res = await apiRequest(
         `${API_BASE}/knowledge/list?project_id=${projectId}`,
         {
@@ -77,41 +85,65 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
       if (!res.ok) throw new Error("Failed to fetch knowledge files");
 
       const data = await res.json();
-      if (Array.isArray(data.knowledges)) {
-        const filtered = data.knowledges
-          .filter((item: KnowledgeFile) => item.name !== ".emptyFolderPlaceholder")
-          .map((item: KnowledgeFile) => ({
-            "Title & Description": item.name,
-            Type: item.metadata.mimetype,
-            "Created on": item.created_at,
-            "Modified on": item.updated_at,
-            Actions: [
-              {
-                label: "View",
-                onClick: () => {
-                  window.open(`https://riadihsvlxqrrbfnywly.supabase.co/storage/v1/object/public/knowledges/${projectId}/${encodeFullUrl(item.name)}`, "_blank") // Opens in a new tab/window
-                },
-                className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors",
-                icon: <FaEdit />
-              },
-              {
-                label: "Delete",
-                onClick: async () => {
-                  await handleDelete(item.name);
-                },
-                className: "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors",
-                icon: <FaTrash />
-              }
-            ] as TableAction[],
-          }));
+      return data;
+    });
 
-        setKnowledgeList(filtered);
-        setTableTitle("Documents");
-      }
-    } catch (err) {
-      console.error("Error fetching knowledge list:", err);
+    if (result && Array.isArray(result.knowledges)) {
+      const filtered = result.knowledges
+        .filter((item: KnowledgeFile) => item.name !== ".emptyFolderPlaceholder")
+        .map((item: KnowledgeFile) => ({
+          "Title & Description": item.name,
+          Type: item.metadata.mimetype,
+          "Created on": item.created_at,
+          "Modified on": item.updated_at,
+          Actions: [
+            {
+              label: "View",
+              onClick: () => {
+                window.open(`https://riadihsvlxqrrbfnywly.supabase.co/storage/v1/object/public/knowledges/${projectId}/${encodeFullUrl(item.name)}`, "_blank") // Opens in a new tab/window
+              },
+              className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors",
+              icon: <FaEdit />
+            },
+            {
+              label: "Delete",
+              onClick: async () => {
+                const result = await executeDeleteAsync(async () => {
+                  const res = await apiRequest(
+                    `${API_BASE}/knowledge/remove`,
+                    {
+                      method: "DELETE",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        project_id: projectId,
+                        file_name: item.name
+                      })
+                    }
+                  );
+
+                  if (!res.ok) throw new Error("Failed to delete knowledge file");
+                  return res.json();
+                });
+
+                if (result) {
+                  await fetchKnowledgeFileList();
+                }
+              },
+              className: "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors",
+              icon: <FaTrash />
+            }
+          ] as TableAction[],
+        }));
+
+      setKnowledgeList(filtered);
+      setTableTitle("Documents");
+    } else {
+      setKnowledgeList([]);
+      setTableTitle("Documents");
     }
-  }, [projectId]);
+  }, [projectId, executeListAsync, executeDeleteAsync]);
 
   const handleUpload = async () => {
     if (!file) {
@@ -119,7 +151,7 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
       return;
     }
 
-    try {
+    const result = await executeUploadAsync(async () => {
       const formData = new FormData();
       console.log(file)
       formData.append("file", file);
@@ -134,41 +166,16 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
 
       const data = await res.json();
       console.log("Upload success:", data);
+      return data;
+    });
 
+    if (result) {
       // Refresh table after upload
       fetchKnowledgeFileList();
-
       setShowModal(false);
       setFile(null);
-    } catch (err) {
-      console.error("Error uploading file:", err);
-      alert("Error uploading file");
     }
   };
-
-  const handleDelete = async (fileName: string) => {
-    try {
-      const res = await apiRequest(
-        `${API_BASE}/knowledge/remove`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            project_id: projectId,
-            file_name: fileName
-          })
-        }
-      );
-
-      if (!res.ok) throw new Error("Failed to fetch knowledge files");
-
-      await fetchKnowledgeFileList()
-    } catch (err) {
-      console.error("Error fetching knowledge list:", err);
-    }
-  }
 
   useEffect(() => {
     if (projectId) fetchKnowledgeFileList();
@@ -180,12 +187,17 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
         <div className="text-md font-semibold">{tableTitle}</div>
         <div className="flex gap-2">
           <button
-            className="px-3 py-1 hover:bg-gray-200 rounded text-sm flex items-center justify-center"
+            className="px-3 py-1 hover:bg-gray-200 rounded text-sm flex items-center justify-center disabled:opacity-50"
             aria-label="Refresh"
             onClick={fetchKnowledgeFileList}
+            disabled={isLoadingList}
           >
-            <FaSyncAlt />
-            <span className="ml-2">Refresh</span>
+            <Loading isLoading={isLoadingList} type="button" text="Refreshing..." size="small">
+              <>
+                <FaSyncAlt />
+                <span className="ml-2">Refresh</span>
+              </>
+            </Loading>
           </button>
           <button
             className="px-3 py-1 bg-black hover:bg-gray-700 font-semibold text-white rounded text-sm"
@@ -198,7 +210,15 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
       </div>
 
       {/* Table */}
-      <Table headers={tableHeaders} data={knowledgeList} />
+      <LoadingWrapper
+        isLoading={isLoadingList}
+        error={listError}
+        text="Loading knowledge files..."
+        type="inline"
+        className="min-h-[300px]"
+      >
+        <Table headers={tableHeaders} data={knowledgeList} />
+      </LoadingWrapper>
 
       {/* Modal */}
       {showModal && (
@@ -216,22 +236,32 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
                 type="file"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
                 className="w-full border border-gray-300 rounded p-2"
+                disabled={isUploading}
               />
+              {uploadError && (
+                <div className="mt-2 text-red-500 text-sm text-center">
+                  {uploadError}
+                </div>
+              )}
             </div>
 
             {/* Footer */}
             <div className="border-t border-gray-300 px-4 py-3 flex justify-between">
               <button
-                className="px-4 py-1 rounded border border-gray-400 hover:bg-gray-100"
+                className="px-4 py-1 rounded border border-gray-400 hover:bg-gray-100 disabled:opacity-50"
                 onClick={() => setShowModal(false)}
+                disabled={isUploading}
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-1 rounded bg-black text-white hover:bg-gray-700"
+                className="px-4 py-1 rounded bg-black text-white hover:bg-gray-700 disabled:opacity-50"
                 onClick={handleUpload}
+                disabled={isUploading}
               >
-                Upload
+                <Loading isLoading={isUploading} type="button" text="Uploading..." theme="dark">
+                  Upload
+                </Loading>
               </button>
             </div>
           </div>

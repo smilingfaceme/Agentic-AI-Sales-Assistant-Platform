@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { login } from "@/utils";
+import Loading from "@/components/Loading";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -76,10 +77,12 @@ export default function LoginPage() {
           {error && <div className="text-red-500 text-sm">{error}</div>}
           <button
             type="submit"
-            className="w-full py-3 mt-2 rounded-lg bg-black text-white font-bold shadow-none hover:bg-white hover:text-black hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white transition-all"
+            className="w-full py-3 mt-2 rounded-lg bg-black text-white font-bold shadow-none hover:bg-white hover:text-black hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white transition-all disabled:opacity-50"
             disabled={loading}
           >
-            {loading ? "Logging in..." : "Login"}
+            <Loading isLoading={loading} type="button" text="Logging in..." theme="dark">
+              Login
+            </Loading>
           </button>
         </form>
         <div className="mt-6 text-sm text-gray-600">

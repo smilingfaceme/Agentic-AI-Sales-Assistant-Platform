@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { apiRequest } from "@/utils";
 import { FaWhatsapp, FaGlobe, FaRobot } from "react-icons/fa";
+import LoadingWrapper from "@/components/LoadingWrapper";
+import { useApiCall } from "@/hooks/useApiCall";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000/api';
 
@@ -34,21 +36,24 @@ interface ChatHistoryPageProps {
 export default function ChatArea({conversationId, conversationName, conversationSource}:ChatHistoryPageProps) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
+  // Use the API call hook for managing loading states and preventing duplicate requests
+  const { isLoading, error, execute } = useApiCall();
+
   const fetchChatsHistory = async () => {
-    try{
+    const result = await execute(async () => {
       const res = await apiRequest(`${API_BASE}/chats/history?conversation_id=${conversationId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         }
-      })
+      });
       if (!res.ok) throw new Error("Failed to fetch chat history");
       const data = await res.json();
-      if (data.messages) {
-        setChatMessages(data.messages)
-      }
-    } catch {
+      return data;
+    });
 
+    if (result && result.messages) {
+      setChatMessages(result.messages);
     }
   }
 
@@ -70,33 +75,49 @@ export default function ChatArea({conversationId, conversationName, conversation
       </header>
       {/* Main chat area */}
       <div className="flex-1 px-2 md:px-10 py-4 md:py-6 overflow-y-auto bg-[#fafbfc] flex flex-col">
-        {/* Date Separator */}
-        <div className="flex items-center mb-6">
-          <hr className="flex-1 border-t border-gray-300" />
-          <span className="bg-gray-200 text-gray-600 px-4 py-1 rounded-full text-xs font-medium mx-4">
-            {formatDate(firstDate)}
-          </span>
-          <hr className="flex-1 border-t border-gray-300" />
-        </div>
-        {/* Messages */}
-        <section className="flex flex-col gap-6">
-          {chatMessages.map((msg, idx) => (
-            <div key={msg.message_id ?? idx} className={`flex ${msg.sender_type === "customer" ? "justify-start" : "justify-end"}`}>
-              <div className={`max-w-[90vw] md:max-w-[40%] text-sm flex flex-col`}>
-                <div className={`rounded-tl-xl rounded-tr-xl px-4 py-3 ${msg.sender_type === "customer" ? "bg-gray-200 text-gray-900 rounded-br-xl" : "bg-[#23263b] text-white rounded-bl-xl" }`}>
-                  <span>{msg.content}</span>
-                </div>
-                <span className="flex text-xs text-gray-600 mt-1 self-end">
-                  {msg.created_at ? new Date(msg.created_at).toLocaleTimeString() : ""}
-                  {msg.sender_type == "agent" && msg.user_id && (
-                    <span className="ml-2">• {msg.email}</span>
-                  )}
-                  {msg.sender_type == "bot" && <><span className="ml-2">• </span><FaRobot className="ml-1" size={15}/></>}
+        <LoadingWrapper
+          isLoading={isLoading}
+          error={error}
+          text="Loading chat history..."
+          type="inline"
+          className="flex-1"
+        >
+          {chatMessages.length > 0 ? (
+            <>
+              {/* Date Separator */}
+              <div className="flex items-center mb-6">
+                <hr className="flex-1 border-t border-gray-300" />
+                <span className="bg-gray-200 text-gray-600 px-4 py-1 rounded-full text-xs font-medium mx-4">
+                  {formatDate(firstDate)}
                 </span>
+                <hr className="flex-1 border-t border-gray-300" />
               </div>
+              {/* Messages */}
+              <section className="flex flex-col gap-6">
+                {chatMessages.map((msg, idx) => (
+                  <div key={msg.message_id ?? idx} className={`flex ${msg.sender_type === "customer" ? "justify-start" : "justify-end"}`}>
+                    <div className={`max-w-[90vw] md:max-w-[40%] text-sm flex flex-col`}>
+                      <div className={`rounded-tl-xl rounded-tr-xl px-4 py-3 ${msg.sender_type === "customer" ? "bg-gray-200 text-gray-900 rounded-br-xl" : "bg-[#23263b] text-white rounded-bl-xl" }`}>
+                        <span>{msg.content}</span>
+                      </div>
+                      <span className="flex text-xs text-gray-600 mt-1 self-end">
+                        {msg.created_at ? new Date(msg.created_at).toLocaleTimeString() : ""}
+                        {msg.sender_type == "agent" && msg.user_id && (
+                          <span className="ml-2">• {msg.email}</span>
+                        )}
+                        {msg.sender_type == "bot" && <><span className="ml-2">• </span><FaRobot className="ml-1" size={15}/></>}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            </>
+          ) : (
+            <div className="flex items-center justify-center flex-1 text-gray-500">
+              No messages in this conversation yet
             </div>
-          ))}
-        </section>
+          )}
+        </LoadingWrapper>
       </div>
       {/* Message Input Area */}
       <footer className="flex items-center gap-2 border-t border-gray-200 bg-white px-4 md:px-6 py-4">

@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { FaComments, FaWhatsapp, FaGlobe, FaRedo } from "react-icons/fa";
 import ChatArea from "@/components/Dashboard/ChatArea";
+import LoadingWrapper from "@/components/LoadingWrapper";
+import { useApiCall } from "@/hooks/useApiCall";
 
 import { apiRequest } from "@/utils";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000/api';
@@ -53,8 +55,11 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
   );
   const [chatChannels, setChatChannels] = useState<Project[]>([]);
 
+  // Use the API call hook for managing loading states and preventing duplicate requests
+  const { isLoading, error, execute } = useApiCall();
+
   const fetchConversations = async () => {
-    try {
+    const result = await execute(async () => {
       const res = await apiRequest(`${API_BASE}/conversation?project_id=${projectId}`, {
         method: 'GET',
         headers: {
@@ -63,12 +68,14 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
       });
       if (!res.ok) throw new Error("Failed to fetch conversations");
       const data = await res.json();
-      if (data.conversations) {
-        setChatChannels(data.conversations)
-        setActiveConversation(data.conversations[0].conversation_id)
-        countBySource(data.conversations)
-      }
-    } catch {
+      return data;
+    });
+
+    if (result && result.conversations) {
+      setChatChannels(result.conversations);
+      setActiveConversation(result.conversations[0]);
+      countBySource(result.conversations);
+    } else {
       setChatChannels([]);
     }
   }
@@ -153,30 +160,41 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
           </div>
           {/* Chat channel list */}
           <section className="flex-1 overflow-y-auto">
-            {chatChannels.length == 0 ?
-              <div> </div> :
-              <>
-                {getshowConversations(active).map((channel) => (
-                  <button
-                    key={channel.conversation_id}
-                    className={`flex items-center justify-between w-full gap-2 px-4 py-3 cursor-pointer border-b border-gray-300 hover:bg-gray-50 ${activeConversation.conversation_id == channel.conversation_id ? 'bg-gray-200' : 'bg-white'}`}
-                    onClick={() => setActiveConversation(channel)}
-                  >
-                    <div className="flex">
-                      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-                        {channel.source == "WhatsApp" ? <FaWhatsapp size={25} color="green" /> : <FaGlobe size={25} />}
+            <LoadingWrapper
+              isLoading={isLoading}
+              error={error}
+              text="Loading conversations..."
+              type="inline"
+              className="min-h-[200px]"
+            >
+              {chatChannels.length == 0 ? (
+                <div className="flex items-center justify-center py-8 text-gray-500">
+                  No conversations found
+                </div>
+              ) : (
+                <>
+                  {getshowConversations(active).map((channel) => (
+                    <button
+                      key={channel.conversation_id}
+                      className={`flex items-center justify-between w-full gap-2 px-4 py-3 cursor-pointer border-b border-gray-300 hover:bg-gray-50 ${activeConversation.conversation_id == channel.conversation_id ? 'bg-gray-200' : 'bg-white'}`}
+                      onClick={() => setActiveConversation(channel)}
+                    >
+                      <div className="flex">
+                        <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                          {channel.source == "WhatsApp" ? <FaWhatsapp size={25} color="green" /> : <FaGlobe size={25} />}
+                        </div>
+                        <div className="flex-1 text-left ml-2">
+                          <div className="font-semibold text-sm text-gray-800">{channel.conversation_name}</div>
+                          <div className="text-xs text-gray-500">Source: {channel.source}</div>
+                          <div className="text-xs text-gray-500">AI Reply: {channel.ai_reply ? "Yes" : "No"}</div>
+                        </div>
                       </div>
-                      <div className="flex-1 text-left ml-2">
-                        <div className="font-semibold text-sm text-gray-800">{channel.conversation_name}</div>
-                        <div className="text-xs text-gray-500">Source: {channel.source}</div>
-                        <div className="text-xs text-gray-500">AI Reply: {channel.ai_reply ? "Yes" : "No"}</div>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-400">{channel.started_at ? new Date(channel.started_at).toLocaleString() : ""}</div>
-                  </button>
-                ))}
-              </>
-            }
+                      <div className="text-xs text-gray-400">{channel.started_at ? new Date(channel.started_at).toLocaleString() : ""}</div>
+                    </button>
+                  ))}
+                </>
+              )}
+            </LoadingWrapper>
           </section>
         </aside>
 

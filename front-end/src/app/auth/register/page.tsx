@@ -147,7 +147,7 @@ export default function RegisterPage() {
           {success && <div className="text-green-600 text-sm">Registration successful! You can now login.</div>}
           <button
             type="submit"
-            className="w-full py-3 mt-2 rounded-lg bg-black text-white font-bold shadow-none hover:bg-white hover:text-black hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white transition-all"
+            className="w-full py-3 mt-2 rounded-lg bg-black text-white font-bold shadow-none hover:bg-gray-300 hover:text-black hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white transition-all"
             disabled={loading}
           >
             {loading ? "Registering..." : "Register"}

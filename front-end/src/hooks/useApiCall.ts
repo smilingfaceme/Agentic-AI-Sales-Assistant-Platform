@@ -16,7 +16,7 @@ export interface UseApiCallReturn {
 export const useApiCall = (initialLoading: boolean = false): UseApiCallReturn => {
   const [isLoading, setIsLoading] = useState(initialLoading);
   const [error, setError] = useState<string | null>(null);
-  const currentRequestRef = useRef<Promise<any> | null>(null);
+  const currentRequestRef = useRef<Promise<unknown> | null>(null);
   const requestIdRef = useRef<string | null>(null);
 
   /**
@@ -30,7 +30,7 @@ export const useApiCall = (initialLoading: boolean = false): UseApiCallReturn =>
     
     // If there's already a request in progress with the same function, return the existing promise
     if (currentRequestRef.current && requestIdRef.current) {
-      return currentRequestRef.current;
+      return currentRequestRef.current as Promise<T | null>;
     }
 
     requestIdRef.current = requestId;

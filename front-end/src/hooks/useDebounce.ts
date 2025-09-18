@@ -10,7 +10,7 @@ export const useDebounce = (delay: number = 300) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const debounce = useCallback(
-    <T extends (...args: any[]) => any>(func: T) => {
+    <T extends (...args: unknown[]) => unknown>(func: T) => {
       return (...args: Parameters<T>) => {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);

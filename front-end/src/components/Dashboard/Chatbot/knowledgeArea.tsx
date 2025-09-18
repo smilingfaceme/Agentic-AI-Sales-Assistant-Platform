@@ -53,7 +53,7 @@ const encodeFullUrl = (urlLike: string) => {
       u.search = params.toString() ? `?${params.toString()}` : '';
     }
     return u.toString();
-  } catch (err) {
+  } catch {
     // Not a full URL — percent-encode the whole string
     return encodeURI(String(urlLike));
   }
@@ -68,7 +68,7 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
   // Loading states for different operations
   const { isLoading: isLoadingList, error: listError, execute: executeListAsync } = useApiCall();
   const { isLoading: isUploading, error: uploadError, execute: executeUploadAsync } = useApiCall();
-  const { isLoading: isDeleting, execute: executeDeleteAsync } = useApiCall();
+  const { execute: executeDeleteAsync } = useApiCall();
 
   const fetchKnowledgeFileList = useCallback(async () => {
     const result = await executeListAsync(async () => {

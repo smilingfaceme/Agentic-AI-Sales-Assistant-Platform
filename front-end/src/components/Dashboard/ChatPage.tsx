@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FaComments, FaWhatsapp, FaGlobe, FaRedo } from "react-icons/fa";
 import ChatArea from "@/components/Dashboard/ChatArea";
 import LoadingWrapper from "@/components/LoadingWrapper";
@@ -58,7 +58,7 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
   // Use the API call hook for managing loading states and preventing duplicate requests
   const { isLoading, error, execute } = useApiCall();
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     const result = await execute(async () => {
       const res = await apiRequest(`${API_BASE}/conversation?project_id=${projectId}`, {
         method: 'GET',
@@ -78,7 +78,7 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
     } else {
       setChatChannels([]);
     }
-  }
+  }, [projectId, execute]);
 
   const getshowConversations = (filter_key: string) => {
     if (filter_key === 'All') {
@@ -109,7 +109,7 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
 
   useEffect(() => {
     fetchConversations();
-  }, []);
+  }, [fetchConversations]);
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#fafbfc]">

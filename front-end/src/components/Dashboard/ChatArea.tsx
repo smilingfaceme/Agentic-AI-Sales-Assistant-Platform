@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { apiRequest } from "@/utils";
 import { FaWhatsapp, FaGlobe, FaRobot } from "react-icons/fa";
 import LoadingWrapper from "@/components/LoadingWrapper";
@@ -39,7 +39,7 @@ export default function ChatArea({conversationId, conversationName, conversation
   // Use the API call hook for managing loading states and preventing duplicate requests
   const { isLoading, error, execute } = useApiCall();
 
-  const fetchChatsHistory = async () => {
+  const fetchChatsHistory = useCallback(async () => {
     const result = await execute(async () => {
       const res = await apiRequest(`${API_BASE}/chats/history?conversation_id=${conversationId}`, {
         method: 'GET',
@@ -55,11 +55,11 @@ export default function ChatArea({conversationId, conversationName, conversation
     if (result && result.messages) {
       setChatMessages(result.messages);
     }
-  }
+  }, [conversationId, execute]);
 
   useEffect(() => {
     fetchChatsHistory()
-  }, []);
+  }, [fetchChatsHistory]);
 
   // Find the first message date for the separator
   const firstDate = chatMessages.length > 0 ? chatMessages[0].created_at ?? new Date().toISOString() : new Date().toISOString();

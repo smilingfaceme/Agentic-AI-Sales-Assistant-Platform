@@ -17,7 +17,7 @@ export interface UseLoadingReturn {
 export const useLoading = (initialLoading: boolean = false): UseLoadingReturn => {
   const [isLoading, setIsLoading] = useState(initialLoading);
   const [error, setError] = useState<string | null>(null);
-  const currentRequestRef = useRef<Promise<any> | null>(null);
+  const currentRequestRef = useRef<Promise<unknown> | null>(null);
 
   const setLoading = useCallback((loading: boolean) => {
     setIsLoading(loading);
@@ -42,7 +42,7 @@ export const useLoading = (initialLoading: boolean = false): UseLoadingReturn =>
   const executeAsync = useCallback(async <T>(asyncFn: () => Promise<T>): Promise<T | null> => {
     // If there's already a request in progress, return the existing promise
     if (currentRequestRef.current) {
-      return currentRequestRef.current;
+      return currentRequestRef.current as Promise<T>;
     }
 
     setIsLoading(true);

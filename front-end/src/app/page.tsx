@@ -19,20 +19,6 @@ export default function Home() {
           <p className="text-base sm:text-lg md:text-2xl mb-8 text-gray-800 max-w-3xl">
             DoshiAI helps your team close more sales with instant, accurate, and human-like AI answers that improve over time.
           </p>
-          <div className="flex flex-wrap gap-4 mb-10 justify-center">
-            <a
-              href="#"
-              className="inline-block px-6 py-3 rounded-lg bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 text-white font-bold shadow hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-            >
-              Get Started
-            </a>
-            <a
-              href="#"
-              className="inline-block px-6 py-3 rounded-lg bg-white border border-blue-500 text-blue-600 font-bold shadow hover:bg-blue-50 hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-            >
-              Request a Demo
-            </a>
-          </div>
           <Image
             src="/joyz-hp-featured-image.png"
             alt="AI Featured"
@@ -90,10 +76,8 @@ export default function Home() {
         <section className="w-full mb-16 max-w-6xl mx-auto px-2 sm:px-4">
           <h2 className="text-2xl sm:text-3xl font-extrabold mb-8 text-gray-900">Upcoming Features</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-gray-50 p-6 rounded-xl shadow flex flex-col items-center text-center hover:shadow-md transition">
-              <Image src="/input.svg" alt="Conversational AI forms" width={64} height={64} className="h-16 mb-3" />
-              <h3 className="text-base md:text-lg font-semibold mb-2 text-gray-900">Conversational Forms</h3>
-              <p className="text-gray-800">Capture leads through natural chat instead of long static forms.</p>
+            <div className="bg-gray-50 p-3 rounded-xl shadow flex flex-col items-center text-center hover:shadow-md transition">
+              <Image src="/upcoming_feature_1.png" alt="Conversational AI forms" width={500} height={600} className="w-full max-w-3xl h-auto rounded-xl shadow-lg" />
             </div>
             <div className="bg-gray-50 p-6 rounded-xl shadow flex flex-col items-center text-center hover:shadow-md transition">
               <Image src="/api.svg" alt="API Agent" width={64} height={64} className="h-16 mb-3" />

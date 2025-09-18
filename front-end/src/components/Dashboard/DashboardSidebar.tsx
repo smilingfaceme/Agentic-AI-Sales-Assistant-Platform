@@ -13,10 +13,11 @@ const navItems = [
   { label: "Go live", icon: <FaBroadcastTower />, activeKey: "go-live" },
 ];
 
-const utilityItems = [
-  { label: "Help & Support", icon: <FaHeadset />, activeKey: "help" },
-  { label: "Logout", icon: <FaSignOutAlt />, activeKey: "logout" },
-];
+// Commented out unused variable to fix ESLint warning
+// const utilityItems = [
+//   { label: "Help & Support", icon: <FaHeadset />, activeKey: "help" },
+//   { label: "Logout", icon: <FaSignOutAlt />, activeKey: "logout" },
+// ];
 
 type DashboardSidebarProps = {
   activeKey?: string;
@@ -37,7 +38,7 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
   // Fetch projects from backend
-  const fetchProjects = async () => {
+  const fetchProjects = React.useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -69,7 +70,7 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
     } finally {
       setLoading(false);
     }
-  };
+  }, [router, selectedOrg.name, onProductSelect]);
 
   const logout = async () => {
     localStorage.clear();
@@ -78,7 +79,7 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
   // Fetch projects on mount
   React.useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [fetchProjects]);
 
   return (
     <aside

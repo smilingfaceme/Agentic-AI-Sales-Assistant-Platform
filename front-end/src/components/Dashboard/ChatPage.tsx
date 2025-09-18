@@ -18,10 +18,10 @@ const navButtons: { label: string; key: NotifyKey }[] = [
 interface ChatPageProps {
   sidebarHidden?: boolean;
   onSidebarToggle?: () => void;
-  productId?: string;
+  projectId?: string;
 }
 
-export default function ChatPage({ sidebarHidden, onSidebarToggle, productId }: ChatPageProps) {
+export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: ChatPageProps) {
   type Project = {
     conversation_id: string,
     project_id: string,
@@ -55,7 +55,7 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, productId }: 
 
   const fetchConversations = async () => {
     try {
-      const res = await apiRequest(`${API_BASE}/conversation?product_id=${productId}`, {
+      const res = await apiRequest(`${API_BASE}/conversation?project_id=${projectId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

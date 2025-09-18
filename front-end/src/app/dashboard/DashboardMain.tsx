@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [productId, setProductId] = useState<string>("");
+  const [projectId, setProductId] = useState<string>("");
 
   useEffect(() => {
     async function fetchData() {
@@ -52,11 +52,11 @@ export default function DashboardPage() {
       <main className="flex-1 text-gray-900 h-screen w-full p-0 m-0">
         {activeKey === 'chats' ? (
           <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-            <DashboardChat sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} productId={productId} />
+            <DashboardChat key={projectId} sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} projectId={projectId} />
           </div>
         ) : activeKey === 'chatbot' ? (
           <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-            <DashboardChatbot sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
+            <DashboardChatbot key={projectId} sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} projectId={projectId}/>
           </div>
         ) : activeKey === 'go-live' ? (
           <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">

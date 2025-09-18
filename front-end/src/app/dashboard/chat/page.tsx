@@ -3,9 +3,9 @@ import ChatPage from '@/components/Dashboard/ChatPage';
 interface ChatPageProps {
   sidebarHidden?: boolean;
   onSidebarToggle?: () => void;
-  productId?: string;
+  projectId?: string;
 }
 
-export default function DashboardChat({ sidebarHidden, onSidebarToggle, productId }: ChatPageProps) {
-  return <ChatPage sidebarHidden={sidebarHidden} onSidebarToggle={onSidebarToggle} productId={productId}/>;
+export default function DashboardChat({ sidebarHidden, onSidebarToggle, projectId }: ChatPageProps) {
+  return <ChatPage key={projectId} sidebarHidden={sidebarHidden} onSidebarToggle={onSidebarToggle} projectId={projectId}/>;
 }

@@ -1,11 +1,12 @@
-import ChatbotPage from '@/components/Dashboard/ChatbotPage';
+import ChatbotPage from '@/components/Dashboard/Chatbot/ChatbotPage';
 
 interface ChatbotPageProps {
   sidebarHidden?: boolean;
   onSidebarToggle?: () => void;
+  projectId?: string;
 }
 
-export default function DashboardChatbot({ sidebarHidden, onSidebarToggle }: ChatbotPageProps) {
-  return <ChatbotPage sidebarHidden={sidebarHidden} onSidebarToggle={onSidebarToggle}/>;
+export default function DashboardChatbot({ sidebarHidden, onSidebarToggle, projectId }: ChatbotPageProps) {
+  return <ChatbotPage key={projectId} sidebarHidden={sidebarHidden} onSidebarToggle={onSidebarToggle} projectId={projectId}/>;
 }
 

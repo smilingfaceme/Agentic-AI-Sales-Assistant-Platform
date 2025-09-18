@@ -29,7 +29,7 @@ type DashboardSidebarProps = {
 
 export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden, onToggle, onProductSelect }: DashboardSidebarProps) {
   const router = useRouter();
-  type Org = { name: string; project_id: string; [key: string]: unknown };
+  type Org = { name: string; project_id: string;[key: string]: unknown };
   const [projects, setProjects] = React.useState<Org[]>([]);
   const [selectedOrg, setSelectedOrg] = React.useState<Org>({ name: "", project_id: "" });
   const [orgDropdownOpen, setOrgDropdownOpen] = React.useState(false);
@@ -53,7 +53,9 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
           router.push("/dashboard/new-project")
         } else {
           setProjects(data.projects);
-          setSelectedOrg(data.projects[0] || "");
+          if (selectedOrg.name == "") {
+            setSelectedOrg(data.projects[0] || { name: "", project_id: "" });
+          }
           if (onProductSelect) {
             onProductSelect(data.projects[0].project_id);
           }

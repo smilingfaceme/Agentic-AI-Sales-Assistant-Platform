@@ -9,6 +9,10 @@ export interface TableProps {
 // Next.js + Tailwind only, idiomatic functional component
 const Table = ({ headers, data }: TableProps) => {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [sortConfig, setSortConfig] = useState<{
+    key: string | null;
+    direction: "asc" | "desc";
+  }>({ key: null, direction: "asc" });
 
   // Select row handler
   const handleSelectRow = (idx: number) => {
@@ -25,6 +29,37 @@ const Table = ({ headers, data }: TableProps) => {
       setSelectedRows(data.map((_, idx) => idx));
     }
   };
+
+  // Sort handler
+  const handleSort = (header: string) => {
+    setSortConfig((prev) => {
+      if (prev.key === header) {
+        return {
+          key: header,
+          direction: prev.direction === "asc" ? "desc" : "asc",
+        };
+      }
+      return { key: header, direction: "asc" };
+    });
+  };
+
+  // Sorted data
+  const sortedData = [...data].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+    const valueA = a[sortConfig.key];
+    const valueB = b[sortConfig.key];
+
+    if (valueA === null || valueA === undefined) return 1;
+    if (valueB === null || valueB === undefined) return -1;
+
+    if (typeof valueA === "number" && typeof valueB === "number") {
+      return sortConfig.direction === "asc" ? valueA - valueB : valueB - valueA;
+    }
+
+    return sortConfig.direction === "asc"
+      ? String(valueA).localeCompare(String(valueB))
+      : String(valueB).localeCompare(String(valueA));
+  });
 
   return (
     <div className="overflow-x-auto shadow rounded-lg">
@@ -43,23 +78,37 @@ const Table = ({ headers, data }: TableProps) => {
             {headers.map((header) => (
               <th
                 key={header}
-                className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                onClick={() => handleSort(header)}
+                className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer select-none"
               >
-                {header}
+                <div className="flex items-center gap-1">
+                  {header}
+                  {sortConfig.key === header && (
+                    <span>
+                      {sortConfig.direction === "asc" ? "▲" : "▼"}
+                    </span>
+                  )}
+                </div>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {data.length === 0 ? (
+          {sortedData.length === 0 ? (
             <tr>
-              <td colSpan={headers.length + 1} className="px-4 py-4 text-center text-gray-500">
+              <td
+                colSpan={headers.length + 1}
+                className="px-4 py-4 text-center text-gray-500"
+              >
                 No data available
               </td>
             </tr>
           ) : (
-            data.map((row, idx) => (
-              <tr key={idx} className="hover:bg-gray-50 border-b border-gray-200">
+            sortedData.map((row, idx) => (
+              <tr
+                key={idx}
+                className="hover:bg-gray-50 border-b border-gray-200"
+              >
                 <td className="px-4 py-2 text-center">
                   <input
                     type="checkbox"
@@ -70,8 +119,11 @@ const Table = ({ headers, data }: TableProps) => {
                   />
                 </td>
                 {headers.map((header) => (
-                  <td key={header} className="px-4 py-2 text-sm text-gray-600">
-                    {row[header] !== undefined ? row[header] : ""}
+                  <td
+                    key={header}
+                    className="px-4 py-2 text-sm text-gray-600"
+                  >
+                    {row[header] !== undefined ? String(row[header]) : ""}
                   </td>
                 ))}
               </tr>

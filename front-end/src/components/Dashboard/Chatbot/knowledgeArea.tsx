@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
-import { FaSyncAlt, FaCloudUploadAlt } from "react-icons/fa";
-import Table from "@/components/Table";
+import { useState, useEffect, useCallback } from "react";
+import { FaSyncAlt, FaCloudUploadAlt, FaEdit, FaTrash } from "react-icons/fa";
+import Table, { TableAction } from "@/components/Table";
 import { apiRequest } from "@/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000/api";
@@ -28,13 +28,41 @@ interface ChatbotPageProps {
   projectId?: string;
 }
 
+function encodeForQuery(value: string) {
+  // encodeURIComponent is appropriate for query values
+  return encodeURIComponent(String(value));
+}
+
+function encodePathSegment(segment: string) {
+  return encodeURIComponent(String(segment)).replace(/%2F/g, '/');
+}
+
+const encodeFullUrl = (urlLike: string) => {
+  try {
+    // If it's already a valid URL, return a normalized version
+    const u = new URL(urlLike);
+    // encode path segments and query items to be extra-safe
+    u.pathname = u.pathname.split('/').map(encodePathSegment).join('/');
+    if (u.search) {
+      // preserve existing query keys, but encode values
+      const params = new URLSearchParams(u.search);
+      for (const [k, v] of params) params.set(k, encodeForQuery(v));
+      u.search = params.toString() ? `?${params.toString()}` : '';
+    }
+    return u.toString();
+  } catch (err) {
+    // Not a full URL — percent-encode the whole string
+    return encodeURI(String(urlLike));
+  }
+}
+
 export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
-  const [knowledgeList, setKnowledgeList] = useState<Record<string, string>[]>([]);
+  const [knowledgeList, setKnowledgeList] = useState<Record<string, string | TableAction[]>[]>([]);
   const [tableTitle, setTableTitle] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [file, setFile] = useState<File | null>(null);
 
-  const fetchKnowledgeFileList = async () => {
+  const fetchKnowledgeFileList = useCallback(async () => {
     try {
       const res = await apiRequest(
         `${API_BASE}/knowledge/list?project_id=${projectId}`,
@@ -57,7 +85,24 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
             Type: item.metadata.mimetype,
             "Created on": item.created_at,
             "Modified on": item.updated_at,
-            Actions: "Edit/Delete",
+            Actions: [
+              {
+                label: "View",
+                onClick: () => {
+                  window.open(`https://riadihsvlxqrrbfnywly.supabase.co/storage/v1/object/public/knowledges/${projectId}/${encodeFullUrl(item.name)}`, "_blank") // Opens in a new tab/window
+                },
+                className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors",
+                icon: <FaEdit />
+              },
+              {
+                label: "Delete",
+                onClick: async () => {
+                  await handleDelete(item.name);
+                },
+                className: "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors",
+                icon: <FaTrash />
+              }
+            ] as TableAction[],
           }));
 
         setKnowledgeList(filtered);
@@ -66,7 +111,7 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
     } catch (err) {
       console.error("Error fetching knowledge list:", err);
     }
-  };
+  }, [projectId]);
 
   const handleUpload = async () => {
     if (!file) {
@@ -101,9 +146,33 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
     }
   };
 
+  const handleDelete = async (fileName: string) => {
+    try {
+      const res = await apiRequest(
+        `${API_BASE}/knowledge/remove`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            project_id: projectId,
+            file_name: fileName
+          })
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to fetch knowledge files");
+
+      await fetchKnowledgeFileList()
+    } catch (err) {
+      console.error("Error fetching knowledge list:", err);
+    }
+  }
+
   useEffect(() => {
     if (projectId) fetchKnowledgeFileList();
-  }, [projectId]);
+  }, [projectId, fetchKnowledgeFileList]);
 
   return (
     <section className="flex-1 flex flex-col bg-white w-full p-6">

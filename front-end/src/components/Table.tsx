@@ -1,13 +1,21 @@
 "use client";
 import { useState } from "react";
 
+export interface TableAction {
+  label: string;
+  onClick: (rowData: Record<string, string | number | boolean | null | undefined | TableAction[]>, rowIndex: number) => void;
+  className?: string;
+  icon?: React.ReactNode;
+}
+
 export interface TableProps {
   headers: string[];
-  data: Array<Record<string, string | number | boolean | null | undefined>>;
+  data: Array<Record<string, string | number | boolean | null | undefined | TableAction[]>>;
+  actionColumnKey?: string; // The key in data that contains actions
 }
 
 // Next.js + Tailwind only, idiomatic functional component
-const Table = ({ headers, data }: TableProps) => {
+const Table = ({ headers, data, actionColumnKey = "Actions" }: TableProps) => {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
@@ -123,7 +131,23 @@ const Table = ({ headers, data }: TableProps) => {
                     key={header}
                     className="px-4 py-2 text-sm text-gray-600"
                   >
-                    {row[header] !== undefined ? String(row[header]) : ""}
+                    {header === actionColumnKey && Array.isArray(row[header]) ? (
+                      <div className="flex gap-2">
+                        {(row[header] as TableAction[]).map((action, actionIdx) => (
+                          <button
+                            key={actionIdx}
+                            onClick={() => action.onClick(row, idx)}
+                            className={action.className || "px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"}
+                            title={action.label}
+                          >
+                            {action.icon && <span className="mr-1">{action.icon}</span>}
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      row[header] !== undefined ? String(row[header]) : ""
+                    )}
                   </td>
                 ))}
               </tr>

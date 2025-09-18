@@ -71,6 +71,10 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
     }
   };
 
+  const logout = async () => {
+    localStorage.clear();
+    router.push("/")
+  }
   // Fetch projects on mount
   React.useEffect(() => {
     fetchProjects();
@@ -105,7 +109,7 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
               {orgDropdownOpen ? <FaChevronDown className="ml-2 text-gray-500" /> : <FaChevronLeft className="ml-2 text-gray-500" />}
             </button>
             {orgDropdownOpen && (
-              <div className="absolute left-0 mt-2 w-45 bg-white border border-gray-200 rounded shadow-lg z-50">
+              <div className="absolute left-0 mt-2 bg-white border border-gray-200 rounded shadow-lg z-50">
                 {loading && <div className="px-4 py-2 text-gray-400">Loading...</div>}
                 {error && <div className="px-4 py-2 text-red-500">{error}</div>}
                 {!loading && !error && projects.map((org) => (
@@ -130,7 +134,7 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
                     window.location.href = "/dashboard/new-project";
                   }}
                 >
-                  + New Organization
+                  + New Project
                 </div>
               </div>
             )}
@@ -156,20 +160,30 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
       </nav>
       {/* Utility Items */}
       <div className={`pb-4 ${hidden ? "flex flex-col items-center" : "ml-5"}`}>
-        {utilityItems.map((item) => (
-          <button
-            key={item.activeKey}
-            className={
-              hidden
-                ? `flex items-center justify-center w-10 h-10 mb-2 rounded-lg transition-colors text-gray-900 hover:bg-gray-100`
-                : `flex items-center w-full px-3 py-2 mb-2 rounded transition-colors text-left text-gray-900 hover:bg-gray-100`
-            }
-            onClick={() => onNav && onNav(item.activeKey)}
-          >
-            <span className={hidden ? "text-xl" : "mr-3 text-lg"}>{item.icon}</span>
-            {!hidden && item.label}
-          </button>
-        ))}
+        <button
+          key="help"
+          className={
+            hidden
+              ? `flex items-center justify-center w-10 h-10 mb-2 rounded-lg transition-colors text-gray-900 hover:bg-gray-100`
+              : `flex items-center w-full px-3 py-2 mb-2 rounded transition-colors text-left text-gray-900 hover:bg-gray-100`
+          }
+          onClick={() => onNav && onNav("help")}
+        >
+          <span className={hidden ? "text-xl" : "mr-3 text-lg"}><FaHeadset /></span>
+          {!hidden && "Help & Support"}
+        </button>
+        <button
+          key="logout"
+          className={
+            hidden
+              ? `flex items-center justify-center w-10 h-10 mb-2 rounded-lg transition-colors text-gray-900 hover:bg-gray-100`
+              : `flex items-center w-full px-3 py-2 mb-2 rounded transition-colors text-left text-gray-900 hover:bg-gray-100`
+          }
+          onClick={logout}
+        >
+          <span className={hidden ? "text-xl" : "mr-3 text-lg"}><FaSignOutAlt /></span>
+          {!hidden && "Logout"}
+        </button>
       </div>
       {/* Footer */}
       <div className={`flex items-center justify-center py-2 border-t border-gray-200 ${hidden ? "" : "ml-5"}`}>

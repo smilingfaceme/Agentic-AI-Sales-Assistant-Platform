@@ -1,5 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -7,18 +9,30 @@ import compression from 'compression';
 import morgan from 'morgan';
 import { createHttpTerminator } from 'http-terminator';
 
-// Load environment variables first
-dotenv.config();
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Import routes
+// Load environment variables with explicit path
+const envPath = path.join(__dirname, '..', '.env');
+console.log(envPath)
+const result = dotenv.config({ path: envPath });
+
+if (result.error) {
+  console.error('❌ Error loading .env file:', result.error);
+  console.log('📁 Looking for .env at:', envPath);
+  process.exit(1);
+}
+
+console.log(`✅ Loaded ${Object.keys(result.parsed || {}).length} environment variables`);
+
+// Import routes and middleware after env is loaded
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
 import conversationRoutes from './routes/conversation.js';
 import chatsRoutes from './routes/chat.js';
 import projectRoutes from './routes/project.js';
 import knowledgeRoutes from './routes/knowledge.js';
-
-// Import middleware
 import errorHandler from './middleware/errorHandler.js';
 import { validateEnv } from './utils/validateEnv.js';
 

@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { getFileListByProjectId, uploadFileByProjectId } from '../controllers/knowledgeController.js';
+import { getFileListByProjectId, uploadFileByProjectId, removeFileByProjectId } from '../controllers/knowledgeController.js';
 import checkToken from '../middleware/checkToken.js';
 
 const router = express.Router();
@@ -15,5 +15,8 @@ router.get('/list', checkToken, getFileListByProjectId);
 
 // POST /knowledge/upload?project_id=...
 router.post('/upload', checkToken, upload.single('file'), uploadFileByProjectId);
+
+// POST /knowledge/upload?project_id=...
+router.delete('/remove', checkToken, upload.single('file'), removeFileByProjectId);
 
 export default router;

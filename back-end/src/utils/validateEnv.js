@@ -2,7 +2,9 @@ export const validateEnv = () => {
   const requiredEnvVars = [
     'SUPABASE_URL',
     'SUPABASE_KEY',
-    'JWT_SECRET'
+    'JWT_SECRET',
+    'PORT',
+    'NODE_ENV'
   ];
 
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -12,6 +14,7 @@ export const validateEnv = () => {
     missingVars.forEach(varName => {
       console.error(`   - ${varName}`);
     });
+    console.error('\n💡 Please check your .env file exists and contains all required variables');
     process.exit(1);
   }
 
@@ -21,5 +24,12 @@ export const validateEnv = () => {
     process.exit(1);
   }
 
+  // Validate Supabase URL format
+  if (process.env.SUPABASE_URL && !process.env.SUPABASE_URL.startsWith('https://')) {
+    console.error('❌ SUPABASE_URL must be a valid HTTPS URL');
+    process.exit(1);
+  }
+
   console.log('✅ Environment variables validated successfully');
+  console.log(`🌍 Running in ${process.env.NODE_ENV} mode on port ${process.env.PORT}`);
 };

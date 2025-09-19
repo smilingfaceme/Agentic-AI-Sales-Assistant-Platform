@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { FaRobot, FaBook, FaRegComment, FaRegHandPointRight} from "react-icons/fa";
 import KnowledgeArea from "@/components/Dashboard/Chatbot/knowledgeArea"
+import UnansweredQuestionArea from '@/components/Dashboard/Chatbot/unansweredArea'
 
 interface ChatbotPageProps {
   sidebarHidden?: boolean;
@@ -14,10 +15,6 @@ export default function ChatbotPage({ sidebarHidden, onSidebarToggle, projectId 
   const [active, setActive] = useState<string>("All");
   const [tableTitlte, setTableTitlte] = useState("")
 
-  const handleUnansweredButtonEvent = async () => {
-    setActive('Unanswered')
-    setTableTitlte("Unanswered Questions")
-  }
   return (
     <div className="flex flex-col h-screen w-full bg-[#fafbfc]">
       {/* Header */}
@@ -46,7 +43,10 @@ export default function ChatbotPage({ sidebarHidden, onSidebarToggle, projectId 
           </button>
           <button
             className={`flex items-center px-4 py-2 rounded ${active == 'Unanswered' ? 'font-semibold bg-gray-100' : 'hover:bg-gray-50'}`}
-            onClick={handleUnansweredButtonEvent}
+            onClick={() => {
+              setActive('Unanswered');
+              setTableTitlte("Unanswered Questions");
+            }}
           >
             <FaRegComment />
             <span className="pl-2">Unanswered Questions</span>
@@ -61,6 +61,7 @@ export default function ChatbotPage({ sidebarHidden, onSidebarToggle, projectId 
         </aside>
         {/* Right table */}
         {active == 'Knowledge' && <KnowledgeArea key={tableTitlte} projectId={projectId}/>}
+        {active == 'Unanswered' && <UnansweredQuestionArea key={tableTitlte} projectId={projectId}/>}
       </main>
     </div>
   );

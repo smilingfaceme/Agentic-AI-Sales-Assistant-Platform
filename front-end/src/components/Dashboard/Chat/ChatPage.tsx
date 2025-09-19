@@ -1,12 +1,11 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { FaComments, FaWhatsapp, FaGlobe, FaRedo } from "react-icons/fa";
-import ChatArea from "@/components/Dashboard/ChatArea";
+import ChatArea from "@/components/Dashboard/Chat/ChatArea";
 import LoadingWrapper from "@/components/LoadingWrapper";
 import { useApiCall } from "@/hooks/useApiCall";
 
 import { apiRequest } from "@/utils";
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000/api';
 
 type NotifyKey = 'All' | 'Unassigned' | 'WhatsApp' | 'Test';
 
@@ -60,7 +59,7 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
 
   const fetchConversations = useCallback(async () => {
     const result = await execute(async () => {
-      const res = await apiRequest(`${API_BASE}/conversation?project_id=${projectId}`, {
+      const res = await apiRequest(`/conversation?project_id=${projectId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +128,7 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
       </header>
 
       {/* Main content: 2 columns, responsive */}
-      <main className="flex flex-1 h-full flex-col md:flex-row">
+      <main className="flex flex-1 h-full flex-col md:flex-row overflow-hidden">
         {/* Left sidebar - collapses on mobile */}
         <aside className="w-full md:w-100 min-w-[220px] border-r border-gray-300 bg-white flex flex-col md:block md:flex">
           {/* Filter Navbar */}

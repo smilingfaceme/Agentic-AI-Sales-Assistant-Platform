@@ -3,12 +3,11 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { FaBuilding, FaChevronDown, FaChevronLeft, FaComments, FaBroadcastTower, FaRobot, FaProjectDiagram, FaHeadset, FaSignOutAlt, FaHeart } from "react-icons/fa";
 import { apiRequest } from "@/utils";
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000/api';
 
 const navItems = [
   { label: "Chats", icon: <FaComments />, activeKey: "chats" },
   { label: "Chatbot", icon: <FaRobot />, activeKey: "chatbot" },
-  { label: "Workflows", icon: <FaProjectDiagram />, activeKey: "workflows" },
+  // { label: "Workflows", icon: <FaProjectDiagram />, activeKey: "workflows" },
   // { label: "WA Bulk Msgs", icon: <FaLink />, activeKey: "wa-bulk", },
   { label: "Go live", icon: <FaBroadcastTower />, activeKey: "go-live" },
 ];
@@ -42,7 +41,7 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
     setLoading(true);
     setError("");
     try {
-      const res = await apiRequest(`${API_BASE}/project/get`, {
+      const res = await apiRequest(`/project/get`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -56,9 +55,9 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
           setProjects(data.projects);
           if (selectedOrg.name == "") {
             setSelectedOrg(data.projects[0] || { name: "", project_id: "" });
-          }
-          if (onProductSelect) {
-            onProductSelect(data.projects[0].project_id);
+            if (onProductSelect) {
+              onProductSelect(data.projects[0].project_id);
+            }
           }
         }
 
@@ -92,11 +91,26 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
     >
       {/* Header / Organization */}
       <div className={`flex items-center border-b border-gray-300 ${hidden ? "justify-center p-4 pt-3" : "p-4 pt-2 pl-8"}`}>
-        <span onClick={onToggle} title={hidden ? "Show sidebar" : "Hide sidebar"} className="cursor-pointer">
-          <FaBuilding className="text-xl" />
-        </span>
+        <div className={`flex items-center gap-4 ${!hidden ? "w-full" : ""}`}>
+          <span onClick={onToggle} title={hidden ? "Show sidebar" : "Hide sidebar"} className="cursor-pointer">
+            <FaBuilding className="text-xl" />
+          </span>
+          {!hidden && (
+            <button
+              className="text-md w-full flex items-center focus:outline-none w-full"
+              onClick={async () => {
+                setOrgDropdownOpen((open) => !open);
+                if (!orgDropdownOpen) {
+                  await fetchProjects();
+                }
+              }}
+            >
+              {selectedOrg.name || "Loading..."}
+            </button>
+          )}
+        </div>
         {!hidden && (
-          <div className="relative ml-2">
+          <div>
             <button
               className="text-md flex items-center focus:outline-none"
               onClick={async () => {
@@ -106,39 +120,8 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
                 }
               }}
             >
-              {selectedOrg.name || "Loading..."}
               {orgDropdownOpen ? <FaChevronDown className="ml-2 text-gray-500" /> : <FaChevronLeft className="ml-2 text-gray-500" />}
             </button>
-            {orgDropdownOpen && (
-              <div className="absolute left-0 mt-2 bg-white border border-gray-200 rounded shadow-lg z-50">
-                {loading && <div className="px-4 py-2 text-gray-400">Loading...</div>}
-                {error && <div className="px-4 py-2 text-red-500">{error}</div>}
-                {!loading && !error && projects.map((org) => (
-                  <div
-                    key={org.name}
-                    className={`px-4 py-2 cursor-pointer hover:bg-gray-100 ${org === selectedOrg ? "bg-blue-50" : ""}`}
-                    onClick={() => {
-                      setSelectedOrg(org);
-                      setOrgDropdownOpen(false);
-                      if (onProductSelect) {
-                        onProductSelect(org.project_id);
-                      }
-                    }}
-                  >
-                    {org.name}
-                  </div>
-                ))}
-                <div
-                  className="px-4 py-2 cursor-pointer text-blue-600 hover:bg-blue-50 border-t border-gray-100 font-medium"
-                  onClick={() => {
-                    setOrgDropdownOpen(false);
-                    window.location.href = "/dashboard/new-project";
-                  }}
-                >
-                  + New Project
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -191,6 +174,43 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
         <FaHeart className="text-red-400 mr-2" />
         {!hidden && <span className="text-xs text-gray-400">Made with love</span>}
       </div>
+
+      {!hidden && (
+        <>
+          {orgDropdownOpen && (
+            <div className="fixed inset-0" onClick={() => { setOrgDropdownOpen(false) }}>
+              <div className="bg-white border border-gray-200 rounded-lg shadow-lg z-50 absolute" style={{ width: '215px', marginLeft: '40px', marginTop: '60px' }}>
+                {loading && <div className="px-4 py-2 text-gray-400">Loading...</div>}
+                {error && <div className="px-4 py-2 text-red-500">{error}</div>}
+                {!loading && !error && projects.map((org) => (
+                  <div
+                    key={org.name}
+                    className={`px-4 py-2 cursor-pointer hover:bg-gray-100 ${org === selectedOrg ? "bg-blue-50" : ""}`}
+                    onClick={() => {
+                      setSelectedOrg(org);
+                      setOrgDropdownOpen(false);
+                      if (onProductSelect) {
+                        onProductSelect(org.project_id);
+                      }
+                    }}
+                  >
+                    {org.name}
+                  </div>
+                ))}
+                <div
+                  className="px-4 py-2 cursor-pointer text-blue-600 hover:bg-gray-50 border-t border-gray-100 font-medium"
+                  onClick={() => {
+                    setOrgDropdownOpen(false);
+                    window.location.href = "/dashboard/new-project";
+                  }}
+                >
+                  + New Project
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </aside>
   );
 }

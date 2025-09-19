@@ -15,7 +15,7 @@ type DashboardData = {
 
 export default function DashboardPage() {
   const [sidebarHidden, setSidebarHidden] = useState(false);
-  const [activeKey, setActiveKey] = useState('wa-bulk');
+  const [activeKey, setActiveKey] = useState('chats');
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

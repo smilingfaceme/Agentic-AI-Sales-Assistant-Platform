@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/utils";
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000/api';
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -20,7 +19,7 @@ export default function NewProjectPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await apiRequest(`${API_BASE}/project/create`, {
+      const res = await apiRequest(`/project/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

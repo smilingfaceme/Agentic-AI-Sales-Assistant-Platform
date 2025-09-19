@@ -1,6 +1,7 @@
 
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+console.log('API_BASE from env:', API_BASE);
 
 // Helper to get token from localStorage
 function getToken() {
@@ -17,7 +18,7 @@ export async function apiRequest(input: RequestInfo, init: RequestInit = {}) {
     ...(init.headers || {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
-  const res = await fetch(input, { ...init, headers });
+  const res = await fetch(`${API_BASE}${input}`, { ...init, headers });
   if (res.status === 401 || res.status === 403) {
     if (typeof window !== 'undefined') {
       window.location.href = '/auth/login';
@@ -49,6 +50,6 @@ export async function register(name: string, email: string, password: string) {
 
 
 export async function getDashboardData() {
-  const res = await apiRequest(`${API_BASE}/dashboard`);
+  const res = await apiRequest(`/dashboard`);
   return res.json();
 }

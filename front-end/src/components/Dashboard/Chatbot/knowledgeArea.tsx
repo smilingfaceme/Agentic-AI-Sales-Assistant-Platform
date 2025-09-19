@@ -7,8 +7,6 @@ import LoadingWrapper from "@/components/LoadingWrapper";
 import Loading from "@/components/Loading";
 import { useApiCall } from "@/hooks/useApiCall";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000/api";
-
 const tableHeaders = [
   "Title & Description",
   "Type",
@@ -73,7 +71,7 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
   const fetchKnowledgeFileList = useCallback(async () => {
     const result = await executeListAsync(async () => {
       const res = await apiRequest(
-        `${API_BASE}/knowledge/list?project_id=${projectId}`,
+        `/knowledge/list?project_id=${projectId}`,
         {
           method: "GET",
           headers: {
@@ -110,7 +108,7 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
               onClick: async () => {
                 const result = await executeDeleteAsync(async () => {
                   const res = await apiRequest(
-                    `${API_BASE}/knowledge/remove`,
+                    `/knowledge/remove`,
                     {
                       method: "DELETE",
                       headers: {
@@ -155,7 +153,7 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
       const formData = new FormData();
       console.log(file)
       formData.append("file", file);
-      const res = await apiRequest(`${API_BASE}/knowledge/upload?project_id=${projectId}`, {
+      const res = await apiRequest(`/knowledge/upload?project_id=${projectId}`, {
         method: "POST",
         body: formData, // FormData automatically sets headers
       });
@@ -221,52 +219,53 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
       </LoadingWrapper>
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-[#00000096] flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            {/* Header */}
-            <div className="border-b border-gray-300 px-4 py-3 font-semibold text-lg">
-              Add new knowledge document
-            </div>
+      <div
+        className={`fixed inset-0 bg-[#00000096] flex items-center justify-center z-50 transition-opacity duration-500 ${showModal ? "opacity-100 visible" : "opacity-0 invisible"}`}
+        onClick={() => setShowModal(false)}
+      >
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+          {/* Header */}
+          <div className="border-b border-gray-300 px-4 py-3 font-semibold text-lg">
+            Add new knowledge document
+          </div>
 
-            {/* Main */}
-            <div className="p-4 h-50 items-center flex flex-col">
-              <FaCloudUploadAlt size={100} color="gray" title="Choose File" />
-              <input
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="w-full border border-gray-300 rounded p-2"
-                disabled={isUploading}
-              />
-              {uploadError && (
-                <div className="mt-2 text-red-500 text-sm text-center">
-                  {uploadError}
-                </div>
-              )}
-            </div>
+          {/* Main */}
+          <div className="p-4 h-50 items-center flex flex-col">
+            <FaCloudUploadAlt size={100} color="gray" title="Choose File" />
+            <input
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="w-full border border-gray-300 rounded p-2"
+              disabled={isUploading}
+            />
+            {uploadError && (
+              <div className="mt-2 text-red-500 text-sm text-center">
+                {uploadError}
+              </div>
+            )}
+          </div>
 
-            {/* Footer */}
-            <div className="border-t border-gray-300 px-4 py-3 flex justify-between">
-              <button
-                className="px-4 py-1 rounded border border-gray-400 hover:bg-gray-100 disabled:opacity-50"
-                onClick={() => setShowModal(false)}
-                disabled={isUploading}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-1 rounded bg-black text-white hover:bg-gray-700 disabled:opacity-50"
-                onClick={handleUpload}
-                disabled={isUploading}
-              >
-                <Loading isLoading={isUploading} type="button" text="Uploading..." theme="dark">
-                  Upload
-                </Loading>
-              </button>
-            </div>
+          {/* Footer */}
+          <div className="border-t border-gray-300 px-4 py-3 flex justify-between">
+            <button
+              className="px-4 py-1 rounded border border-gray-400 hover:bg-gray-100 disabled:opacity-50"
+              onClick={() => setShowModal(false)}
+              disabled={isUploading}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-1 rounded bg-black text-white hover:bg-gray-700 disabled:opacity-50"
+              onClick={handleUpload}
+              disabled={isUploading}
+            >
+              <Loading isLoading={isUploading} type="button" text="Uploading..." theme="dark">
+                Upload
+              </Loading>
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </section>
   );
 }

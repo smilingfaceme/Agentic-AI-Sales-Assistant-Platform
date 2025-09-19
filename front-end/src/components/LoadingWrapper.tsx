@@ -22,7 +22,7 @@ interface LoadingWrapperProps extends Omit<LoadingProps, 'isLoading'> {
 const LoadingWrapper: React.FC<LoadingWrapperProps> = ({
   isLoading,
   error,
-  showError = true,
+  showError = false,
   errorComponent,
   children,
   minLoadingTime = 0,

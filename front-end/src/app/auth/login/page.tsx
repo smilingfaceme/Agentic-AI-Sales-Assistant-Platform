@@ -77,7 +77,7 @@ export default function LoginPage() {
           {error && <div className="text-red-500 text-sm">{error}</div>}
           <button
             type="submit"
-            className="w-full py-3 mt-2 rounded-lg bg-black text-white font-bold shadow-none hover:bg-gray-300 hover:text-black hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white transition-all disabled:opacity-50"
+            className="w-full py-3 mt-2 rounded-lg bg-black text-white font-bold hover:bg-gray-300 hover:text-black focus:outline-none focus:ring-2 focus:ring-white transition-all disabled:opacity-50"
             disabled={loading}
           >
             <Loading isLoading={loading} type="button" text="Logging in..." theme="dark">

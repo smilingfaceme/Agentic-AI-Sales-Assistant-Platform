@@ -8,7 +8,7 @@ export default function Home() {
       {/* Fixed Header */}
       {/* Use Navbar component for header */}
       <Navbar />
-      
+
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center pt-20 pb-16 px-4 sm:px-6 lg:px-8">
         {/* Hero Section */}
@@ -76,17 +76,19 @@ export default function Home() {
         <section className="w-full mb-16 max-w-6xl mx-auto px-2 sm:px-4">
           <h2 className="text-2xl sm:text-3xl font-extrabold mb-8 text-gray-900">Upcoming Features</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-gray-50 p-3 rounded-xl shadow flex flex-col items-center text-center hover:shadow-md transition">
+            <div className="bg-gray-50 p-6 rounded-xl shadow flex flex-col items-center text-center hover:shadow-md transition">
               <Image src="/upcoming_feature_1.png" alt="Conversational AI forms" width={500} height={600} className="w-full max-w-3xl h-auto rounded-xl shadow-lg" />
+              <h3 className="text-base md:text-lg font-semibold mb-2 mt-2 text-gray-900">Conversational AI Forms</h3>
+              <p className="text-gray-800">Capture leads through natural chat Instead of long static forms.</p>
             </div>
             <div className="bg-gray-50 p-6 rounded-xl shadow flex flex-col items-center text-center hover:shadow-md transition">
-              <Image src="/api.svg" alt="API Agent" width={64} height={64} className="h-16 mb-3" />
-              <h3 className="text-base md:text-lg font-semibold mb-2 text-gray-900">API Agent</h3>
+              <Image src="/upcoming_feature_2.png" alt="Conversational AI forms" width={500} height={600} className="w-full max-w-3xl h-auto rounded-xl shadow-lg" />
+              <h3 className="text-base md:text-lg font-semibold mb-2 mt-2 text-gray-900">API Agent</h3>
               <p className="text-gray-800">Fetch user-specific data with APIs and deliver personalized responses.</p>
             </div>
             <div className="bg-gray-50 p-6 rounded-xl shadow flex flex-col items-center text-center hover:shadow-md transition">
-              <Image src="/ticket.svg" alt="Support tickets" width={64} height={64} className="h-16 mb-3" />
-              <h3 className="text-base md:text-lg font-semibold mb-2 text-gray-900">Smart Tickets</h3>
+              <Image src="/upcoming_feature_3.jpeg" alt="Conversational forms" width={500} height={600} className="w-full max-w-3xl h-auto rounded-xl shadow-lg" />
+              <h3 className="text-base md:text-lg font-semibold mb-2 mt-2 text-gray-900">Smart Tickets</h3>
               <p className="text-gray-800">Create tickets for unsolved queries and auto-update users when resolved.</p>
             </div>
           </div>

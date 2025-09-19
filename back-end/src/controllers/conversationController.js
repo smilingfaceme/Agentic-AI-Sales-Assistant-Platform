@@ -18,3 +18,17 @@ export async function getConversationsByProductId(req, res) {
 
   return res.status(200).json({ conversations: data });
 }
+
+// Fetch all unanswered questions
+export async function getUnansweredQuestions(req, res) {
+
+  const { data, error } = await supabase
+    .rpc('get_last_unanswered_messages')
+
+  if (error) {
+    console.error('Error fetching last unanswered messages:', error)
+    return []
+  }
+
+  return res.status(200).json({ messages: data });
+}

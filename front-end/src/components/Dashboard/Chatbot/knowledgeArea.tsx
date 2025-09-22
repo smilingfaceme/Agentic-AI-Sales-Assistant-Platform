@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { FaSyncAlt, FaCloudUploadAlt, FaEdit, FaTrash } from "react-icons/fa";
 import Table, { TableAction } from "@/components/Table";
-import { apiRequest } from "@/utils";
+import { apiRequest, SUPABASE_URL } from "@/utils";
 import LoadingWrapper from "@/components/LoadingWrapper";
 import Loading from "@/components/Loading";
 import { useApiCall } from "@/hooks/useApiCall";
@@ -98,7 +98,7 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
             {
               label: "View",
               onClick: () => {
-                window.open(`https://riadihsvlxqrrbfnywly.supabase.co/storage/v1/object/public/knowledges/${projectId}/${encodeFullUrl(item.name)}`, "_blank") // Opens in a new tab/window
+                window.open(`${SUPABASE_URL}/storage/v1/object/public/knowledges/${projectId}/${encodeFullUrl(item.name)}`, "_blank") // Opens in a new tab/window
               },
               className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors",
               icon: <FaEdit />
@@ -223,7 +223,7 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
         className={`fixed inset-0 bg-[#00000096] flex items-center justify-center z-50 transition-opacity duration-500 ${showModal ? "opacity-100 visible" : "opacity-0 invisible"}`}
         onClick={() => setShowModal(false)}
       >
-        <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-md" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
           <div className="border-b border-gray-300 px-4 py-3 font-semibold text-lg">
             Add new knowledge document

@@ -41,23 +41,11 @@ export default function UnansweredQuestionArea({ projectId }: UnansweredQuestion
   const [showModal, setShowModal] = useState(false);
   // Loading states for different operations
   const { isLoading: isLoadingList, error: listError, execute: executeListAsync } = useApiCall();
-  const { execute: executeDeleteAsync } = useApiCall();
-
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    if (showModal) {
-      setIsVisible(true); // mount + play enter animation
-    } else {
-      const timer = setTimeout(() => setIsVisible(false), 500); // wait for exit animation
-      return () => clearTimeout(timer);
-    }
-  }, [showModal]);
 
   const fetchUnansweredQuestionList = useCallback(async () => {
     const result = await executeListAsync(async () => {
       const res = await apiRequest(
-        `/conversation/unanswered`,
+        `/conversation/unanswered?project_id=${projectId}`,
         {
           method: "GET",
           headers: {
@@ -93,7 +81,7 @@ export default function UnansweredQuestionArea({ projectId }: UnansweredQuestion
       setKnowledgeList([]);
       setTableTitle("Unanswered Questions");
     }
-  }, [executeListAsync, executeDeleteAsync]);
+  }, [projectId, executeListAsync]);
 
   useEffect(() => {
     fetchUnansweredQuestionList();

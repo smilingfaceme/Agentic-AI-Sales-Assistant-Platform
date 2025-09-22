@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState } from "react";
 import { apiRequest } from "@/utils";
 import { FaGlobe } from "react-icons/fa";
 import LoadingWrapper from "@/components/LoadingWrapper";
@@ -26,7 +26,7 @@ export default function TestChatbotPage({ projectId }: TestChatbotPageProps) {
   const [conversationId, setConversationId] = useState("");
 
   // Use the API call hook for managing loading states and preventing duplicate requests
-  const { isLoading, error, execute } = useApiCall();
+  const { isLoading, error } = useApiCall();
 
   const sendNewMessage = async (message: string, sender_type: string) => {
     let currentConversationId = conversationId;

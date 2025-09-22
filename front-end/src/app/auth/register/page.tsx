@@ -54,9 +54,10 @@ export default function RegisterPage() {
       setLoading(true);
       try {
         const res = await import("@/utils").then(m => m.register(name, email, password));
-        if (res.user) {
-          setSuccess(true);
-          router.push('/auth/login')
+        if (res.token) {
+          // Save token to localStorage or cookie
+          localStorage.setItem("token", res.token);
+          window.location.href = "/dashboard";
         } else {
           setRegisterError(res.message || "Registration failed");
         }

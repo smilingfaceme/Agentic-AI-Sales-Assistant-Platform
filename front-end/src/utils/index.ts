@@ -1,7 +1,7 @@
 
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-console.log('API_BASE from env:', API_BASE);
+export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 // Helper to get token from localStorage
 function getToken() {

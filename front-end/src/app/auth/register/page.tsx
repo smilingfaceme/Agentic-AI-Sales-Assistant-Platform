@@ -2,8 +2,10 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+  const router = useRouter();
   // State for form fields and validation
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -11,6 +13,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [emailError, setEmailError] = React.useState("");
   const [passwordMatchError, setPasswordMatchError] = React.useState("");
+  const [passwordWeakError, setPasswordWeakError] = React.useState(false);
   const [showWeakPassword, setShowWeakPassword] = React.useState(false);
 
   // Email validation regex
@@ -44,6 +47,7 @@ export default function RegisterPage() {
       valid = false;
     }
     if (!isStrongPassword(password)) {
+      setPasswordWeakError(true)
       valid = false;
     }
     if (valid) {
@@ -52,6 +56,7 @@ export default function RegisterPage() {
         const res = await import("@/utils").then(m => m.register(name, email, password));
         if (res.user) {
           setSuccess(true);
+          router.push('/auth/login')
         } else {
           setRegisterError(res.message || "Registration failed");
         }
@@ -124,7 +129,7 @@ export default function RegisterPage() {
               placeholder="••••••••"
             />
             {showWeakPassword && (
-              <div className="text-gray-500 text-xs mt-1">It would be better if your password is strong (at least 8 characters, with letters and numbers).</div>
+              <div className={`${passwordWeakError ? 'text-red-500' : 'text-gray-500'} text-gray-500 text-xs mt-1`}>It would be better if your password is strong (at least 8 characters, with letters and numbers).</div>
             )}
           </div>
           <div>

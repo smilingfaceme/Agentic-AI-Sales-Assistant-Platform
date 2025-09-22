@@ -3,6 +3,7 @@ import { useState } from "react";
 import { FaRobot, FaBook, FaRegComment, FaRegHandPointRight} from "react-icons/fa";
 import KnowledgeArea from "@/components/Dashboard/Chatbot/knowledgeArea"
 import UnansweredQuestionArea from '@/components/Dashboard/Chatbot/unansweredArea'
+import TestChatbotPage from "../TestChat/TestChatbotPage";
 
 interface ChatbotPageProps {
   sidebarHidden?: boolean;
@@ -62,6 +63,7 @@ export default function ChatbotPage({ sidebarHidden, onSidebarToggle, projectId 
         {/* Right table */}
         {active == 'Knowledge' && <KnowledgeArea key={tableTitlte} projectId={projectId}/>}
         {active == 'Unanswered' && <UnansweredQuestionArea key={tableTitlte} projectId={projectId}/>}
+        {active == 'Test' && <TestChatbotPage projectId={projectId}/>}
       </main>
     </div>
   );

@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { getDashboardData } from '@/utils';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
-import DashboardChat from '@/app/dashboard/chat/page';
-import DashboardChatbot from '@/app/dashboard/chatbot/page';
-import DashboardGoLive from '@/app/dashboard/golive/page';
+import ChatPage from '@/components/Dashboard/Chat/ChatPage';
+import ChatbotPage from '@/components/Dashboard/Chatbot/ChatbotPage';
+import GoLivePage from '@/components/Dashboard/GolivePage';
 
 type DashboardData = {
   usersCount: number;
@@ -52,15 +52,15 @@ export default function DashboardPage() {
       <main className="flex-1 text-gray-900 h-screen w-full p-0 m-0">
         {activeKey === 'chats' ? (
           <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-            <DashboardChat key={projectId} sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} projectId={projectId} />
+            <ChatPage key={projectId} sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} projectId={projectId} />
           </div>
         ) : activeKey === 'chatbot' ? (
           <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-            <DashboardChatbot key={projectId} sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} projectId={projectId}/>
+            <ChatbotPage key={projectId} sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} projectId={projectId}/>
           </div>
         ) : activeKey === 'go-live' ? (
           <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-            <DashboardGoLive sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
+            <GoLivePage sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
           </div>
         ) : (
           <>

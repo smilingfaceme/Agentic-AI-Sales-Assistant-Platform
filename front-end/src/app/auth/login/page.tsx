@@ -17,6 +17,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await login(email, password);
+      console.log(res)
       if (res.token) {
         // Save token to localStorage or cookie
         localStorage.setItem("token", res.token);
@@ -24,7 +25,8 @@ export default function LoginPage() {
       } else {
         setError(res.message || "Login failed");
       }
-    } catch {
+    } catch (e) {
+      console.log(e)
       setError("Login failed");
     } finally {
       setLoading(false);
@@ -74,7 +76,9 @@ export default function LoginPage() {
               placeholder="••••••••"
             />
           </div>
-          {error && <div className="text-red-500 text-sm">{error}</div>}
+          {error == "Email not confirmed" ? (
+            <div className="text-blue-500 text-sm">Please check your email and confirm your email.</div>
+          ) : error && <div className="text-red-500 text-sm">{error}</div>}
           <button
             type="submit"
             className="w-full py-3 mt-2 rounded-lg bg-black text-white font-bold hover:bg-gray-300 hover:text-black focus:outline-none focus:ring-2 focus:ring-white transition-all disabled:opacity-50"

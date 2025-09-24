@@ -1,8 +1,12 @@
+import os
+import httpx
 from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from middleware.auth import verify_token
 from utils.supabase_client import supabase
 
 router = APIRouter()
+
+WhatsApp_Bot_URL = os.getenv("WhatsApp_Bot_URL")
 
 @router.get("/history")
 async def get_chats(
@@ -28,6 +32,23 @@ async def send_message(
 ):
     if not conversation_id or not content or not sender_type:
         raise HTTPException(status_code=400, detail="Missing conversation_id, content or sender_type parameter")
+    
+    conversation = supabase.table('conversations').select('*').eq('conversation_id', conversation_id).execute()
+    if conversation.data == []:
+        raise HTTPException(status_code=400, detail="Conversation not found")
+
+    if conversation.data[0]['source'] == 'WhatsApp':
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{WhatsApp_Bot_URL}/send",
+                json={
+                    "project_id": conversation.data[0]['project_id'],
+                    'to': conversation.data[0]['phone_number'],
+                    'message': content
+                }
+            )
+            if response.status_code > 300 :
+                raise HTTPException(status_code=500, detail="Error sending message")
     
     sender_id = None
     email = None

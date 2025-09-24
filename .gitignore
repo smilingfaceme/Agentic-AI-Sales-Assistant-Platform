@@ -41,3 +41,4 @@ front-end/node_modules/
 __pycache__
 back-end/.env
 back-end/.DS_Store
+session_auth_*

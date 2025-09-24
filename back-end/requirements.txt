@@ -8,3 +8,4 @@ passlib
 python-multipart
 slowapi
 postgrest
+bcrypt

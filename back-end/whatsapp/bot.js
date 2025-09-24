@@ -28,7 +28,7 @@ async function startBot(projectId) {
         lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
       console.log(`❌ [${projectId}] Connection closed. Reconnect:`, shouldReconnect)
       sessionStatus[projectId] = { status: "closed" }
-      // if (shouldReconnect) startBot(projectId)
+      if (shouldReconnect) startBot(projectId)
     } else if (connection === "open") {
       console.log(`✅ [${projectId}] Bot connected as`, sock.user)
       sessionStatus[projectId] = { status: "connected", user: sock.user }

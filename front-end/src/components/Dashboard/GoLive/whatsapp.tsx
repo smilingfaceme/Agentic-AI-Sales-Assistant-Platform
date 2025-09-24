@@ -17,24 +17,26 @@ export default function WhatsAppConnectPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const connectWhatsapp = useCallback(async () => {
-    const result = await execute(async () => {
-      return await whatsappApi.connect(projectId);
-    });
+    if (projectId) {
+      const result = await execute(async () => {
+        return await whatsappApi.connect(projectId);
+      });
 
-    if (result && result.response) {
-      if (result.response.message === "Scan QR") {
-        setStatus(false)
-        setQr(result.response.qr);
-      } else if (result.response.message === "Bot connected") {
-        setStatus(true)
-        setEnabled(true)
-        const number = result.response.user.id.split(':')[0];
-        setWhatsappinfo({ nmuber: number });
-      } else if (result.response.message === "Bot stopped") {
-        setStatus(true)
-        setEnabled(false)
-        const number = result.response.user.id.split(':')[0];
-        setWhatsappinfo({ nmuber: number });
+      if (result && result.response) {
+        if (result.response.message === "Scan QR") {
+          setStatus(false)
+          setQr(result.response.qr);
+        } else if (result.response.message === "Bot connected") {
+          setStatus(true)
+          setEnabled(true)
+          const number = result.response.user.id.split(':')[0];
+          setWhatsappinfo({ nmuber: number });
+        } else if (result.response.message === "Bot stopped") {
+          setStatus(true)
+          setEnabled(false)
+          const number = result.response.user.id.split(':')[0];
+          setWhatsappinfo({ nmuber: number });
+        }
       }
     }
   }, [projectId, execute]);
@@ -68,7 +70,13 @@ export default function WhatsAppConnectPage() {
   }, [projectId, execute]);
 
   useEffect(() => {
-    connectWhatsapp();
+    // ✅ Run every 2 seconds, and cleanup properly
+    const interval = setInterval(() => {
+      console.log("⏰ Interval running...");
+      connectWhatsapp();
+    }, 2000);
+
+    return () => clearInterval(interval); // cleanup on unmount
   }, [connectWhatsapp]);
 
   // ✅ Generate QR inside canvas
@@ -96,7 +104,7 @@ export default function WhatsAppConnectPage() {
                     +19202599368
                   </span>
                 </div>
-                <button 
+                <button
                   className="rounded-md border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-100"
                   onClick={logoutConnectWhatsapp}
                 >

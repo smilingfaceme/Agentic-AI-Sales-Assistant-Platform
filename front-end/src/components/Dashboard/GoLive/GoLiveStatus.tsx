@@ -15,26 +15,35 @@ export default function GoLiveStatusPage() {
   const { execute } = useApiCall();
 
   const connectWhatsapp = useCallback(async () => {
-    const result = await execute(async () => {
-      return await whatsappApi.connect(projectId);
-    });
+    if (projectId) {
+      const result = await execute(async () => {
+        return await whatsappApi.connect(projectId);
+      });
 
-    if (result && result.response) {
-      if (result.response.message === "Scan QR") {
-        setWhatsappConnected(false)
-        setWhatsappActive(false)
-      } else if (result.response.message === "Bot connected") {
-        setWhatsappConnected(true)
-        setWhatsappActive(true)
-      } else if (result.response.message === "Bot stopped") {
-        setWhatsappConnected(true)
-        setWhatsappActive(false)
+      if (result && result.response) {
+        if (result.response.message === "Scan QR") {
+          setWhatsappConnected(false)
+          setWhatsappActive(false)
+        } else if (result.response.message === "Bot connected") {
+          setWhatsappConnected(true)
+          setWhatsappActive(true)
+        } else if (result.response.message === "Bot stopped") {
+          setWhatsappConnected(true)
+          setWhatsappActive(false)
+        }
       }
     }
+
   }, [projectId, execute]);
 
   useEffect(() => {
-    connectWhatsapp();
+    // ✅ Run every 2 seconds, and cleanup properly
+    const interval = setInterval(() => {
+      console.log("⏰ Interval running...");
+      connectWhatsapp();
+    }, 2000);
+
+    return () => clearInterval(interval); // cleanup on unmount
   }, [connectWhatsapp]);
 
   return (

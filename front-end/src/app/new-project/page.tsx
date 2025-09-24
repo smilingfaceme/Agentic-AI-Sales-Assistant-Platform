@@ -2,14 +2,15 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { projectApi } from "@/services/apiService";
+import { useAppContext } from '@/contexts/AppContext';
 
 export default function NewProjectPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-
+  const { setProjectId } = useAppContext();
   const handleCancel = () => {
-    router.push("/dashboard");
+    router.push("/dashboard/chats");
   };
 
   const [loading, setLoading] = useState(false);
@@ -21,7 +22,8 @@ export default function NewProjectPage() {
     try {
       const data = await projectApi.createProject(name, description);
       if (data.project) {
-        router.push("/dashboard");
+        setProjectId(data.project.project_id)
+        router.push("/dashboard/chats");
       } else {
         setError(data.error || "Failed to create project.");
       }

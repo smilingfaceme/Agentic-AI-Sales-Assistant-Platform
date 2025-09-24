@@ -24,7 +24,7 @@ const navItems = [
 export default function DashboardSidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { activeKey, setActiveKey, sidebarHidden, setSidebarHidden, setProjectId } = useAppContext();
+  const { activeKey, setActiveKey, sidebarHidden, setSidebarHidden, projectId, setProjectId } = useAppContext();
   type Org = { name: string; project_id: string;[key: string]: unknown };
   const [projects, setProjects] = React.useState<Org[]>([]);
   const [selectedOrg, setSelectedOrg] = React.useState<Org>({ name: "", project_id: "" });
@@ -40,12 +40,14 @@ export default function DashboardSidebar() {
       const data = await projectApi.getProjects();
       if (Array.isArray(data.projects)) {
         if (data.projects.length === 0) {
-          router.push("/dashboard/new-project");
+          router.push("/new-project");
         } else {
           setProjects(data.projects);
-          if (selectedOrg.name === "") {
+          if (projectId === "") {
             setSelectedOrg(data.projects[0] || { name: "", project_id: "" });
             setProjectId(data.projects[0].project_id);
+          } else {
+            setSelectedOrg(data.projects.find((org:Org) => org.project_id === projectId) || { name: "", project_id: "" });
           }
         }
       } else {
@@ -186,7 +188,7 @@ export default function DashboardSidebar() {
                   className="px-4 py-2 cursor-pointer text-blue-600 hover:bg-gray-50 border-t border-gray-100 font-medium"
                   onClick={() => {
                     setOrgDropdownOpen(false);
-                    window.location.href = "/dashboard/new-project";
+                    window.location.href = "/new-project";
                   }}
                 >
                   + New Project

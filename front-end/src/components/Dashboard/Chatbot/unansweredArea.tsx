@@ -74,7 +74,7 @@ export default function UnansweredQuestionArea() {
   }, [fetchUnansweredQuestionList]);
 
   return (
-    <section className="flex-1 flex flex-col bg-white w-full p-6">
+    <section className="flex-1 flex flex-col bg-white w-full p-6 h-full">
       <div className="flex items-center justify-between mb-4 border-b-2 border-gray-300 px-4 py-1">
         <div className="text-md font-semibold">{tableTitle}</div>
         <div className="flex gap-2">

@@ -1,15 +1,17 @@
 "use client";
 import React from "react";
-import { useRouter } from "next/navigation";
-import { FaBuilding, FaChevronDown, FaChevronLeft, FaComments, FaBroadcastTower, FaRobot, FaProjectDiagram, FaHeadset, FaSignOutAlt, FaHeart } from "react-icons/fa";
-import { apiRequest } from "@/utils";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
+import { FaBuilding, FaChevronDown, FaChevronLeft, FaComments, FaBroadcastTower, FaRobot, FaHeadset, FaSignOutAlt, FaHeart } from "react-icons/fa";
+import { projectApi } from "@/services/apiService";
+import { useAppContext } from '@/contexts/AppContext';
 
 const navItems = [
-  { label: "Chats", icon: <FaComments />, activeKey: "chats" },
-  { label: "Chatbot", icon: <FaRobot />, activeKey: "chatbot" },
+  { label: "Chats", icon: <FaComments />, href: "/dashboard/chats" },
+  { label: "Chatbot", icon: <FaRobot />, href: "/dashboard/chatbot" },
   // { label: "Workflows", icon: <FaProjectDiagram />, activeKey: "workflows" },
   // { label: "WA Bulk Msgs", icon: <FaLink />, activeKey: "wa-bulk", },
-  { label: "Go live", icon: <FaBroadcastTower />, activeKey: "go-live" },
+  { label: "Go live", icon: <FaBroadcastTower />, href: "/dashboard/go-live" },
 ];
 
 // Commented out unused variable to fix ESLint warning
@@ -18,17 +20,11 @@ const navItems = [
 //   { label: "Logout", icon: <FaSignOutAlt />, activeKey: "logout" },
 // ];
 
-type DashboardSidebarProps = {
-  activeKey?: string;
-  onNav?: (key: string) => void;
-  hidden?: boolean;
-  onToggle?: () => void;
-  onProductSelect?: (productId: string) => void;
-};
 
-
-export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden, onToggle, onProductSelect }: DashboardSidebarProps) {
+export default function DashboardSidebar() {
   const router = useRouter();
+  const pathname = usePathname();
+  const { activeKey, setActiveKey, sidebarHidden, setSidebarHidden, setProjectId } = useAppContext();
   type Org = { name: string; project_id: string;[key: string]: unknown };
   const [projects, setProjects] = React.useState<Org[]>([]);
   const [selectedOrg, setSelectedOrg] = React.useState<Org>({ name: "", project_id: "" });
@@ -41,26 +37,17 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
     setLoading(true);
     setError("");
     try {
-      const res = await apiRequest(`/project/get`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      const data = await res.json();
-      if (res.ok && Array.isArray(data.projects)) {
-        if ((data.projects.length) == 0) {
-          router.push("/dashboard/new-project")
+      const data = await projectApi.getProjects();
+      if (Array.isArray(data.projects)) {
+        if (data.projects.length === 0) {
+          router.push("/dashboard/new-project");
         } else {
           setProjects(data.projects);
-          if (selectedOrg.name == "") {
+          if (selectedOrg.name === "") {
             setSelectedOrg(data.projects[0] || { name: "", project_id: "" });
-            if (onProductSelect) {
-              onProductSelect(data.projects[0].project_id);
-            }
+            setProjectId(data.projects[0].project_id);
           }
         }
-
       } else {
         setError(data.error || "Failed to fetch projects.");
       }
@@ -69,7 +56,7 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
     } finally {
       setLoading(false);
     }
-  }, [router, selectedOrg.name, onProductSelect]);
+  }, [router, selectedOrg.name, setProjectId]);
 
   const logout = async () => {
     localStorage.clear();
@@ -82,20 +69,20 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
 
   return (
     <aside
-      className={`flex flex-col h-screen ${hidden ? "w-0 md:w-16" : "w-64"} bg-white border-r border-gray-300 shadow-lg pt-3 p-0 relative text-gray-900 transition-all duration-300
-      ${hidden ? "overflow-hidden" : ""}
+      className={`flex flex-col h-screen ${sidebarHidden ? "w-0 md:w-16" : "w-64"} bg-white border-r border-gray-300 shadow-lg pt-3 p-0 relative text-gray-900 transition-all duration-300
+      ${sidebarHidden ? "overflow-hidden" : ""}
       fixed md:static top-0 left-0 z-40 md:z-auto
-      ${hidden ? "md:block" : "block"}
-      ${hidden ? "hidden md:flex" : "flex"}`}
-      style={{ minWidth: hidden ? 0 : undefined }}
+      ${sidebarHidden ? "md:block" : "block"}
+      ${sidebarHidden ? "hidden md:flex" : "flex"}`}
+      style={{ minWidth: sidebarHidden ? 0 : undefined }}
     >
       {/* Header / Organization */}
-      <div className={`flex items-center border-b border-gray-300 ${hidden ? "justify-center p-4 pt-3" : "p-4 pt-2 pl-8"}`}>
-        <div className={`flex items-center gap-4 ${!hidden ? "w-full" : ""}`}>
-          <span onClick={onToggle} title={hidden ? "Show sidebar" : "Hide sidebar"} className="cursor-pointer">
+      <div className={`flex items-center border-b border-gray-300 ${sidebarHidden ? "justify-center p-4 pt-3" : "p-4 pt-2 pl-8"}`}>
+        <div className={`flex items-center gap-4 ${!sidebarHidden ? "w-full" : ""}`}>
+          <span onClick={() => setSidebarHidden(!sidebarHidden)} title={sidebarHidden ? "Show sidebar" : "Hide sidebar"} className="cursor-pointer">
             <FaBuilding className="text-xl" />
           </span>
-          {!hidden && (
+          {!sidebarHidden && (
             <button
               className="text-md w-full flex items-center focus:outline-none w-full"
               onClick={async () => {
@@ -109,7 +96,7 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
             </button>
           )}
         </div>
-        {!hidden && (
+        {!sidebarHidden && (
           <div>
             <button
               className="text-md flex items-center focus:outline-none"
@@ -126,56 +113,56 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
         )}
       </div>
       {/* Main Navigation */}
-      <nav className={`flex-1 flex flex-col gap-2 ${hidden ? "items-center" : "ml-5 mr-2"}`}>
+      <nav className={`flex-1 flex flex-col gap-2 ${sidebarHidden ? "items-center" : "ml-5 mr-2"}`}>
         {navItems.map((item) => (
-          <button
-            key={item.activeKey}
+          <Link
+            key={item.href}
+            href={item.href}
             className={
-              hidden
-                ? `flex items-center justify-center w-10 h-10 mb-2 rounded-lg transition-colors text-gray-900 ${activeKey === item.activeKey ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
-                : `flex items-center w-full px-3 py-2 mb-2 rounded transition-colors text-left text-gray-900 ${activeKey === item.activeKey ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
+              sidebarHidden
+                ? `flex items-center justify-center w-10 h-10 mb-2 rounded-lg transition-colors text-gray-900 ${pathname === item.href ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
+                : `flex items-center w-full px-3 py-2 mb-2 rounded transition-colors text-left text-gray-900 ${pathname === item.href ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
             }
-            onClick={() => onNav && onNav(item.activeKey)}
           >
-            <span className={hidden ? "text-xl" : "mr-3 text-lg"}>{item.icon}</span>
-            {!hidden && item.label}
-          </button>
+            <span className={sidebarHidden ? "text-xl" : "mr-3 text-lg"}>{item.icon}</span>
+            {!sidebarHidden && item.label}
+          </Link>
         ))}
       </nav>
       {/* Utility Items */}
-      <div className={`pb-4 ${hidden ? "flex flex-col items-center" : "ml-5"}`}>
+      <div className={`pb-4 ${sidebarHidden ? "flex flex-col items-center" : "ml-5"}`}>
         <button
           key="help"
           className={
-            hidden
+            sidebarHidden
               ? `flex items-center justify-center w-10 h-10 mb-2 rounded-lg transition-colors text-gray-900 hover:bg-gray-100`
               : `flex items-center w-full px-3 py-2 mb-2 rounded transition-colors text-left text-gray-900 hover:bg-gray-100`
           }
-          onClick={() => onNav && onNav("help")}
+          onClick={() => setActiveKey("help")}
         >
-          <span className={hidden ? "text-xl" : "mr-3 text-lg"}><FaHeadset /></span>
-          {!hidden && "Help & Support"}
+          <span className={sidebarHidden ? "text-xl" : "mr-3 text-lg"}><FaHeadset /></span>
+          {!sidebarHidden && "Help & Support"}
         </button>
         <button
           key="logout"
           className={
-            hidden
+            sidebarHidden
               ? `flex items-center justify-center w-10 h-10 mb-2 rounded-lg transition-colors text-gray-900 hover:bg-gray-100`
               : `flex items-center w-full px-3 py-2 mb-2 rounded transition-colors text-left text-gray-900 hover:bg-gray-100`
           }
           onClick={logout}
         >
-          <span className={hidden ? "text-xl" : "mr-3 text-lg"}><FaSignOutAlt /></span>
-          {!hidden && "Logout"}
+          <span className={sidebarHidden ? "text-xl" : "mr-3 text-lg"}><FaSignOutAlt /></span>
+          {!sidebarHidden && "Logout"}
         </button>
       </div>
       {/* Footer */}
-      <div className={`flex items-center justify-center py-2 border-t border-gray-200 ${hidden ? "" : "ml-5"}`}>
+      <div className={`flex items-center justify-center py-2 border-t border-gray-200 ${sidebarHidden ? "" : "ml-5"}`}>
         <FaHeart className="text-red-400 mr-2" />
-        {!hidden && <span className="text-xs text-gray-400">Made with love</span>}
+        {!sidebarHidden && <span className="text-xs text-gray-400">Made with love</span>}
       </div>
 
-      {!hidden && (
+      {!sidebarHidden && (
         <>
           {orgDropdownOpen && (
             <div className="fixed inset-0" onClick={() => { setOrgDropdownOpen(false) }}>
@@ -189,9 +176,7 @@ export default function DashboardSidebar({ activeKey = "wa-bulk", onNav, hidden,
                     onClick={() => {
                       setSelectedOrg(org);
                       setOrgDropdownOpen(false);
-                      if (onProductSelect) {
-                        onProductSelect(org.project_id);
-                      }
+                      setProjectId(org.project_id);
                     }}
                   >
                     {org.name}

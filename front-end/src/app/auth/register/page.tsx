@@ -57,7 +57,7 @@ export default function RegisterPage() {
         if (res.token) {
           // Save token to localStorage or cookie
           localStorage.setItem("token", res.token);
-          window.location.href = "/dashboard";
+          router.push("/dashboard/chats")
         } else {
           setRegisterError(res.message || "Registration failed");
         }

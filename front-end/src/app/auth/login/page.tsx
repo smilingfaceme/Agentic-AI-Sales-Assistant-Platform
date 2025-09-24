@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { login } from "@/utils";
 import Loading from "@/components/Loading";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -21,7 +23,7 @@ export default function LoginPage() {
       if (res.token) {
         // Save token to localStorage or cookie
         localStorage.setItem("token", res.token);
-        window.location.href = "/dashboard";
+        router.push("/dashboard/chats")
       } else {
         setError(res.message || "Login failed");
       }

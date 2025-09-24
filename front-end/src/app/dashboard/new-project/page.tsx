@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiRequest } from "@/utils";
+import { projectApi } from "@/services/apiService";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -19,15 +19,8 @@ export default function NewProjectPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await apiRequest(`/project/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({name, description})
-      });
-      const data = await res.json();
-      if (res.ok && data.project) {
+      const data = await projectApi.createProject(name, description);
+      if (data.project) {
         router.push("/dashboard");
       } else {
         setError(data.error || "Failed to create project.");

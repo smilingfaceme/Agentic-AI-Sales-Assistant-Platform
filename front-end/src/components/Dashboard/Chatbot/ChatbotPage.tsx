@@ -1,20 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useAppContext } from '@/contexts/AppContext';
 import { FaRobot, FaBook, FaRegComment, FaRegHandPointRight} from "react-icons/fa";
-import KnowledgeArea from "@/components/Dashboard/Chatbot/knowledgeArea"
-import UnansweredQuestionArea from '@/components/Dashboard/Chatbot/unansweredArea'
-import TestChatbotPage from "../TestChat/TestChatbotPage";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
-interface ChatbotPageProps {
-  sidebarHidden?: boolean;
-  onSidebarToggle?: () => void;
-  projectId?: string;
-}
-
-export default function ChatbotPage({ sidebarHidden, onSidebarToggle, projectId }: ChatbotPageProps) {
-
-  const [active, setActive] = useState<string>("All");
-  const [tableTitlte, setTableTitlte] = useState("")
+export default function ChatbotPage({ children }: { children: React.ReactNode }) {
+  const { sidebarHidden, setSidebarHidden } = useAppContext();
+  const pathname = usePathname();
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#fafbfc]">
@@ -24,7 +16,7 @@ export default function ChatbotPage({ sidebarHidden, onSidebarToggle, projectId 
           {/* Sidebar toggle only on mobile */}
           <button
             className="md:hidden bg-white border border-gray-300 rounded-full p-2 shadow-lg mr-2"
-            onClick={onSidebarToggle}
+            onClick={() => setSidebarHidden(!sidebarHidden)}
             aria-label={sidebarHidden ? "Show sidebar" : "Hide sidebar"}
           >
             <FaRobot />
@@ -35,35 +27,32 @@ export default function ChatbotPage({ sidebarHidden, onSidebarToggle, projectId 
       <main className="flex flex-1 h-full flex-col md:flex-row">
         {/* Left buttons */}
         <aside className="w-full md:w-72 min-w-[220px] border-r border-gray-300 bg-white flex flex-col gap-2 py-6 px-4">
-          <button
-            className={`flex items-center px-4 py-2 rounded ${active == 'Knowledge' ? 'font-semibold bg-gray-100' : 'hover:bg-gray-50'}`}
-            onClick={() => {setActive('Knowledge')}}
+          <Link
+            href="/dashboard/chatbot/knowledge"
+            className={`flex items-center px-4 py-2 rounded ${pathname === '/dashboard/chatbot/knowledge' ? 'font-semibold bg-gray-100' : 'hover:bg-gray-50'}`}
           >
             <FaBook />
             <span className="pl-2">Knowledge Base</span>
-          </button>
-          <button
-            className={`flex items-center px-4 py-2 rounded ${active == 'Unanswered' ? 'font-semibold bg-gray-100' : 'hover:bg-gray-50'}`}
-            onClick={() => {
-              setActive('Unanswered');
-              setTableTitlte("Unanswered Questions");
-            }}
+          </Link>
+          <Link
+            href="/dashboard/chatbot/unanswered"
+            className={`flex items-center px-4 py-2 rounded ${pathname === '/dashboard/chatbot/unanswered' ? 'font-semibold bg-gray-100' : 'hover:bg-gray-50'}`}
           >
             <FaRegComment />
             <span className="pl-2">Unanswered Questions</span>
-          </button>
-          <button
-            className={`flex items-center px-4 py-2 rounded ${active == 'Test' ? 'font-semibold bg-gray-100' : 'hover:bg-gray-50'}`}
-            onClick={() => setActive('Test')}
+          </Link>
+          <Link
+            href="/dashboard/chatbot/test"
+            className={`flex items-center px-4 py-2 rounded ${pathname === '/dashboard/chatbot/test' ? 'font-semibold bg-gray-100' : 'hover:bg-gray-50'}`}
           >
             <FaRegHandPointRight />
             <span className="pl-2">Test Chatbot</span>
-          </button>
+          </Link>
         </aside>
-        {/* Right table */}
-        {active == 'Knowledge' && <KnowledgeArea key={tableTitlte} projectId={projectId}/>}
-        {active == 'Unanswered' && <UnansweredQuestionArea key={tableTitlte} projectId={projectId}/>}
-        {active == 'Test' && <TestChatbotPage projectId={projectId}/>}
+        {/* Right content area */}
+        <div className="flex-1">
+          {children}
+        </div>
       </main>
     </div>
   );

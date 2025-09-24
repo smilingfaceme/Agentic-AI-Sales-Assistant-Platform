@@ -6,7 +6,10 @@ import { apiRequest } from "@/utils";
 import LoadingWrapper from "@/components/LoadingWrapper";
 import Loading from "@/components/Loading";
 import { useApiCall } from "@/hooks/useApiCall";
-import ChatArea from "@/components/Dashboard/Chat/ChatArea";
+import ChatArea from "@/components/Dashboard/ChatArea/ChatArea";
+import { useAppContext } from '@/contexts/AppContext';
+import { useChatbotContext, MessageFile } from '@/contexts/ChatbotContext';
+import { useChatAreaContext } from '@/contexts/ChatAreaContext';
 
 const tableHeaders = [
   "Channel Name",
@@ -15,30 +18,14 @@ const tableHeaders = [
   "Actions",
 ];
 
-type MessageFile = {
-  conversation_name: string;
-  conversation_id: string;
-  content: string;
-  created_at: string;
-  source: string;
-  [key: string]: unknown;
-};
 
-interface UnansweredQuestionProps {
-  projectId?: string;
-}
-
-export default function UnansweredQuestionArea({ projectId }: UnansweredQuestionProps) {
+export default function UnansweredQuestionArea() {
   const [knowledgeList, setKnowledgeList] = useState<Record<string, string | TableAction[]>[]>([]);
-  const [tableTitle, setTableTitle] = useState("");
-  const [activeMessage, setActiveMessage] = useState<MessageFile>({
-    conversation_name: '',
-    conversation_id: '',
-    content: '',
-    created_at: '',
-    source: ''
-  });
-  const [showModal, setShowModal] = useState(false);
+
+  const { projectId } = useAppContext();
+  const { tableTitle, setTableTitle, showModal, setShowModal } = useChatbotContext();
+  const { setActiveChatHistory } = useChatAreaContext();
+  
   // Loading states for different operations
   const { isLoading: isLoadingList, error: listError, execute: executeListAsync } = useApiCall();
 
@@ -62,14 +49,13 @@ export default function UnansweredQuestionArea({ projectId }: UnansweredQuestion
 
     if (result && Array.isArray(result.messages)) {
       const filtered = result.messages
-        .filter((item: MessageFile) => item.name !== ".emptyFolderPlaceholder")
         .map((item: MessageFile) => ({
           "Channel Name": item.conversation_name,
           "Message": item.content,
           "Send At": item.created_at,
           'Actions': [{
             label: "View",
-            onClick: () => { setActiveMessage(item); setShowModal(true) },
+            onClick: () => { setActiveChatHistory(item); setShowModal(true) },
             className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors",
             icon: <FaEdit />
           }] as TableAction[],
@@ -81,7 +67,7 @@ export default function UnansweredQuestionArea({ projectId }: UnansweredQuestion
       setKnowledgeList([]);
       setTableTitle("Unanswered Questions");
     }
-  }, [projectId, executeListAsync]);
+  }, [projectId, executeListAsync, setTableTitle, setActiveChatHistory, setShowModal]);
 
   useEffect(() => {
     fetchUnansweredQuestionList();
@@ -129,12 +115,7 @@ export default function UnansweredQuestionArea({ projectId }: UnansweredQuestion
             }`}
           onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
         >
-          <ChatArea
-            key={activeMessage.conversation_id}
-            conversationId={activeMessage.conversation_id}
-            conversationName={activeMessage.conversation_name}
-            conversationSource={activeMessage.source}
-          />
+          <ChatArea />
         </div>
       </div>
 

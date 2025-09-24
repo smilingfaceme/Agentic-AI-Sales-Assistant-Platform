@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { FaComments, FaWhatsapp, FaGlobe, FaRedo } from "react-icons/fa";
-import ChatArea from "@/components/Dashboard/Chat/ChatArea";
+import ChatArea from "@/components/Dashboard/ChatArea/ChatArea";
 import LoadingWrapper from "@/components/LoadingWrapper";
 import { useApiCall } from "@/hooks/useApiCall";
-
-import { apiRequest } from "@/utils";
+import { useAppContext } from '@/contexts/AppContext';
+import { useChatContext, Project } from '@/contexts/ChatContext';
+import { useChatAreaContext } from '@/contexts/ChatAreaContext';
+import { chatApi } from "@/services/apiService";
 
 type NotifyKey = 'All' | 'Unassigned' | 'WhatsApp' | 'Test';
 
@@ -16,22 +18,10 @@ const navButtons: { label: string; key: NotifyKey }[] = [
   { label: "Bot", key: "WhatsApp" },
 ];
 
-interface ChatPageProps {
-  sidebarHidden?: boolean;
-  onSidebarToggle?: () => void;
-  projectId?: string;
-}
-
-export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: ChatPageProps) {
-  type Project = {
-    conversation_id: string,
-    project_id: string,
-    conversation_name: string,
-    ai_reply: true,
-    started_at: string,
-    ended_at: null,
-    source: string
-  }
+export default function ChatPage() {
+  const { sidebarHidden, setSidebarHidden, projectId } = useAppContext();
+  const { activeConversation, setActiveConversation } = useChatContext();
+  const { setActiveChatHistory } = useChatAreaContext();
 
   const [notifies, setNotifies] = useState({
     'All': 0,
@@ -41,17 +31,6 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
   });
 
   const [active, setActive] = useState<NotifyKey>('All');
-  const [activeConversation, setActiveConversation] = useState<Project>(
-    {
-      conversation_id: '',
-      project_id: '',
-      conversation_name: '',
-      ai_reply: true,
-      started_at: '',
-      ended_at: null,
-      source: ''
-    }
-  );
   const [chatChannels, setChatChannels] = useState<Project[]>([]);
 
   // Use the API call hook for managing loading states and preventing duplicate requests
@@ -59,25 +38,18 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
 
   const fetchConversations = useCallback(async () => {
     const result = await execute(async () => {
-      const res = await apiRequest(`/conversation?project_id=${projectId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      if (!res.ok) throw new Error("Failed to fetch conversations");
-      const data = await res.json();
-      return data;
+      return await chatApi.getConversations(projectId);
     });
 
     if (result && result.conversations) {
       setChatChannels(result.conversations);
       setActiveConversation(result.conversations[0]);
+      setActiveChatHistory(result.conversations[0]);
       countBySource(result.conversations);
     } else {
       setChatChannels([]);
     }
-  }, [projectId, execute]);
+  }, [projectId, execute, setActiveConversation, setActiveChatHistory]);
 
   const getshowConversations = (filter_key: string) => {
     if (filter_key === 'All') {
@@ -118,7 +90,7 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
           {/* Sidebar toggle only on mobile */}
           <button
             className="md:hidden bg-white border border-gray-300 rounded-full p-2 shadow-lg mr-2"
-            onClick={onSidebarToggle}
+            onClick={() => setSidebarHidden(!sidebarHidden)}
             aria-label={sidebarHidden ? "Show sidebar" : "Hide sidebar"}
           >
             <FaComments />
@@ -175,8 +147,11 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
                   {getshowConversations(active).map((channel) => (
                     <button
                       key={channel.conversation_id}
-                      className={`flex items-center justify-between w-full gap-2 px-4 py-3 cursor-pointer border-b border-gray-300 hover:bg-gray-50 ${activeConversation.conversation_id == channel.conversation_id ? 'bg-gray-200' : 'bg-white'}`}
-                      onClick={() => setActiveConversation(channel)}
+                      className={`flex items-center justify-between w-full gap-2 px-4 py-3 cursor-pointer border-b border-gray-300 hover:bg-gray-50 ${activeConversation?.conversation_id == channel.conversation_id ? 'bg-gray-200' : 'bg-white'}`}
+                      onClick={() => {
+                        setActiveConversation(channel);
+                        setActiveChatHistory(channel)
+                      }}
                     >
                       <div className="flex">
                         <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
@@ -198,7 +173,7 @@ export default function ChatPage({ sidebarHidden, onSidebarToggle, projectId }: 
         </aside>
 
         {/* Right chat area */}
-        {activeConversation && <ChatArea key={activeConversation.conversation_id} conversationId={activeConversation.conversation_id} conversationName={activeConversation.conversation_name} conversationSource={activeConversation.source} />}
+        {activeConversation && <ChatArea key={activeConversation.conversation_id} />}
       </main>
     </div>
   );

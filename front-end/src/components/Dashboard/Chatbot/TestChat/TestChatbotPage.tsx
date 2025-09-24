@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { apiRequest } from "@/utils";
-import { FaWhatsapp, FaGlobe } from "react-icons/fa";
+"use client";
+import React, { useState } from "react";
+import { useAppContext } from '@/contexts/AppContext';
+import { chatApi } from "@/services/apiService";
+import { FaGlobe } from "react-icons/fa";
 import LoadingWrapper from "@/components/LoadingWrapper";
-import ChatPanel from '@/components/Dashboard/Chat/ChatPanel'
+import TestChatBotPanel from '@/components/Dashboard/Chatbot/TestChat/TestChatPanel';
 import { useApiCall } from "@/hooks/useApiCall";
 
 export type ChatMessage = {
@@ -15,69 +17,37 @@ export type ChatMessage = {
   created_at?: string;
 };
 
-interface ChatHistoryPageProps {
-  conversationId?: string;
-  conversationName?: string;
-  conversationSource?: string;
-}
-
-
-export default function ChatArea({ conversationId, conversationName, conversationSource }: ChatHistoryPageProps) {
+export default function TestChatbotPage() {
+  const { projectId } = useAppContext();
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [agentMessage, setAgentMessage] = useState("");
+  const [conversationId, setConversationId] = useState("");
 
   // Use the API call hook for managing loading states and preventing duplicate requests
-  const { isLoading, error, execute } = useApiCall();
-
-  const fetchChatsHistory = useCallback(async () => {
-    const result = await execute(async () => {
-      const res = await apiRequest(`/chats/history?conversation_id=${conversationId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      if (!res.ok) throw new Error("Failed to fetch chat history");
-      const data = await res.json();
-      return data;
-    });
-
-    if (result && result.messages) {
-      setChatMessages(result.messages);
-    }
-  }, [conversationId, execute]);
+  const { isLoading, error } = useApiCall();
 
   const sendNewMessage = async (message: string, sender_type: string) => {
-    const res = await apiRequest(`/chats/send`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          'conversation_id': conversationId,
-          'content': message,
-          'sender_type': sender_type,
-        })
-      })
-    if (!res.ok) throw new Error("Failed to fetch chat history");
-    const data = await res.json();
+    let currentConversationId = conversationId;
+
+    if (!currentConversationId || currentConversationId === "") {
+      const data = await chatApi.createConversation(projectId, "Test My ChatBot", "Test");
+      currentConversationId = data.conversations[0].conversation_id;
+      setConversationId(currentConversationId);
+    }
+
+    const data = await chatApi.sendMessage(currentConversationId, message, sender_type);
     if (data.message) {
       setChatMessages([...chatMessages, data.message]);
     }
-  }
-
-  useEffect(() => {
-    fetchChatsHistory()
-  }, [fetchChatsHistory]);
+  };
   return (
     <section className="flex-1 flex flex-col bg-[#fafbfc] w-full" style={{ height: '100%' }}>
       {/* Chat header */}
       <header className="flex items-center gap-2 px-4 md:px-6 py-4 border-b border-gray-300 bg-white">
         <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-          {conversationSource?.toLowerCase() == 'whatsapp' ? <FaWhatsapp size={28} color="green" /> : <FaGlobe size={28} />}
+          <FaGlobe size={28} />
         </div>
-        <span className="font-semibold text-md text-gray-800">{conversationName}</span>
+        <span className="font-semibold text-md text-gray-800">Test My Chatbot</span>
       </header>
       {/* Main chat area */}
       <div className="flex-1 px-2 md:px-10 py-4 md:py-6 overflow-y-auto bg-[#fafbfc] flex flex-col-reverse">
@@ -88,7 +58,7 @@ export default function ChatArea({ conversationId, conversationName, conversatio
           type="inline"
           className="flex-1"
         >
-          <ChatPanel chatMessages={chatMessages} key={chatMessages.length} />
+          <TestChatBotPanel chatMessages={chatMessages} key={chatMessages.length} />
         </LoadingWrapper>
       </div>
 
@@ -108,7 +78,7 @@ export default function ChatArea({ conversationId, conversationName, conversatio
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault(); // prevent form submission if inside a form
-              sendNewMessage(agentMessage, "agent");
+              sendNewMessage(agentMessage, "customer");
               setAgentMessage(""); // optional: clear input after sending
             }
           }}
@@ -117,7 +87,7 @@ export default function ChatArea({ conversationId, conversationName, conversatio
           className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white"
           aria-label="Send"
           onClick={() => {
-            sendNewMessage(agentMessage, "agent");
+            sendNewMessage(agentMessage, "customer");
             setAgentMessage("");
           }}
         >

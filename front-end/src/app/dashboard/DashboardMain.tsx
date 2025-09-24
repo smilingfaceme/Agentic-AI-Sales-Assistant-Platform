@@ -1,10 +1,12 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useAppContext } from '@/contexts/AppContext';
+import { ChatbotProvider } from '@/contexts/ChatbotContext';
 import { getDashboardData } from '@/utils';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import ChatPage from '@/components/Dashboard/Chat/ChatPage';
 import ChatbotPage from '@/components/Dashboard/Chatbot/ChatbotPage';
-import GoLivePage from '@/components/Dashboard/GolivePage';
+import GoLivePage from '@/components/Dashboard/GoLive/GolivePage';
 
 type DashboardData = {
   usersCount: number;
@@ -14,12 +16,10 @@ type DashboardData = {
 };
 
 export default function DashboardPage() {
-  const [sidebarHidden, setSidebarHidden] = useState(false);
-  const [activeKey, setActiveKey] = useState('chats');
+  const { activeKey, projectId } = useAppContext();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [projectId, setProductId] = useState<string>("");
 
   useEffect(() => {
     async function fetchData() {
@@ -41,48 +41,40 @@ export default function DashboardPage() {
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 text-gray-900">
       {/* Sidebar: hidden on mobile, collapsible on desktop */}
       <div className="w-full md:w-auto">
-        <DashboardSidebar
-          hidden={sidebarHidden}
-          onToggle={() => setSidebarHidden(!sidebarHidden)}
-          activeKey={activeKey}
-          onNav={setActiveKey}
-          onProductSelect={(id) => setProductId(String(id))}
-        />
+        <DashboardSidebar />
       </div>
       <main className="flex-1 text-gray-900 h-screen w-full p-0 m-0">
-        {activeKey === 'chats' ? (
-          <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-            <ChatPage key={projectId} sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} projectId={projectId} />
-          </div>
-        ) : activeKey === 'chatbot' ? (
-          <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-            <ChatbotPage key={projectId} sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} projectId={projectId}/>
-          </div>
-        ) : activeKey === 'go-live' ? (
-          <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-            <GoLivePage sidebarHidden={sidebarHidden} onSidebarToggle={() => setSidebarHidden(!sidebarHidden)} />
-          </div>
-        ) : (
-          <>
-            <h1 className="text-2xl md:text-3xl font-bold mb-6">Main Dashboard</h1>
-            <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
-              {loading ? (
-                <p>Loading dashboard data...</p>
-              ) : error ? (
-                <p className="text-red-500">{error}</p>
-              ) : dashboardData ? (
-                <div className="space-y-4 p-6">
-                  <div>Users: {dashboardData.usersCount}</div>
-                  <div>Active Chats: {dashboardData.activeChats}</div>
-                  <div>Bots Online: {dashboardData.botsOnline}</div>
-                  <div>Revenue: ${dashboardData.revenue}</div>
-                </div>
-              ) : (
-                <p>Select a feature from the sidebar.</p>
-              )}
-            </div>
-          </>
-        )}
+        <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
+          {activeKey === 'chats' ? (   
+            <ChatPage key={projectId} />
+          ) : activeKey === 'chatbot' ? (
+            <ChatbotProvider>
+              <ChatbotPage key={projectId} />
+            </ChatbotProvider>
+          ) : activeKey === 'go-live' ? (
+            <GoLivePage key={projectId} />
+          ) : (
+            <>
+              <h1 className="text-2xl md:text-3xl font-bold mb-6">Main Dashboard</h1>
+              <div className="bg-white rounded shadow p-0 min-h-[400px] text-gray-900 h-full w-full">
+                {loading ? (
+                  <p>Loading dashboard data...</p>
+                ) : error ? (
+                  <p className="text-red-500">{error}</p>
+                ) : dashboardData ? (
+                  <div className="space-y-4 p-6">
+                    <div>Users: {dashboardData.usersCount}</div>
+                    <div>Active Chats: {dashboardData.activeChats}</div>
+                    <div>Bots Online: {dashboardData.botsOnline}</div>
+                    <div>Revenue: ${dashboardData.revenue}</div>
+                  </div>
+                ) : (
+                  <p>Select a feature from the sidebar.</p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </main>
     </div>
   );

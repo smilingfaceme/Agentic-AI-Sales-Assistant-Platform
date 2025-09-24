@@ -2,10 +2,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { FaSyncAlt, FaCloudUploadAlt, FaEdit, FaTrash } from "react-icons/fa";
 import Table, { TableAction } from "@/components/Table";
-import { apiRequest, SUPABASE_URL } from "@/utils";
+import { SUPABASE_URL } from "@/utils";
 import LoadingWrapper from "@/components/LoadingWrapper";
 import Loading from "@/components/Loading";
 import { useApiCall } from "@/hooks/useApiCall";
+import { useAppContext } from '@/contexts/AppContext';
+import { useChatbotContext } from '@/contexts/ChatbotContext';
+import { knowledgeApi } from "@/services/apiService";
 
 const tableHeaders = [
   "Title & Description",
@@ -25,9 +28,6 @@ type KnowledgeFile = {
   };
 };
 
-interface ChatbotPageProps {
-  projectId?: string;
-}
 
 function encodeForQuery(value: string) {
   // encodeURIComponent is appropriate for query values
@@ -57,11 +57,11 @@ const encodeFullUrl = (urlLike: string) => {
   }
 }
 
-export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
+export default function KnowledgeArea() {
   const [knowledgeList, setKnowledgeList] = useState<Record<string, string | TableAction[]>[]>([]);
-  const [tableTitle, setTableTitle] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+
+  const { projectId } = useAppContext();
+  const { tableTitle, setTableTitle, showModal, setShowModal, file, setFile } = useChatbotContext();
 
   // Loading states for different operations
   const { isLoading: isLoadingList, error: listError, execute: executeListAsync } = useApiCall();
@@ -70,20 +70,7 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
 
   const fetchKnowledgeFileList = useCallback(async () => {
     const result = await executeListAsync(async () => {
-      const res = await apiRequest(
-        `/knowledge/list?project_id=${projectId}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!res.ok) throw new Error("Failed to fetch knowledge files");
-
-      const data = await res.json();
-      return data;
+      return await knowledgeApi.getKnowledgeFiles(projectId);
     });
 
     if (result && Array.isArray(result.knowledges)) {
@@ -107,22 +94,7 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
               label: "Delete",
               onClick: async () => {
                 const result = await executeDeleteAsync(async () => {
-                  const res = await apiRequest(
-                    `/knowledge/remove`,
-                    {
-                      method: "DELETE",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        project_id: projectId,
-                        file_name: item.name
-                      })
-                    }
-                  );
-
-                  if (!res.ok) throw new Error("Failed to delete knowledge file");
-                  return res.json();
+                  return await knowledgeApi.deleteKnowledgeFile(projectId, item.name);
                 });
 
                 if (result) {
@@ -141,7 +113,7 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
       setKnowledgeList([]);
       setTableTitle("Documents");
     }
-  }, [projectId, executeListAsync, executeDeleteAsync]);
+  }, [projectId, executeListAsync, executeDeleteAsync, setTableTitle]);
 
   const handleUpload = async () => {
     if (!file) {
@@ -150,25 +122,10 @@ export default function KnowledgeArea({ projectId }: ChatbotPageProps) {
     }
 
     const result = await executeUploadAsync(async () => {
-      const formData = new FormData();
-      console.log(file)
-      formData.append("file", file);
-      const res = await apiRequest(`/knowledge/upload?project_id=${projectId}`, {
-        method: "POST",
-        body: formData, // FormData automatically sets headers
-      });
-      console.log("Upload response:", res);
-      if (!res.ok) {
-        throw new Error("Failed to upload file");
-      }
-
-      const data = await res.json();
-      console.log("Upload success:", data);
-      return data;
+      return await knowledgeApi.uploadKnowledgeFile(projectId, file);
     });
 
     if (result) {
-      // Refresh table after upload
       fetchKnowledgeFileList();
       setShowModal(false);
       setFile(null);

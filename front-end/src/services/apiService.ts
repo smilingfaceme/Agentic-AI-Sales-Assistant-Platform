@@ -184,3 +184,100 @@ export const dashboardApi = {
     return res.json();
   }
 };
+
+// User Settings APIs
+export const userApi = {
+  updateProfile: async (userData: { name: string; }) => {
+    const res = await apiRequest('/user/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    });
+    if (!res.ok) throw new Error('Failed to update profile');
+    return res.json();
+  },
+
+  updatePassword: async (passwordData: { currentPassword: string; newPassword: string }) => {
+    const res = await apiRequest('/user/password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(passwordData)
+    });
+    if (!res.ok) throw new Error('Failed to update password');
+    return res.json();
+  }
+};
+
+// Company Settings APIs
+export const companyApi = {
+  updateCompany: async (companyData: { name: string; description: string }) => {
+    const res = await apiRequest('/company/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(companyData)
+    });
+    if (!res.ok) throw new Error('Failed to update company');
+    return res.json();
+  },
+
+  deleteCompany: async () => {
+    const res = await apiRequest(`/company/delete`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to delete company');
+    return res.json();
+  }
+};
+
+// User Invitation APIs
+export const invitationApi = {
+  getInvitedUsers: async () => {
+    const res = await apiRequest(`/invite/list`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch invited users');
+    return res.json();
+  },
+
+  inviteUser: async (inviteData: { email: string; role: string; }) => {
+    const res = await apiRequest('/invite/new', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inviteData)
+    });
+    if (!res.ok) throw new Error('Failed to send invitation');
+    return res.json();
+  },
+
+  resendInvitation: async (invitationId: string) => {
+    const res = await apiRequest(`/invite/resend?invitationId=${invitationId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to resend invitation');
+    return res.json();
+  },
+
+  revokeInvitation: async (invitationId: string) => {
+    const res = await apiRequest(`/invite/revoke?invitation_id=${invitationId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) throw new Error('Failed to revoke invitation');
+    return res.json();
+  },
+};
+
+// Role Management APIs
+export const roleApi = {
+  getRoles: async () => {
+    const res = await apiRequest(`/role/get`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch invited users');
+    return res.json();
+  },
+};

@@ -140,7 +140,7 @@ const Table = ({ headers, data, actionColumnKey = "Actions" }: TableProps) => {
                             className={action.className || "px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"}
                             title={action.label}
                           >
-                            {action.icon && <span className="mr-1">{action.icon}</span>}
+                            {action.icon}
                             {action.label}
                           </button>
                         ))}

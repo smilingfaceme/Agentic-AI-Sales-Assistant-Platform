@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { getDashboardData } from '@/utils';
+import { getDashboardData, isAuthenticated } from '@/utils';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
+import { useRouter } from 'next/navigation';
 
 type DashboardData = {
   usersCount: number;
@@ -16,12 +17,25 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const { projectId } = useAppContext();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Check authentication on mount
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push('/auth/login');
+      return;
+    }
+    setAuthChecked(true);
+  }, [router]);
 
   useEffect(() => {
+    if (!authChecked) return; // Don't fetch data until auth is checked
+
     async function fetchData() {
       setLoading(true);
       setError("");
@@ -35,11 +49,20 @@ export default function DashboardLayout({
       }
     }
     fetchData();
-  }, []);
+  }, [authChecked]);
+
+  // Show loading or nothing while checking authentication
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-600">Checking authentication...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 text-gray-900">
-      <div className="w-full md:w-auto">
+      <div className="w-full md:w-auto absolute md:relative">
         <DashboardSidebar />
       </div>
       <main className="flex-1 text-gray-900 h-screen w-full p-0 m-0">

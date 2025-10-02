@@ -1,5 +1,6 @@
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from utils.token_handler import decode_valide_access_token
 from jose import JWTError, jwt
 import os, time
 from dotenv import load_dotenv
@@ -26,51 +27,30 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     Raises:
         HTTPException: If the token is invalid, expired, or missing required claims.
     """
-    try:
-        # Extract the raw JWT token string
-        token = credentials.credentials
-        
-        # Decode JWT with the secret and HS256 algorithm
-        payload = jwt.decode(
-            token, 
-            os.getenv("JWT_SECRET"), 
-            algorithms=["HS256"],
-            options={"verify_aud": False}  # Skip audience validation
-        )
-        
-        # Extract claims from the payload
-        user_id = payload.get("sub")
-        email = payload.get("email")
-        role = payload.get("role")
-        company_id = payload.get("company_id")
-        permissions = payload.get("permissions")
-        
-        # Validate expiration time
-        if int(payload.get('exp')) < time.time():
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
-            )
-        
-        # Ensure required claims are present
-        if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
-            )
-        
-        # Return verified user details
-        return {
-            "sub": user_id, 
-            'email': email, 
-            'role': role, 
-            'company_id': company_id, 
-            "permissions": permissions
-        }
+    # Extract the raw JWT token string
+    token = credentials.credentials
     
-    except JWTError:
-        # Handle invalid signature, malformed token, or decoding errors
+    # Decode JWT with the secret and HS256 algorithm
+    payload = decode_valide_access_token(token)
+    
+    if not payload or not payload.get("id"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
         )
+    
+    # Extract claims from the payload
+    user_id = payload.get("id")
+    email = payload.get("email")
+    role = payload.get("role")
+    company_id = payload.get("company_id")
+    permissions = payload.get("permissions")
+    
+    # Return verified user details
+    return {
+        "id": user_id, 
+        'email': email, 
+        'role': role, 
+        'company_id': company_id, 
+        "permission": permissions
+    }

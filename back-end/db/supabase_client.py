@@ -1,4 +1,4 @@
-import os
+import os, time
 from supabase import create_client, Client
 from dotenv import load_dotenv
 

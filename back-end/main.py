@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import routes
-from routes import auth, user, company, role, invite, dashboard, project, conversation, chat, knowledge, whatsapp, qa
+from routers import auth, user, company, invite, knowledge, conversation, chat, integration
 from middleware.error_handler import add_exception_handlers
 from utils.validate_env import validate_env
 
@@ -35,15 +35,11 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(user.router, prefix="/api/user", tags=["user"])
 app.include_router(company.router, prefix="/api/company", tags=["company"])
-app.include_router(role.router, prefix="/api/role", tags=["role"])
 app.include_router(invite.router, prefix="/api/invite", tags=["invite"])
-app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
-app.include_router(project.router, prefix="/api/project", tags=["project"])
-app.include_router(conversation.router, prefix="/api/conversation", tags=["conversation"])
-app.include_router(chat.router, prefix="/api/chats", tags=["chats"])
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
-app.include_router(whatsapp.router, prefix="/api/whatsapp", tags=["whatsapp"])
-app.include_router(qa.router, prefix="/api/qa", tags=["question-answer"])
+app.include_router(conversation.router, prefix="/api/conversation", tags=["conversation"])
+app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+app.include_router(integration.router, prefix="/api/integration", tags=["integration"])
 
 # Add exception handlers
 add_exception_handlers(app)

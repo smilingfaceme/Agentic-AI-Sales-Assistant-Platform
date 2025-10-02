@@ -1,7 +1,5 @@
-import SettingsPage from '@/components/Dashboard/Settings/SettingsPage';
+import { redirect } from 'next/navigation';
 
 export default function SettingsPageRoute() {
-  return (
-    <SettingsPage />
-  );
+  redirect('/dashboard/settings/user');
 }

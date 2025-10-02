@@ -7,7 +7,9 @@ export type User = {
   company_name: string;
   company_description: string;
   role: string;
-  permissions: object;
+  permissions: {
+    [key:string]:unknown
+  };
 };
 
 export type Role = {
@@ -22,8 +24,6 @@ interface AppContextType {
   setCurrentUser: (user: User) => void;
   companyId:string;
   setCompanyId: (id: string) => void;
-  projectId: string;
-  setProjectId: (id: string) => void;
   activeKey: string;
   setActiveKey: (key: string) => void;
   sidebarHidden: boolean;
@@ -42,7 +42,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     permissions: {}
   });
   const [companyId, setCompanyId] = useState<string>("");
-  const [projectId, setProjectId] = useState<string>("");
   const [activeKey, setActiveKey] = useState('chats');
   const [sidebarHidden, setSidebarHidden] = useState(false);
 
@@ -52,8 +51,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setCurrentUser,
       companyId,
       setCompanyId,
-      projectId,
-      setProjectId,
       activeKey,
       setActiveKey,
       sidebarHidden,

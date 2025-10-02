@@ -5,8 +5,7 @@ export type ChatMessage = {
   message_id: number;
   conversation_id: string;
   sender_type: 'customer' | 'bot' | 'agent';
-  user_id?: string | null;
-  email?: string | null;
+  sender_email?: string | null;
   content: string;
   created_at?: string;
 };

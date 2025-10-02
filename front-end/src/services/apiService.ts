@@ -45,8 +45,8 @@ export const projectApi = {
 
 // Chat APIs
 export const chatApi = {
-  getConversations: async (projectId: string) => {
-    const res = await apiRequest(`/conversation?project_id=${projectId}`, {
+  getConversations: async () => {
+    const res = await apiRequest(`/conversation`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -55,7 +55,7 @@ export const chatApi = {
   },
 
   getChatHistory: async (conversationId: string) => {
-    const res = await apiRequest(`/chats/history?conversation_id=${conversationId}`, {
+    const res = await apiRequest(`/chat/history?conversation_id=${conversationId}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -64,7 +64,7 @@ export const chatApi = {
   },
 
   sendMessage: async (conversationId: string, content: string, senderType: string) => {
-    const res = await apiRequest('/chats/send', {
+    const res = await apiRequest('/chat/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -77,14 +77,14 @@ export const chatApi = {
     return res.json();
   },
 
-  createConversation: async (projectId: string, conversationName: string, source: string) => {
+  createConversation: async ( conversationName: string, source: string) => {
     const res = await apiRequest('/conversation/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        project_id: projectId,
         conversation_name: conversationName,
-        source
+        source,
+        phone_number:""
       })
     });
     if (!res.ok) throw new Error('Failed to create conversation');
@@ -94,8 +94,8 @@ export const chatApi = {
 
 // Knowledge APIs
 export const knowledgeApi = {
-  getKnowledgeFiles: async (projectId: string) => {
-    const res = await apiRequest(`/knowledge/list?project_id=${projectId}`, {
+  getKnowledgeFiles: async () => {
+    const res = await apiRequest(`/knowledge/list`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -103,10 +103,10 @@ export const knowledgeApi = {
     return res.json();
   },
 
-  uploadKnowledgeFile: async (projectId: string, file: File) => {
+  uploadKnowledgeFile: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await apiRequest(`/knowledge/upload?project_id=${projectId}`, {
+    const res = await apiRequest(`/knowledge/upload`, {
       method: 'POST',
       body: formData
     });
@@ -114,12 +114,11 @@ export const knowledgeApi = {
     return res.json();
   },
 
-  deleteKnowledgeFile: async (projectId: string, fileName: string) => {
+  deleteKnowledgeFile: async (fileName: string) => {
     const res = await apiRequest('/knowledge/remove', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        project_id: projectId,
         file_name: fileName
       })
     });
@@ -141,35 +140,38 @@ export const chatbotApi = {
 };
 
 // WhatsApp APIs
-export const whatsappApi = {
-  connect: async (projectId: string) => {
-    const res = await apiRequest(`/whatsapp/connect?project_id=${projectId}`, {
-      method: 'POST',
+export const integrationApi = {
+  get: async () => {
+    const res = await apiRequest(`/integration`, {
+      method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
     if (!res.ok) throw new Error('Failed to connect to WhatsApp');
     return res.json();
   },
-  start: async (projectId: string) => {
-    const res = await apiRequest(`/whatsapp/start?project_id=${projectId}`, {
+  new: async (instanceName:string) => {
+    const res = await apiRequest(`/integration/new`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({"instanceName":instanceName})
     });
     if (!res.ok) throw new Error('Failed to connect to WhatsApp');
     return res.json();
   },
-  stop: async (projectId: string) => {
-    const res = await apiRequest(`/whatsapp/stop?project_id=${projectId}`, {
+  active: async (integrationId: string) => {
+    const res = await apiRequest(`/integration/active`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({"integrationId":integrationId})
     });
     if (!res.ok) throw new Error('Failed to connect to WhatsApp');
     return res.json();
   },
-  logout: async (projectId: string) => {
-    const res = await apiRequest(`/whatsapp/logout?project_id=${projectId}`, {
+  logout: async (integrationId: string) => {
+    const res = await apiRequest(`/integration/logout`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({"integrationId":integrationId})
     });
     if (!res.ok) throw new Error('Failed to connect to WhatsApp');
     return res.json();
@@ -273,7 +275,7 @@ export const invitationApi = {
 // Role Management APIs
 export const roleApi = {
   getRoles: async () => {
-    const res = await apiRequest(`/role/get`, {
+    const res = await apiRequest(`/invite/get_roles`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });

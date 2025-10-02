@@ -88,7 +88,7 @@ export default function LoginPage() {
           </div>
           {error == "Email not confirmed" ? (
             <div className="text-blue-500 text-sm">Please check your email and confirm your email.</div>
-          ) : error && <div className="text-red-500 text-sm">{error.split(':')[1]}</div>}
+          ) : error && <div className="text-red-500 text-sm">{error}</div>}
           <button
             type="submit"
             className="w-full py-3 mt-2 rounded-lg bg-black text-white font-bold hover:bg-gray-300 hover:text-black focus:outline-none focus:ring-2 focus:ring-white transition-all disabled:opacity-50"

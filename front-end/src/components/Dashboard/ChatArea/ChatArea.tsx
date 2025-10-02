@@ -26,12 +26,11 @@ export default function ChatArea() {
 
   const sendNewMessage = async (message: string, sender_type: string) => {
     if (!activeChatHistory?.conversation_id || !message.trim()) return;
-
+    setAgentMessage("");
     const data = await chatApi.sendMessage(activeChatHistory.conversation_id, message, sender_type);
     if (data.message) {
       setChatMessages([...chatMessages, data.message]);
     }
-    setAgentMessage("");
   };
 
   useEffect(() => {
@@ -47,7 +46,7 @@ export default function ChatArea() {
       {/* Header */}
       <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 md:px-6 py-4">
         <div className="flex items-center gap-3">
-          {activeChatHistory.source === 'WhatsApp' ? <FaWhatsapp size={28} color="green" /> : <FaGlobe size={28} />}
+          {activeChatHistory.source === 'WhatsApp' ? <FaWhatsapp size={30} color="oklch(62.7% 0.194 149.214)" /> : <FaGlobe size={28} />}
           <div>
             <h2 className="font-semibold text-gray-900">{activeChatHistory.conversation_name}</h2>
             <p className="text-sm text-gray-500">{activeChatHistory.source}</p>

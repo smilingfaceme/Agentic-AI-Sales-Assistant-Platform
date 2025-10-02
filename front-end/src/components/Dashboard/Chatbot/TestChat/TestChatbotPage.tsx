@@ -1,6 +1,5 @@
 "use client";
 import React, { useState } from "react";
-import { useAppContext } from '@/contexts/AppContext';
 import { chatApi } from "@/services/apiService";
 import { FaGlobe } from "react-icons/fa";
 import LoadingWrapper from "@/components/LoadingWrapper";
@@ -18,7 +17,6 @@ export type ChatMessage = {
 };
 
 export default function TestChatbotPage() {
-  const { projectId } = useAppContext();
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [agentMessage, setAgentMessage] = useState("");
   const [conversationId, setConversationId] = useState("");
@@ -30,7 +28,7 @@ export default function TestChatbotPage() {
     let currentConversationId = conversationId;
 
     if (!currentConversationId || currentConversationId === "") {
-      const data = await chatApi.createConversation(projectId, "Test My ChatBot", "Test");
+      const data = await chatApi.createConversation("Test My ChatBot", "Test");
       currentConversationId = data.conversations[0].conversation_id;
       setConversationId(currentConversationId);
     }

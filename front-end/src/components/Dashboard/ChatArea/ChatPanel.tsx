@@ -1,15 +1,6 @@
 import React from "react";
 import { FaRobot } from "react-icons/fa";
-
-export type ChatMessage = {
-  message_id: number;
-  conversation_id: string;
-  sender_type: 'customer' | 'bot' | 'agent';
-  user_id?: string | null;
-  email?: string | null;
-  content: string;
-  created_at?: string;
-};
+import { ChatMessage } from '@/contexts/ChatAreaContext'
 
 function formatDate(date: string) {
   const d = new Date(date);
@@ -53,8 +44,8 @@ export default function ChatArea({ chatMessages }: ChatHistoryPageProps) {
                     </div>
                     <span className="flex text-xs text-gray-600 mt-1 self-end">
                       {msg.created_at ? new Date(msg.created_at).toLocaleTimeString() : ""}
-                      {msg.sender_type == "agent" && msg.user_id && (
-                        <span className="ml-2">• {msg.email}</span>
+                      {msg.sender_type == "agent" && (
+                        <span className="ml-2">• {msg.sender_email}</span>
                       )}
                       {msg.sender_type == "bot" && <><span className="ml-2">• </span><FaRobot className="ml-1" size={15} /></>}
                     </span>

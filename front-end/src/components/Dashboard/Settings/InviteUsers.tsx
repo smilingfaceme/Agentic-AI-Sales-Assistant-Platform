@@ -115,10 +115,7 @@ export default function InviteUsers() {
   };
 
   // Map invited users to table data
-  const tableData = invitedUsers.map((user) => {
-    console.log("Invited user data:", user);
-    
-    return {
+  const tableData = invitedUsers.map((user) => ({
       "Email": user.invited_email,
       "Role": user.role,
       "Status": user.status.toUpperCase(),
@@ -129,7 +126,7 @@ export default function InviteUsers() {
           label: "",
           onClick: () => handleResendInvite(user.id, user.invited_email),
           className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors mr-1",
-          icon: <Loading isLoading={resendLoading[user.id] ?? false} type="button" text="Resending" theme="dark">
+          icon: <Loading isLoading={resendLoading[user.id] ?? false} type="button" size="small" text="Resending" theme="dark">
             <FaEnvelope className="mr-1"/> Resend
           </Loading>
         }] : []),
@@ -137,13 +134,12 @@ export default function InviteUsers() {
           label: "",
           onClick: () => handleRevokeInvite(user.id, user.invited_email),
           className: "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors",
-          icon: <Loading isLoading={revokeLoading[user.id] ?? false} type="button" text="Revoking" theme="dark">
+          icon: <Loading isLoading={revokeLoading[user.id] ?? false} type="button" size="small" text="Revoking" theme="dark">
             <FaTrash className="mr-1"/> Revoke
           </Loading>
         }
       ] as TableAction[]
-    }
-  });
+  }));
 
   // Send Invitation Function
   const handleInviteUser = async (e: React.FormEvent) => {

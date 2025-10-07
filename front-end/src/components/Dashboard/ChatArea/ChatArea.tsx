@@ -28,8 +28,8 @@ export default function ChatArea() {
     if (!activeChatHistory?.conversation_id || !message.trim()) return;
     setAgentMessage("");
     const data = await chatApi.sendMessage(activeChatHistory.conversation_id, message, sender_type);
-    if (data.message) {
-      setChatMessages([...chatMessages, data.message]);
+    if (data.messages) {
+      setChatMessages([...chatMessages, ...data.messages]);
     }
   };
 

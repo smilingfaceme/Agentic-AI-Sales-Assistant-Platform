@@ -11,11 +11,11 @@ export interface TableAction {
 export interface TableProps {
   headers: string[];
   data: Array<Record<string, string | number | boolean | null | undefined | TableAction[]>>;
-  actionColumnKey?: string; // The key in data that contains actions
+  actionColumnKey?: string[]; // The key in data that contains actions
 }
 
 // Next.js + Tailwind only, idiomatic functional component
-const Table = ({ headers, data, actionColumnKey = "Actions" }: TableProps) => {
+const Table = ({ headers, data, actionColumnKey = ["Actions"] }: TableProps) => {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
@@ -131,7 +131,7 @@ const Table = ({ headers, data, actionColumnKey = "Actions" }: TableProps) => {
                     key={header}
                     className="px-4 py-2 text-sm text-gray-600"
                   >
-                    {header === actionColumnKey && Array.isArray(row[header]) ? (
+                    {actionColumnKey.includes(header) && Array.isArray(row[header]) ? (
                       <div className="flex gap-2">
                         {(row[header] as TableAction[]).map((action, actionIdx) => (
                           <button

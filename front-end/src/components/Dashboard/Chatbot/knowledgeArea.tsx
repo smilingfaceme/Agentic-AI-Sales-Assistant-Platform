@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { FaSyncAlt, FaCloudUploadAlt, FaEdit, FaTrash } from "react-icons/fa";
+import { FaSyncAlt, FaCloudUploadAlt, FaVectorSquare, FaTrash } from "react-icons/fa";
 import Table, { TableAction } from "@/components/Table";
 import { SUPABASE_URL } from "@/utils";
 import LoadingWrapper from "@/components/LoadingWrapper";
@@ -12,20 +12,21 @@ import { knowledgeApi } from "@/services/apiService";
 const tableHeaders = [
   "Title & Description",
   "Type",
+  "Status",
   "Created on",
-  "Modified on",
   "Actions",
 ];
 
 type KnowledgeFile = {
   id: string;
-  name: string;
+  company_id: string;
+  uploaded_by: string;
+  file_name: string;
+  file_type: string;
+  file_hash: string;
+  status: string;
+  extra: string;
   created_at: string;
-  updated_at: string;
-  metadata: {
-    mimetype: string;
-    [key: string]: unknown;
-  };
 };
 
 // encodeURIComponent is appropriate for query values
@@ -59,15 +60,17 @@ export default function KnowledgeArea() {
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeFile[]>([]);
   const [company, setCompany] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const { tableTitle, setTableTitle, showModal, setShowModal} = useChatbotContext();
+  const { tableTitle, setTableTitle, showModal, setShowModal } = useChatbotContext();
 
   // Loading states for different operations
   const { isLoading: isLoadingList, error: listError, execute: executeListAsync } = useApiCall();
   const { isLoading: isUploading, error: uploadError, execute: executeUploadAsync } = useApiCall();
   const { execute: executeDeleteAsync } = useApiCall();
+  const { execute: executeReprocessAsync } = useApiCall();
 
   // Loading state for delete operation
   const [deleteLoading, setDeleteLoading] = useState<Record<string, boolean>>({});
+  const [reprocessLoading, setReprocessLoading] = useState<Record<string, boolean>>({});
 
   // Fetch knowledge files
   const fetchKnowledgeFileList = useCallback(async () => {
@@ -82,6 +85,7 @@ export default function KnowledgeArea() {
           return acc;
         }, {} as Record<string, boolean>);
         setDeleteLoading(initialLoading);
+        setReprocessLoading(initialLoading);
       }
       setCompany(result.company_id)
       setKnowledgeList(result.knowledges);
@@ -93,10 +97,10 @@ export default function KnowledgeArea() {
   }, [executeListAsync, setTableTitle]);
 
   // Delete knowledge file
-  const deleteFile = async (fileid: string, filename: string) => {
+  const deleteFile = async (fileid: string) => {
     setDeleteLoading((prev) => ({ ...prev, [fileid]: true }));
     const result = await executeDeleteAsync(async () => {
-      return await knowledgeApi.deleteKnowledgeFile(filename);
+      return await knowledgeApi.deleteKnowledgeFile(fileid);
     });
     setDeleteLoading((prev) => ({ ...prev, [fileid]: false }));
     if (result) {
@@ -104,31 +108,62 @@ export default function KnowledgeArea() {
     }
   }
 
+  // Reprocess knowledge file
+  const reprocessFile = async (fileid: string) => {
+    setReprocessLoading((prev) => ({ ...prev, [fileid]: true }));
+    const result = await executeReprocessAsync(async () => {
+      return await knowledgeApi.reprocessKnowledgeFile(fileid);
+    });
+    setReprocessLoading((prev) => ({ ...prev, [fileid]: false }));
+    if (result) {
+      await fetchKnowledgeFileList();
+    }
+  }
+
   // Map knowledge files to table data
   const tabledata = knowledgeList
-    .filter((item: KnowledgeFile) => item.name !== ".emptyFolderPlaceholder")
     .map((item: KnowledgeFile) => ({
-      "Title & Description": item.name,
-      Type: item.metadata.mimetype,
-      "Created on": new Date(item.created_at).toLocaleDateString(),
-      "Modified on": new Date(item.updated_at).toLocaleDateString(),
-      Actions: [
-        {
-          label: "View",
-          onClick: () => {
-            window.open(`${SUPABASE_URL}/storage/v1/object/public/knowledges/${company}/${encodeFullUrl(item.name)}`, "_blank") // Opens in a new tab/window
-          },
-          className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors",
-          icon: <FaEdit />
+      "Title & Description": [{
+        label: item.file_name,
+        onClick: () => {
+          window.open(`${SUPABASE_URL}/storage/v1/object/public/knowledges/${company}/${encodeFullUrl(item.file_name)}`, "_blank") // Opens in a new tab/window
         },
+        className: "bg-transparent cursor-pointer focus:cursor-wait",
+        icon: <></>
+      }],
+      Type: item.file_type,
+      "Status": item.status,
+      "Created on": new Date(item.created_at).toLocaleDateString(),
+      Actions: [
+        ...(item.status === "Failed"
+          ? [
+            {
+              label: "",
+              onClick: async () => reprocessFile(item.id),
+              className:
+                "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors",
+              icon: (
+                <Loading
+                  isLoading={reprocessLoading[item.id] ?? false}
+                  type="button"
+                  size="small"
+                  text="Reprocessing"
+                  theme="dark"
+                >
+                  <FaVectorSquare className="mr-1" /> Reprocess
+                </Loading>
+              ),
+            },
+          ]
+          : []),
         {
           label: "",
-          onClick: async () => deleteFile(item.id, item.name),
+          onClick: async () => deleteFile(item.id),
           className: "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors",
           icon: <Loading isLoading={deleteLoading[item.id] ?? false} type="button" size="small" text="Deleting" theme="dark">
             <FaTrash className="mr-1" /> Delete
           </Loading>
-        }
+        },
       ] as TableAction[],
     }));
 
@@ -175,7 +210,7 @@ export default function KnowledgeArea() {
           <button
             className="px-3 py-1 bg-black hover:bg-gray-700 font-semibold text-white rounded text-sm"
             aria-label="New Knowledge"
-            onClick={() => {setFile(null); setShowModal(true); }}
+            onClick={() => { setFile(null); setShowModal(true); }}
           >
             + New
           </button>
@@ -190,7 +225,7 @@ export default function KnowledgeArea() {
         type="inline"
         className="min-h-[300px]"
       >
-        <Table headers={tableHeaders} data={tabledata} />
+        <Table headers={tableHeaders} data={tabledata} actionColumnKey={["Title & Description", "Actions"]} />
       </LoadingWrapper>
 
       {/* Modal */}
@@ -209,6 +244,7 @@ export default function KnowledgeArea() {
             <FaCloudUploadAlt size={100} color="gray" title="Choose File" />
             <input
               type="file"
+              accept=".csv, .xlsx, .xls"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               className="w-full border border-gray-300 rounded p-2"
               disabled={isUploading}

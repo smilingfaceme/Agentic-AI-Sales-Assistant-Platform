@@ -114,12 +114,24 @@ export const knowledgeApi = {
     return res.json();
   },
 
-  deleteKnowledgeFile: async (fileName: string) => {
+  deleteKnowledgeFile: async (fileId: string) => {
     const res = await apiRequest('/knowledge/remove', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        file_name: fileName
+        file_id: fileId
+      })
+    });
+    if (!res.ok) throw new Error('Failed to delete knowledge file');
+    return res.json();
+  },
+
+  reprocessKnowledgeFile: async (fileId: string) => {
+    const res = await apiRequest('/knowledge/reprocess', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        file_id: fileId
       })
     });
     if (!res.ok) throw new Error('Failed to delete knowledge file');

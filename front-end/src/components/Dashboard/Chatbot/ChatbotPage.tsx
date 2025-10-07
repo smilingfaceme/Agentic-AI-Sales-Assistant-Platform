@@ -57,7 +57,7 @@ export default function ChatbotPage({ children }: { children: React.ReactNode })
           </Link>}
         </aside>
         {/* Right content area */}
-        <div className="flex-1">
+        <div className="flex-1 h-full">
           {children}
         </div>
       </main>

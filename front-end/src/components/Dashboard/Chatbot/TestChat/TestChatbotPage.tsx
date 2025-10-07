@@ -34,12 +34,12 @@ export default function TestChatbotPage() {
     }
 
     const data = await chatApi.sendMessage(currentConversationId, message, sender_type);
-    if (data.message) {
-      setChatMessages([...chatMessages, data.message]);
+    if (data.messages) {
+      setChatMessages([...chatMessages, ...data.messages]);
     }
   };
   return (
-    <section className="flex-1 flex flex-col bg-[#fafbfc] w-full" style={{ height: '100%' }}>
+    <section className="flex-1 flex flex-col bg-gray-50 h-full">
       {/* Chat header */}
       <header className="flex items-center gap-2 px-4 md:px-6 py-4 border-b border-gray-300 bg-white">
         <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">

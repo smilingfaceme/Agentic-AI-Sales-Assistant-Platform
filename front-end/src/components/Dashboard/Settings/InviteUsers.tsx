@@ -219,7 +219,7 @@ export default function InviteUsers() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table headers={tableHeaders} data={tableData} actionColumnKey="Actions" />
+              <Table headers={tableHeaders} data={tableData}/>
             </div>
           )}
         </div>

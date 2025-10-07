@@ -1,6 +1,7 @@
 import React from "react";
 import { FaRobot } from "react-icons/fa";
 import { ChatMessage } from '@/contexts/ChatAreaContext'
+import ReactMarkdown from "react-markdown";
 
 function formatDate(date: string) {
   const d = new Date(date);
@@ -40,7 +41,7 @@ export default function ChatArea({ chatMessages }: ChatHistoryPageProps) {
                 <div key={msg.message_id ?? idx} className={`flex ${msg.sender_type === "customer" ? "justify-start" : "justify-end"}`}>
                   <div className={`max-w-[90vw] md:max-w-[40%] text-sm flex flex-col`}>
                     <div className={`rounded-tl-xl rounded-tr-xl px-4 py-3 ${msg.sender_type === "customer" ? "bg-gray-200 text-gray-900 rounded-br-xl" : "bg-[#23263b] text-white rounded-bl-xl"}`}>
-                      <span>{msg.content}</span>
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
                     <span className="flex text-xs text-gray-600 mt-1 self-end">
                       {msg.created_at ? new Date(msg.created_at).toLocaleTimeString() : ""}

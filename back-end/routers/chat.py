@@ -5,7 +5,9 @@ from middleware.auth import verify_token
 from db.public_table import get_companies
 from db.company_table import *
 from utils.whatsapp import send_message_whatsapp
-from datetime import datetime
+from src.response.generate import generate_response_with_search
+import threading
+import asyncio
 
 router = APIRouter()
 
@@ -71,8 +73,8 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
     if sender_type == "agent":
         email = user["email"]
     
-    # Insert new message into database
-    updated_conversation = await add_new_message(
+    # Insert new message into database    
+    add_query = await add_new_message(
         company_id=company_schema, 
         conversation_id=conversation_id, 
         sender_email=email, 
@@ -80,14 +82,43 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
         content=content
     )
     
-    # Return success response with new message details
-    if updated_conversation["status"] == "success":
-        return {
-            "status": 'success',
-            "message": updated_conversation['rows'][0]
-        }
+    if add_query["status"] == "success":
+        if current_conversation['ai_reply'] == False or sender_type == "agent":
+            return {
+                "status": 'success',
+                "messages": [
+                    add_query['rows'][0]
+                ]
+            }
+        
+        response = await generate_response_with_search(user["company_id"], company_schema, conversation_id, content)
+        print(response)
+        
+        # Insert new message into database        
+        add_response = await add_new_message(
+            company_id=company_schema, 
+            conversation_id=conversation_id, 
+            sender_email="",
+            sender_type="bot", 
+            content=response
+        )
+    
+        if add_response["status"] == "success":
+            return {
+                "status": 'success',
+                "messages": [
+                    add_query['rows'][0], 
+                    add_response['rows'][0]]
+            }
+        else:
+            return {
+                "status": 'success',
+                "messages": [
+                            add_query['rows'][0]
+                        ]
+            }
     else:
-        raise HTTPException(status_code=500, detail=updated_conversation['message'])
+        raise HTTPException(status_code=500, detail=add_query['message'])
 
 
 @router.get("/history")
@@ -128,6 +159,32 @@ async def get_chats(conversation_id: str = Query(...), user = Depends(verify_tok
         "messages": messages['rows']
     }
 
+async def response_in_background(conversation_id: str, company_id: str, company_schema: str, query: str, instance_name:str, phone_number:str):
+    try:
+        response = await generate_response_with_search(
+            company_id=company_id,
+            company_schema=company_schema,
+            conversation_id=conversation_id,
+            query=query
+        )
+        # Insert new message into database        
+        add_response = await add_new_message(
+            company_id=company_schema, 
+            conversation_id=conversation_id, 
+            sender_email="",
+            sender_type="bot", 
+            content=response
+        )
+        await send_message_whatsapp(instance_name, phone_number, response)
+        return response
+    except Exception as e:
+        print(e)
+        return None
+
+def run_response_in_thread(conversation_id, company_id, company_schema, query, instance_name, phone_number):
+    asyncio.run(response_in_background(conversation_id, company_id, company_schema, query, instance_name, phone_number))
+
+
 @router.post("/reply")
 async def reply_to_message(data = Body(...)):
     instanceName = data['instanceName']
@@ -166,6 +223,15 @@ async def reply_to_message(data = Body(...)):
     
     # Return success response with new message details
     if messages["status"] == "success":
+        
+        # Start vectorization in background thread
+        thread = threading.Thread(
+            target=run_response_in_thread,
+            args=(conversation_id, company_id, company_schema,message['message']['conversation'], instanceName, phone_number)
+        )
+        thread.daemon = True
+        thread.start()
+        
         return {
             "status": 'success',
         }

@@ -9,4 +9,9 @@ python-multipart
 slowapi
 postgrest
 bcrypt
-yamail
+yagmail
+pandas
+numpy
+openpyxl
+pinecone
+openai

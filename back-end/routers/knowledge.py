@@ -1,9 +1,48 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, Body, File
 from middleware.auth import verify_token
 from db.supabase_client import supabase
+import tempfile
+import os
+from typing import Optional
+from src.vectorize import vectorize_file
+import pandas as pd
+from src.utils.file_utills import generate_file_hash
+from src.utils.pinecone_utills import delete_file_vectors
+import threading
+import io
 
 # Create a new FastAPI router for handling file storage operations
 router = APIRouter()
+
+def vectorize_in_background(file_content: bytes, file_name: str, company_id: str, record_id: str):
+    """Background task to vectorize uploaded file"""
+    try:
+        # Convert bytes to BytesIO for vectorize_file function
+        file_io = io.BytesIO(file_content)
+        
+        # Run vectorization
+        result = vectorize_file(
+            file_content=file_io,
+            file_name=file_name,
+            index_name=company_id,
+            company_id=company_id
+        )
+        
+        # Update database record status
+        if result["status"] == "success":
+            supabase.table("knowledges").update({
+                "status": "Completed"
+            }).eq("id", record_id).execute()
+        else:
+            supabase.table("knowledges").update({
+                "status": "Failed"
+            }).eq("id", record_id).execute()
+            
+    except Exception as e:
+        print(f"Vectorization failed: {str(e)}")
+        supabase.table("knowledges").update({
+            "status": "Failed"
+        }).eq("id", record_id).execute()
 
 @router.get("/list")
 async def get_file_list(
@@ -24,11 +63,12 @@ async def get_file_list(
         raise HTTPException(status_code=400, detail="Project ID is required")
     
     try:
-        storage = supabase.storage.from_('knowledges')
-        response = storage.list(company_id)
+        files = supabase.table("knowledges").select("*").eq("company_id", company_id).execute()
+        # storage = supabase.storage.from_('knowledges')
+        # response = storage.list(company_id)
         return {
             "company_id": company_id,
-            "knowledges": response
+            "knowledges": files.data
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -49,11 +89,8 @@ async def upload_file(
     if not user['permission'].get("knowledge", False):
         raise HTTPException(status_code=400, detail="You are not authorized to perform this action")
     company_id = user["company_id"]
-    if not file:
+    if not file or not company_id:
         raise HTTPException(status_code=400, detail="No file provided")
-    
-    if not company_id:
-        raise HTTPException(status_code=400, detail="Project ID is required")
     
     try:
         file_content = await file.read()
@@ -65,7 +102,32 @@ async def upload_file(
             {"content-type": file.content_type}
         )
         
-        return {"message": "File uploaded successfully", "data": response}
+        if response.full_path:
+            new_record = supabase.table("knowledges").insert([{
+                "company_id": company_id,
+                "uploaded_by": user["id"],
+                "file_name": file_name,
+                "file_type": file.content_type,
+                "file_hash": generate_file_hash(file_content),
+                "status": "Processing"
+            }]).execute()
+            
+            if new_record.data:
+                record_id = new_record.data[0]["id"]
+                
+                # Start vectorization in background thread
+                thread = threading.Thread(
+                    target=vectorize_in_background,
+                    args=(file_content, file_name, company_id, record_id)
+                )
+                thread.daemon = True
+                thread.start()
+                
+                return {"message": "File uploaded successfully, vectorization started", "data": new_record.data[0]}
+            else:
+                raise HTTPException(status_code=500, detail="Failed to create knowledge record")
+        else:
+            raise HTTPException(status_code=500, detail="Failed to upload file")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -85,9 +147,63 @@ async def remove_file(
     if not user['permission'].get("knowledge", False):
         raise HTTPException(status_code=400, detail="You are not authorized to perform this action")
     company_id = user["company_id"]
-    file_name = data["file_name"]
+    file_id = data["file_id"]
+    file = supabase.table("knowledges").select("*").eq("id", file_id).execute()
+    if not file.data:
+        raise HTTPException(status_code=400, detail="File not found")
+    file_name = file.data[0]["file_name"]
+    file_hash = file.data[0]["file_hash"]
     try:
+        delete_file_vectors(company_id, file_hash)
+        supabase.table("knowledges").delete().eq("id", file_id).execute()
         response = supabase.storage.from_('knowledges').remove([f"{company_id}/{file_name}"])
         return {"message": "File removed successfully", "data": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/reprocess")
+async def reprocess_file(
+    data = Body(...),
+    user = Depends(verify_token)
+):
+    company_id = user["company_id"]
+    file_id = data.get("file_id")
+
+    # Validate input
+    if not file_id:
+        raise HTTPException(status_code=400, detail="file_id is required")
+
+    # Fetch file record
+    file_info = supabase.table("knowledges").select("*").eq("id", file_id).single().execute()
+    if not file_info.data:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file_name = file_info.data["file_name"]
+
+    # Download file from Supabase Storage (as bytes)
+    try:
+        file_response = supabase.storage.from_("knowledges").download(f"{company_id}/{file_name}")
+        if not file_response:
+            raise HTTPException(status_code=404, detail="File not found in storage")
+
+        # Create in-memory file-like object
+        file_content = file_response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error downloading file: {str(e)}")
+
+    # Process file asynchronously (no local save)
+    try:
+        thread = threading.Thread(
+            target=vectorize_in_background,
+            args=(file_content, file_name, company_id, file_id),
+            daemon=True
+        )
+        thread.start()
+        
+        supabase.table("knowledges").update({
+            "status": "Processing"
+        }).eq("id", file_id).execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Background processing failed: {str(e)}")
+    
+    return {"message": "File reprocessing started", "file_id": file_id}

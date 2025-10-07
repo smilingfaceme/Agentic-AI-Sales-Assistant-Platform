@@ -6,7 +6,9 @@ def validate_env():
     required_vars = [
         "SUPABASE_URL",
         "SUPABASE_KEY", 
-        "JWT_SECRET"
+        "JWT_SECRET",
+        "PINECONE_API_KEY",
+        "OPENAI_API_KEY"
     ]
     
     missing_vars = []

@@ -66,7 +66,7 @@ async def register(
         "email": new_user["email"],
         "role": role_info['name'],
         "company_id": new_company['id'],
-        "permission": role_info['permissions']
+        "permissions": role_info['permissions']
     }
     
     token = create_access_token(token_data)
@@ -80,7 +80,7 @@ async def register(
             "company_name": new_company['name'],
             "company_description": new_company['description'],
             "role": role_info['name'],
-            "permission": role_info['permissions']
+            "permissions": role_info['permissions']
         }
     }
 

@@ -40,14 +40,26 @@ export default function PermissionWrapper({ children }: PermissionWrapperProps) 
   const [isChecking, setIsChecking] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
 
-  useEffect(() => {
-    checkPermissions();
-  }, [pathname, currentUser]);
+  const getRequiredPermissions = (path: string): string[] => {
+    const matchingRoute = Object.keys(PROTECTED_ROUTES)
+      .filter(route => path.startsWith(route))
+      .sort((a, b) => b.length - a.length)[0];
+
+    return matchingRoute ? [...PROTECTED_ROUTES[matchingRoute as keyof typeof PROTECTED_ROUTES]] : [];
+  };
+
+  const hasRequiredPermissions = (requiredPermissions: string[]): boolean => {
+    if (!currentUser.permissions || typeof currentUser.permissions !== 'object') {
+      return false;
+    }
+
+    return requiredPermissions.some(permission =>
+      (currentUser.permissions as Record<string, boolean>)[permission] === true
+    );
+  };
 
   const checkPermissions = async () => {
     setIsChecking(true);
-
-    console.log(pathname)
 
     // Check if route is public
     if (PUBLIC_ROUTES.some(route => pathname.endsWith(route))) {
@@ -69,7 +81,6 @@ export default function PermissionWrapper({ children }: PermissionWrapperProps) 
       } else {
         router.push('/auth/login')
       }
-      console.log(user)
     }
     // Check route permissions
     const requiredPermissions = getRequiredPermissions(pathname);
@@ -77,7 +88,6 @@ export default function PermissionWrapper({ children }: PermissionWrapperProps) 
       // Redirect to dashboard or show unauthorized
       const redirect_route = REDIRECT_ROUTES[pathname as keyof typeof REDIRECT_ROUTES]
       router.push(redirect_route)
-      // router.back();
       return;
     }
 
@@ -85,28 +95,14 @@ export default function PermissionWrapper({ children }: PermissionWrapperProps) 
     setIsChecking(false);
   };
 
-  const getRequiredPermissions = (path: string): string[] => {
-    const matchingRoute = Object.keys(PROTECTED_ROUTES)
-      .filter(route => path.startsWith(route))
-      .sort((a, b) => b.length - a.length)[0];
-
-    return matchingRoute ? [...PROTECTED_ROUTES[matchingRoute as keyof typeof PROTECTED_ROUTES]] : [];
-  };
-
-  const hasRequiredPermissions = (requiredPermissions: string[]): boolean => {
-    if (!currentUser.permissions || typeof currentUser.permissions !== 'object') {
-      return false;
-    }
-
-    return requiredPermissions.some(permission =>
-      (currentUser.permissions as Record<string, boolean>)[permission] === true
-    );
-  };
+  useEffect(() => {
+    checkPermissions();
+  }, [pathname, currentUser]);
 
   if (isChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loading isLoading={true} text="Checking permissions..." />
+        <Loading isLoading={true} text="Loading..." />
       </div>
     );
   }

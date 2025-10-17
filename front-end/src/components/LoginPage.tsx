@@ -1,15 +1,15 @@
-'use client'
+"use client";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { login, setCookie } from "@/utils";
 import Loading from "@/components/Loading";
 import { useRouter } from "next/navigation";
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppContext } from "@/contexts/AppContext";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setCompanyId, setCurrentUser, companyId } = useAppContext();
+  const { setCompanyId, setCurrentUser } = useAppContext();
 
   // User Info States
   const [email, setEmail] = useState("");
@@ -24,19 +24,17 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await login(email, password);
-      console.log(res)
       if (res.token) {
         // Save token to cookie instead of localStorage
         setCookie("auth_token", res.token, 1);
-        setCookie("user", res.user, 1) // Store for 7 days
+        setCookie("user", res.user, 1); // Store for 7 days
         setCompanyId(res.user.company_id);
         setCurrentUser(res.user);
-        router.push("/dashboard/chats")
+        router.push("/dashboard/chats");
       } else {
         setError(res.message || "Login failed");
       }
-    } catch (e) {
-      console.log(e)
+    } catch {
       setError("Login failed");
     } finally {
       setLoading(false);
@@ -55,7 +53,6 @@ export default function LoginPage() {
           />
         </Link>
         <h1 className="text-2xl md:text-3xl font-extrabold text-gray-700 mb-2">Login to DoshiAI</h1>
-        <p>Here {companyId}</p>
         <p className="text-gray-400 mb-6 text-center">
           Welcome back! Please enter your credentials to continue.
         </p>
@@ -68,7 +65,7 @@ export default function LoginPage() {
               name="email"
               required
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900"
               placeholder="you@example.com"
             />
@@ -81,7 +78,7 @@ export default function LoginPage() {
               name="password"
               required
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900"
               placeholder="••••••••"
             />
@@ -91,7 +88,7 @@ export default function LoginPage() {
           ) : error && <div className="text-red-500 text-sm">{error}</div>}
           <button
             type="submit"
-            className="w-full py-3 mt-2 rounded-lg bg-black text-white font-bold hover:bg-gray-300 hover:text-black focus:outline-none focus:ring-2 focus:ring-white transition-all disabled:opacity-50"
+            className="w-full py-3 mt-2 rounded-lg bg-black text-white font-bold hover:bg-gray-300 hover:text-black focus:outline-none focus:ring-2 focus:ring-white transition-all"
             disabled={loading}
           >
             <Loading isLoading={loading} type="button" text="Logging in..." theme="dark">

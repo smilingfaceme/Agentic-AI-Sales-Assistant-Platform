@@ -11,7 +11,7 @@ interface InvitedUser {
   id: string;
   invited_email: string;
   role: string;
-  status: 'pending' | 'accepted' | 'expired';
+  status: 'pending' | 'accepted' | 'expired' | 'failed';
   created_at: string;
   invited_by: string;
 }
@@ -122,7 +122,7 @@ export default function InviteUsers() {
       "Invited Date": new Date(user.created_at).toLocaleDateString(),
       "Invited By": user.invited_by,
       "Actions": [
-        ...(user.status === 'pending' ? [{
+        ...(user.status != 'accepted' ? [{
           label: "",
           onClick: () => handleResendInvite(user.id, user.invited_email),
           className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors mr-1",
@@ -163,8 +163,8 @@ export default function InviteUsers() {
       setInviteEmail("");
       setInviteRole(roles[0].id || "");
       setShowInviteModal(false);
-      fetchInvitedUsers(); // Refresh the list
     }
+    fetchInvitedUsers(); // Refresh the list
   };
 
   return (

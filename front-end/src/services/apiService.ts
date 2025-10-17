@@ -103,15 +103,17 @@ export const knowledgeApi = {
     return res.json();
   },
 
-  uploadKnowledgeFile: async (file: File) => {
+  uploadKnowledgeFile: async (file: File, columns: string[]) => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('columns', JSON.stringify(columns));
     const res = await apiRequest(`/knowledge/upload`, {
       method: 'POST',
       body: formData
     });
-    if (!res.ok) throw new Error('Failed to upload file');
-    return res.json();
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Failed to upload file. ${data.message}`);    
+    return data;
   },
 
   deleteKnowledgeFile: async (fileId: string) => {

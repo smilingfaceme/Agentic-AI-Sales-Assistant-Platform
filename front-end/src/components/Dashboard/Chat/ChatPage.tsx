@@ -109,7 +109,7 @@ export default function ChatPage() {
             {navButtons.map((btn) => (
               <button
                 key={btn.label}
-                className={`relative px-3 py-3 text-sm font-medium ${active === btn.label ? "border-b border-blue-500" : "hover:bg-gray-100"}`}
+                className={`relative px-2 py-3 text-sm font-medium ${active === btn.label ? "border-b border-blue-500" : "hover:bg-gray-100"}`}
                 onClick={() => {
                   setActive(btn.key);
                 }}

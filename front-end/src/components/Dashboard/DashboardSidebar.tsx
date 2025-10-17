@@ -43,7 +43,7 @@ export default function DashboardSidebar() {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header / Organization */}
-        <div className={`flex items-center border-b mt-2 md:mt-0 border-gray-300 ${sidebarHidden ? "justify-center p-4" : "p-4 pt-1 pl-8"}`}>
+        <div className={`flex items-center border-b mt-2 md:mt-0 border-gray-300 ${sidebarHidden ? "justify-center p-4 pt-3" : "p-4 pt-1 pl-8"}`}>
           <div className={`flex items-center ${!sidebarHidden ? "w-full" : ""}`}>
             <span onClick={() => setSidebarHidden(!sidebarHidden)} title={sidebarHidden ? "Show sidebar" : "Hide sidebar"} className="cursor-pointer">
               <FaBuilding className="text-xl" />

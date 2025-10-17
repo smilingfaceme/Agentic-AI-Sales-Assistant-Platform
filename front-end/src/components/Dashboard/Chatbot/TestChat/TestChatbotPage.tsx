@@ -33,6 +33,17 @@ export default function TestChatbotPage() {
       setConversationId(currentConversationId);
     }
 
+    const new_message: ChatMessage = {
+        "content": message,
+        "created_at":new Date().toISOString(),
+        "message_id": 2,
+        "sender_type": 'customer',
+        "email": "",
+        "conversation_id": conversationId
+    }
+    
+    setChatMessages([...chatMessages, new_message])
+
     const data = await chatApi.sendMessage(currentConversationId, message, sender_type);
     if (data.messages) {
       setChatMessages([...chatMessages, ...data.messages]);

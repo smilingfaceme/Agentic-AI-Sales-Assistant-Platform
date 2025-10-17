@@ -25,7 +25,7 @@ export default function ChatbotPage({ children }: { children: React.ReactNode })
         </div>
       </header>
       
-      <main className="flex flex-1 h-full flex-col md:flex-row">
+      <main className="flex flex-1 h-full flex-col md:flex-row overflow-hidden">
         {/* Left buttons */}
         <aside className="w-full md:w-72 min-w-[220px] border-b border-gray-300 md:border-r m:border-gray-300 bg-white px-2 flex md:flex-col gap-1 md:py-6 md:px-4">
           {currentUser.permissions['knowledge'] == true &&<Link
@@ -57,7 +57,7 @@ export default function ChatbotPage({ children }: { children: React.ReactNode })
           </Link>}
         </aside>
         {/* Right content area */}
-        <div className="flex-1 h-full">
+        <div className="flex-1 flex flex-col h-full">
           {children}
         </div>
       </main>

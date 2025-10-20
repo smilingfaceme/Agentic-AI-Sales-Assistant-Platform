@@ -122,9 +122,9 @@ def vectorize_file(file_content: io.BytesIO, file_name: str, index_name: str, co
         "status": "success",
         "file_name": file_name,
         "file_hash": file_hash,
-        "file_type": chunks[0]["metadata"]["file_type"] if chunks else "unknown",
+        "file_type": chunks[0]["metadata"]["pc_file_type"] if chunks else "unknown",
         "total_chunks": len(chunks),
-        "total_rows": chunks[0]["metadata"]["total_rows"] if chunks else 0,
+        "total_rows": chunks[0]["metadata"]["pc_total_rows"] if chunks else 0,
         "deleted_previous_vectors": deleted_count,
-        "message": f"Successfully vectorized {len(chunks)} chunks from {chunks[0]['metadata']['file_type']} file"
+        "message": f"Successfully vectorized {len(chunks)} chunks from {chunks[0]['metadata']['pc_file_type']} file"
     }

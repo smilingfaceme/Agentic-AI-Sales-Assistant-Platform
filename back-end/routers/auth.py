@@ -44,7 +44,7 @@ async def register(
             raise HTTPException(status_code=400, detail="User already exists")
     
     # Insert new company data and create company schema and table
-    new_company = create_companies(name=company, description=description)
+    new_company = await create_companies(name=company, description=description)
     if not new_company:
         raise HTTPException(status_code=400, detail="Registration failed")
     

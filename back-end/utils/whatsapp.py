@@ -20,6 +20,7 @@ async def start_whatsapp(company_id: str, request_id:str, instance_name:str):
                 "instance_name": instance_name
             }
         )
+        print(response)
     return response.json()
 
 async def logout_whatsapp(instance_name:str):

@@ -83,6 +83,17 @@ COMPANY_MESSAGE_TABLE = """create table {company_id}.messages (
 ) TABLESPACE pg_default;
 """
 
+COMPANY_IMAGE_TABLE = """create table {company_id}.images (
+  id uuid not null default gen_random_uuid (),
+  file_name text not null,
+  file_type text not null,
+  file_hash text not null,
+  status text not null,
+  extra json null,
+  created_at timestamp with time zone not null default now(),
+  constraint images_pkey primary key (id)
+) TABLESPACE pg_default;"""
+
 ADD_CONVERSATION_INTO_TABLE =  """INSERT INTO {company_id}.conversations (conversation_name, source, phone_number, instance_name) VALUES (\'{conversation_name}\', \'{source}\', \'{phone_number}\', \'{instance_name}\')"""
 
 GET_ALL_CONVERSATIONS_QUERY = """SELECT * FROM {company_id}.conversations;"""
@@ -106,3 +117,15 @@ JOIN LATERAL (
 ) AS m ON true
 WHERE m.sender_type = 'customer';
 """
+
+ADD_IMAGE_INTO_TABLE = """INSERT INTO {company_id}.images (file_name, file_type, file_hash, status) VALUES (\'{file_name}\', \'{file_type}\', \'{file_hash}\', \'{status}\')"""
+
+GET_IMAGES_FROM_TABLE = """SELECT * FROM {company_id}.images ORDER BY created_at ASC LIMIT {page_size} OFFSET {page_start};"""
+
+GET_ALL_IMAGE_TABLE = """SELECT count(*) FROM {company_id}.images;"""
+
+GET_SAME_IMAGE_TABLE = """SELECT * FROM {company_id}.images WHERE file_hash=\'{file_hash}\';"""
+
+GET_SAME_IMAGE_TABLE_WITH_ID = """SELECT * FROM {company_id}.images WHERE id=\'{file_id}\';"""
+
+DELETE_IMAGE_TABLE = """DELETE FROM {company_id}.images WHERE id = \'{file_id}\';"""

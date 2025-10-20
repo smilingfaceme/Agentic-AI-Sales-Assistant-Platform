@@ -1,6 +1,5 @@
 from typing import List, Dict
-from src.utils.pinecone_utills import search_vectors
-from src.service_client import openai_service
+from src.utils.pinecone_utills import search_vectors_product
 from db.company_table import get_all_messages
 
 from langchain_openai import ChatOpenAI
@@ -17,25 +16,22 @@ OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 llm_bot = ChatOpenAI( model=os.getenv('OPENAI_MODEL', 'gpt-4o-mini'), api_key=OPENAI_KEY)
 
 class RetrievalQueryInput(BaseModel):
-    query: str = Field(..., description="The full text query or key points describing the user's product need. For example: 'affordable 4K smart TV with HDMI support' or 'wireless noise-cancelling headphones under $200'.")
-
+    query: str = Field(..., description="""The full text query or key points describing the user's product need in feature and value. 
+                       For example: "'Size': 1.5 | 'Conductor': Copper | 'Sub Category': Unarmoured Power Cables | 'Insulation': PVC | 'Standard': KS".""")
+    require_new_products: bool = Field(..., description="""Indicates whether the user wants a new and different set of products.
+• True: User disliked or rejected previous results; return new items not shown before.
+• False: User wants to refine, filter, or continue from previous product options.""")
+    
 def safe_string(value: str) -> str:
     """
-    Safely format a string by escaping problematic characters
-    (like backslashes, quotes, and newlines) for SQL or JSON contexts.
+    Escape a string for safe use in SQL queries by doubling single quotes.
     """
     if not isinstance(value, str):
         value = str(value)
     
     # Escape backslashes and quotes
-    safe_value = (
-        value.replace("'", "\'")
-             .replace('"', '\"')
-             .replace("\n", "\n")
-             .replace("\r", "\r")
-    )
+    safe_value = value.replace("'", "''")
     return safe_value
-
 
 async def get_histroy(company_schema: str, conversation_id: str):
     memory = ConversationSummaryBufferMemory(
@@ -61,7 +57,7 @@ async def get_histroy(company_schema: str, conversation_id: str):
     else:
         return memory
 
-def generate_response(user_message:str, chat_memory:ConversationSummaryBufferMemory, company_id:str):
+def generate_response(user_message:str, chat_memory:ConversationSummaryBufferMemory, company_id:str, conversation_id:str):
     prompt_Tempalte = f"""You are an AI sales assistant helping customers. Generate a helpful, persuasive, and natural sales response. The response must be clear and short like human response."""
     prompt = ChatPromptTemplate.from_messages([
         ("system", prompt_Tempalte),
@@ -70,16 +66,20 @@ def generate_response(user_message:str, chat_memory:ConversationSummaryBufferMem
         MessagesPlaceholder("agent_scratchpad"),
     ])
     
-    def search_vectors_with_query(query: str) -> List[Dict]:
-        results = search_vectors(index_name=company_id, query_text=query, company_id=company_id, top_k=5)
-        retrieval_results = [r['metadata']['text'] for r in results]
+    def search_vectors_with_query(query: str, require_new_products:bool) -> List[Dict]:
+        results, differentiating_features = search_vectors_product(index_name=company_id, query_text=query, company_id=company_id, conversationId=conversation_id,  new_search=require_new_products, top_k=5)
+        if differentiating_features:
+            return f"User query is not enough to search products. Ask user with following options: {differentiating_features}"
+        else:
+            retrieval_results = [r['metadata']['pc_text'] for r in results]
         return retrieval_results
     
     # Tool Calling Functions
     db_tool = StructuredTool.from_function(
         func=search_vectors_with_query,
         name="search_vectors_with_query",
-        description="Search for the most relevant products in the vector database based on a user's natural language query or main product requirement.",
+        description="""Search the vector database to find the most relevant products based on the user’s natural language query or product requirements.
+        The input query should include as many specific product details as possible to improve search accuracy and relevance.""",
         args_schema=RetrievalQueryInput,
     )
     tools = [db_tool]
@@ -104,10 +104,9 @@ def generate_response(user_message:str, chat_memory:ConversationSummaryBufferMem
             final_output = chunk["output"]
         
     return final_output
-
   
 async def generate_response_with_search(company_id:str, company_schema:str, conversation_id:str, query: str, top_k: int = 5):
     chat_memory = await get_histroy(company_schema, conversation_id)
     
-    response = generate_response(query, chat_memory, company_id)
+    response = generate_response(query, chat_memory, company_id, conversation_id)
     return safe_string(response)

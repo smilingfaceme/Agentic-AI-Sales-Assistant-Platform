@@ -101,7 +101,7 @@ create table if not exists public.users (
 ) TABLESPACE pg_default;
 
 -- public.knowledges schema
-create table public.knowledges (
+create table if not exists public.knowledges (
   id uuid not null default gen_random_uuid (),
   company_id uuid not null,
   uploaded_by uuid not null,
@@ -116,8 +116,24 @@ create table public.knowledges (
   constraint knowledges_uploaded_by_fkey foreign KEY (uploaded_by) references users (id)
 ) TABLESPACE pg_default;
 
+-- public.invitations schema
+create table if not exists public.invitations (
+  id uuid not null default gen_random_uuid (),
+  company_id uuid not null,
+  invited_email text not null,
+  invited_by uuid not null,
+  role uuid not null,
+  status text not null,
+  token_hash text not null,
+  created_at timestamp with time zone not null default now(),
+  constraint invitations_pkey primary key (id),
+  constraint invitations_company_id_fkey foreign KEY (company_id) references companies (id),
+  constraint invitations_invited_by_fkey foreign KEY (invited_by) references users (id),
+  constraint invitations_role_fkey foreign KEY (role) references roles (id)
+) TABLESPACE pg_default;
+
 -- public.integrations schema
-create table public.integrations (
+create table if not exists public.integrations (
   id uuid not null default gen_random_uuid (),
   company_id uuid not null,
   type text not null,
@@ -190,26 +206,6 @@ select
 from public.integrations i
 left join public.users u on i.created_by = u.id;
 
-INSERT INTO roles (name, permissions) VALUES ('admin', '{"dashboard": true, "invitation": true}'::jsonb) RETURNING id, name, permissions;
-
-
-COMPANY_CONVERSATION_TABLE = """create table {company_id}.conversations (
-  conversation_id uuid not null default gen_random_uuid (),
-  conversation_name text not null,
-  ai_reply boolean not null default true,
-  created_at timestamp without time zone not null default now(),
-  updated_at timestamp without time zone null default now(),
-  source text not null,
-  phone_number text null default ''::text,
-  messages json null,
-  constraint conversations_pkey primary key (conversation_id)
-) TABLESPACE pg_default"""
-
-UPDATE company_17592010983417678.conversations (conversation_name, source, phone_number, messages) VALUES ('Smiling Face', 'WhatsApp', '+19024320943', '[{"content": "Hello DoshiAI", "sender_type": "customer", "sender_email": "", "created_at": '2025-09-30 07:52:35.861109'}, {"content": "Hi, Nice to meet you.", "sender_type": "agent", "sender_email": "hector980112@gmail.com", "created_at": '2025-09-30 07:53:24.604813'}]'::jsonb) RETURNING conversation_id, conversation_name, ai_reply, source, phone_number, messages;
-
-
-UPDATE company_17592010983417678.conversations
-SET messages = '[{"from":"user","text":"New message"}]'::jsonb,
-    updated_at = now()
-WHERE id = '0cdb11bd-0269-4387-a06b-1dda718b3b08'
-RETURNING *;
+INSERT INTO roles (name, permissions) VALUES ('admin', '{"chat": true, "knowledge": true, "invite": true, "company": true, "integration": true, "conversation": true}'::jsonb) RETURNING id, name, permissions;
+INSERT INTO roles (name, permissions) VALUES ('knowledge_manager', '{"chat": false, "knowledge": true, "invite": false, "company": false, "integration": false, "conversation": false}'::jsonb) RETURNING id, name, permissions;
+INSERT INTO roles (name, permissions) VALUES ('agent', '{"chat": true, "knowledge": false, "invite": false, "company": false, "integration": true, "conversation": true}'::jsonb) RETURNING id, name, permissions;

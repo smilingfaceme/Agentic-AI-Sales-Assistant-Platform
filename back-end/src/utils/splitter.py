@@ -1,68 +1,67 @@
 import uuid
 from typing import List, Dict, Any
 
-
 def chunk_file(
     input_texts: List[str],
+    meta_dict: List[Dict],
     max_chunk_size: int,
     metadata: Dict[str, Any]
 ) -> List[Dict[str, Any]]:
     """
-    Splits text rows into chunks, each under `max_chunk_size` characters.
+    Splits each row into one or more chunks.
+    - If a row is shorter than `max_chunk_size`, it becomes one chunk.
+    - If a row exceeds `max_chunk_size`, it is split into multiple chunks.
 
     Args:
-        input_texts: List of row strings from CSV/XLSX
-        max_chunk_size: Maximum characters allowed per chunk
-        metadata: File metadata containing keys like:
-            file_name, file_extension, file_type, file_hash
+        input_texts: List of row strings from CSV/XLSX.
+        max_chunk_size: Maximum characters allowed per chunk.
+        metadata: File metadata (e.g., file_name, file_extension, file_type, file_hash).
 
     Returns:
-        A list of dicts containing chunk text and metadata
+        List of dicts, each containing text and metadata.
     """
     chunks = []
-    current_chunk, current_size = [], 0
     total_rows = len(input_texts)
 
-    def make_chunk(chunk_rows: List[str], row_start: int, row_end: int, chunk_index: int) -> Dict[str, Any]:
+    def make_chunk(text: str, meta:dict, row_index: int, sub_index: int, total_subchunks: int) -> Dict[str, Any]:
         """Helper to create a chunk dictionary with metadata."""
         return {
-            "text": "\n".join(chunk_rows),
+            "text": text,
             "metadata": {
                 **metadata,
-                "chunk_id": str(uuid.uuid4()),
-                "chunk_index": chunk_index,
-                "total_chunks": 0,  # will update later
-                "row_start": row_start,
-                "row_end": row_end,
-                "total_rows": total_rows,
+                "pc_chunk_id": str(uuid.uuid4()),
+                "pc_chunk_index": len(chunks),
+                "pc_total_chunks": 0,  # updated later
+                "pc_row_index": row_index,
+                "pc_row_sub_index": sub_index,
+                "pc_total_row_subchunks": total_subchunks,
+                "pc_total_rows": total_rows,
+                **meta
             }
         }
 
-    row_start = 0
-    for idx, row_text in enumerate(input_texts):
-        row_size = len(row_text)
+    # Process each row independently
+    for row_index, row_text in enumerate(input_texts):
+        if not row_text:
+            continue
 
-        # Truncate oversized row
-        if row_size > max_chunk_size:
-            row_text = row_text[: max_chunk_size - 3] + "..."
-            row_size = max_chunk_size
+        row_length = len(row_text)
 
-        # If this row doesn't fit in the current chunk → save chunk
-        if current_size + row_size > max_chunk_size and current_chunk:
-            chunks.append(make_chunk(current_chunk, row_start, idx - 1, len(chunks)))
-            current_chunk, current_size = [], 0
-            row_start = idx
-
-        current_chunk.append(row_text)
-        current_size += row_size + 1  # +1 for newline
-
-    # Final chunk
-    if current_chunk:
-        chunks.append(make_chunk(current_chunk, row_start, total_rows - 1, len(chunks)))
+        # If row fits in one chunk
+        if row_length <= max_chunk_size:
+            chunks.append(make_chunk(row_text, meta_dict[row_index], row_index, 0, 1))
+        else:
+            # Split long row into multiple parts
+            total_subchunks = (row_length + max_chunk_size - 1) // max_chunk_size
+            for i in range(total_subchunks):
+                start = i * max_chunk_size
+                end = start + max_chunk_size
+                part = row_text[start:end]
+                chunks.append(make_chunk(part, meta_dict[row_index], row_index, i, total_subchunks))
 
     # Update total_chunks
     total_chunks = len(chunks)
     for chunk in chunks:
-        chunk["metadata"]["total_chunks"] = total_chunks
+        chunk["metadata"]["pc_total_chunks"] = total_chunks
 
     return chunks

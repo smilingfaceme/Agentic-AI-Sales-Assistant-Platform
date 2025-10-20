@@ -1,20 +1,23 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, Body, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, Body, File, Form
 from middleware.auth import verify_token
 from db.supabase_client import supabase
 import tempfile
-import os
+import os, json
 from typing import Optional
 from src.vectorize import vectorize_file
 import pandas as pd
 from src.utils.file_utills import generate_file_hash
 from src.utils.pinecone_utills import delete_file_vectors
 import threading
-import io
+import io, asyncio
 
 # Create a new FastAPI router for handling file storage operations
 router = APIRouter()
 
-def vectorize_in_background(file_content: bytes, file_name: str, company_id: str, record_id: str):
+def run_vectorize_in_thread(file_content, file_name, company_id, record_id):
+    asyncio.run(vectorize_in_background(file_content, file_name, company_id, record_id))
+
+async def vectorize_in_background(file_content: bytes, file_name: str, company_id: str, record_id: str):
     """Background task to vectorize uploaded file"""
     try:
         # Convert bytes to BytesIO for vectorize_file function
@@ -76,6 +79,7 @@ async def get_file_list(
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
+    columns = Form(..., default_factory=list),
     user = Depends(verify_token)
 ):
     """
@@ -92,9 +96,15 @@ async def upload_file(
     if not file or not company_id:
         raise HTTPException(status_code=400, detail="No file provided")
     
+    selected_columns = json.loads(columns)
     try:
         file_content = await file.read()
         file_name = file.filename
+        file_hash = generate_file_hash(file_content)
+        
+        existing_file = supabase.table("knowledges").select("*").eq("file_hash", file_hash).eq("company_id", company_id).execute()
+        if existing_file.data:
+            raise HTTPException(status_code=400, detail="File already exists")
         
         response = supabase.storage.from_('knowledges').upload(
             f"{company_id}/{file_name}",
@@ -108,8 +118,9 @@ async def upload_file(
                 "uploaded_by": user["id"],
                 "file_name": file_name,
                 "file_type": file.content_type,
-                "file_hash": generate_file_hash(file_content),
-                "status": "Processing"
+                "file_hash": file_hash,
+                "status": "Processing",
+                "extra": selected_columns
             }]).execute()
             
             if new_record.data:
@@ -117,7 +128,7 @@ async def upload_file(
                 
                 # Start vectorization in background thread
                 thread = threading.Thread(
-                    target=vectorize_in_background,
+                    target=run_vectorize_in_thread,
                     args=(file_content, file_name, company_id, record_id)
                 )
                 thread.daemon = True
@@ -194,7 +205,7 @@ async def reprocess_file(
     # Process file asynchronously (no local save)
     try:
         thread = threading.Thread(
-            target=vectorize_in_background,
+            target=run_vectorize_in_thread,
             args=(file_content, file_name, company_id, file_id),
             daemon=True
         )

@@ -21,13 +21,18 @@ async def get_invitations_list(user = Depends(verify_token)):
     """
     if not user['permission'].get("invite", False):
         raise HTTPException(status_code=400, detail="You are not authorized to perform this action")
-    
+
     invitations = get_invitations_with_users("company_id", user['company_id'])
-    
-    return {
-        "message": "Company settings updated successfully!",
-        "invitations": invitations,
-    }
+    if invitations is None:
+        return {
+            "message": "Company settings updated successfully!",
+            "invitations": [],
+        }
+    else:
+        return {
+            "message": "Company settings updated successfully!",
+            "invitations": invitations,
+        }
 
 @router.get("/get_roles")
 async def get_roles_list(user = Depends(verify_token)):
@@ -116,6 +121,7 @@ async def invite_user(data = Body(...), user = Depends(verify_token)):
     )
     
     if not re:
+        update_invitation_by_id(new_record_invitation['id'], {"status": 'Failed'})
         raise HTTPException(status_code=400, detail="Failed to send invitation")
     
     return {
@@ -151,7 +157,7 @@ async def resend_invitation(invitationId = Query(...), user = Depends(verify_tok
     token_hash = create_access_token(token_data, period=24*3)
     
     # Update invitation
-    updated_invitation = update_invitation_by_id(invitationId, {"token_hash": token_hash})
+    updated_invitation = update_invitation_by_id(invitationId, {"token_hash": token_hash, "status": 'Pending'})
     
     if updated_invitation is None:
         raise HTTPException(status_code=400, detail="Failed to update invitation")
@@ -166,6 +172,7 @@ async def resend_invitation(invitationId = Query(...), user = Depends(verify_tok
     )
     
     if not re:
+        update_invitation_by_id(invitationId, {"status": 'Failed'})
         raise HTTPException(status_code=400, detail="Failed to resend invitation")
     
     return {

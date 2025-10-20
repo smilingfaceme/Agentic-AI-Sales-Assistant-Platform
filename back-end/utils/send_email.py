@@ -11,15 +11,18 @@ FRONTEND_URL = os.getenv("FRONTEND_URL")
 sender_email = ADMIN_EMAIL
 password = ADMIN_EMAIL_PASSWORD  # Use App Password if Gmail
 
-try:
-    # Connect to Gmail SMTP server
-    server = smtplib.SMTP("smtp.gmail.com", 587)
-    server.starttls()  # Secure the connection
-    server.login(sender_email, password)
-except Exception as e:
-    print("❌ Error:", e)
+
 
 def send_invitation(receiver_email:str, token:str, company_name:str, invited_by:str, invited_by_name:str):
+    try:
+        # Connect to Gmail SMTP server
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()  # Secure the connection
+        server.login(sender_email, password)
+    except Exception as e:
+        print("❌ Error:", e)
+        return False
+        
     # Email content
     subject = "Invitation to join DoshiAI"
     body= """

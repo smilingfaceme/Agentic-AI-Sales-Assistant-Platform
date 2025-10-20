@@ -22,12 +22,12 @@ def load_xlsx_file(file_content: io.BytesIO, file_name:str, file_hash:str) -> li
     file_hash = file_hash
     
     metadata = {
-        "file_name": file_name,
-        "file_hash": file_hash,
-        "file_type": file_type,
-        "file_extension": file_extension
+        "pc_file_name": file_name,
+        "pc_file_hash": file_hash,
+        "pc_file_type": file_type,
+        "pc_file_extension": file_extension
     }
     df = pd.read_excel(file_content)
-    texts = dataframe_to_texts(df)
+    texts, meta_dict = dataframe_to_texts(df)
     
-    return chunk_file(texts, max_chunk_size=8000, metadata=metadata)
+    return chunk_file(texts, meta_dict, max_chunk_size=8000, metadata=metadata)

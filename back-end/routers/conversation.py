@@ -34,7 +34,7 @@ async def get_conversations(user = Depends(verify_token)):
     if all_companies["status"] == "success":
         return {
             "status": 'success',
-            "conversations": all_companies['rows']
+            "conversations": all_companies.get('rows', [])
         }
     else:
         # Internal server error if DB query fails
@@ -69,7 +69,7 @@ async def get_unanswered_questions(user = Depends(verify_token)):
     if all_companies["status"] == "success":
         return {
             "status": 'success',
-            "messages": all_companies['rows']
+            "messages": all_companies.get('rows', [])
         }
     else:
         raise HTTPException(status_code=500, detail=all_companies['message'])
@@ -91,19 +91,18 @@ async def create_new_conversation(data = Body(...), user = Depends(verify_token)
     - Inserts a new conversation record into the company schema.
     - Returns the newly created conversation in JSON format.
     """
+    conversation_name = data["conversation_name"]
+    source = data['source']
+    phone_number = data['phone_number']
+    # Ensure required fields exist
+    if not conversation_name or not source:
+        raise HTTPException(status_code=400, detail="Conversation name and source are required")
+    
     if not user['permission'].get("conversation", False):
         if source == "Test" and user['permission'].get("knowledge", False):
             pass
         else:
-            raise HTTPException(status_code=400, detail="You are not authorized to perform this action")    
-    
-    conversation_name = data["conversation_name"]
-    source = data['source']
-    phone_number = data['phone_number']
-
-    # Ensure required fields exist
-    if not conversation_name or not source:
-        raise HTTPException(status_code=400, detail="Conversation name and source are required")
+            raise HTTPException(status_code=400, detail="You are not authorized to perform this action") 
 
     company_id = user["company_id"]
     company_info = get_companies("id", company_id)
@@ -119,7 +118,7 @@ async def create_new_conversation(data = Body(...), user = Depends(verify_token)
     if new_record["status"] == "success":
         return {
             "status": 'success',
-            "conversations": new_record['rows']
+            "conversations": new_record.get('rows', [])
         }
     else:
         raise HTTPException(status_code=500, detail=new_record['message'])

@@ -32,7 +32,7 @@ async def new_integrations(data = Body(...), user = Depends(verify_token)):
     company_id = user["company_id"]
     request_id = user["id"]
     order = 0
-    integrations = get_integrations({"company_id": company_id, "created_by": request_id})
+    integrations = get_integrations({"company_id": company_id})
     
     if integrations:
         order = len(integrations)

@@ -1,11 +1,12 @@
-import os, json
+import os, json, io
 import httpx
-from fastapi import APIRouter, HTTPException, Depends, Query, Body
+from fastapi import APIRouter, HTTPException, Depends, Query, Body, Form, File, UploadFile
 from middleware.auth import verify_token
 from db.public_table import get_companies
 from db.company_table import *
 from utils.whatsapp import send_message_whatsapp
 from src.response.generate import generate_response_with_search
+from utils.stt import speech_to_text
 import threading
 import asyncio
 
@@ -228,6 +229,72 @@ async def reply_to_message(data = Body(...)):
         thread = threading.Thread(
             target=run_response_in_thread,
             args=(conversation_id, company_id, company_schema,message['message']['conversation'], instanceName, phone_number)
+        )
+        thread.daemon = True
+        thread.start()
+        
+        return {
+            "status": 'success',
+        }
+    else:
+        raise HTTPException(status_code=500, detail=messages['message'])
+
+
+@router.post("/voice")
+async def reply_to_message(
+    audio: UploadFile = File(...),
+    instanceName: str = Form(...),
+    company_id: str = Form(...),
+    phone_number: str = Form(...),
+    whatsapp_name:str = Form(...),
+):
+    # Optional: save uploaded file
+    audio_bytes = await audio.read()
+    # Convert to BytesIO for Whisper
+    audio_buffer = io.BytesIO(audio_bytes)
+    audio_buffer.name = audio.filename
+    message_content = speech_to_text(audio_file=audio_buffer)
+    # Debug print
+    print(f"Received audio: {audio.filename}")
+    print(f"Audio Transcript: {message_content}")
+    print(f"Instance: {instanceName}, Company: {company_id}, phone_number: {phone_number}, whatsapp_name: {whatsapp_name}")
+    
+    if not instanceName or not company_id or not phone_number or not whatsapp_name:
+        raise HTTPException(status_code=400, detail="Missing instanceName, company_id or message parameter")
+    
+    phone_number = phone_number.split('@')[0]
+    
+    company_info = get_companies("id", company_id)
+    if not company_info:
+        raise HTTPException(status_code=400, detail="Company not found")
+    company_schema = company_info["schema_name"]
+    
+    conversation = await get_conversatin_by_phone_integration(company_schema, phone_number, instanceName)
+    conversation = conversation.get('rows', [])    
+    if not conversation:
+        new_conversation = await add_new_conversation(company_schema, whatsapp_name, "WhatsApp", phone_number, instanceName)
+        if new_conversation["status"] == "success":
+            conversation_id = new_conversation['rows'][0]['conversation_id']
+        else:
+            raise HTTPException(status_code=500, detail=new_conversation['message'])
+    else:
+        conversation_id = conversation[0]['conversation_id']
+    
+    messages = await add_new_message(
+        company_id=company_schema, 
+        conversation_id=conversation_id, 
+        sender_email="", 
+        sender_type="customer", 
+        content=message_content
+    )
+    
+    # Return success response with new message details
+    if messages["status"] == "success":
+        
+        # Start vectorization in background thread
+        thread = threading.Thread(
+            target=run_response_in_thread,
+            args=(conversation_id, company_id, company_schema,message_content, instanceName, phone_number)
         )
         thread.daemon = True
         thread.start()

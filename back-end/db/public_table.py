@@ -10,20 +10,21 @@ def get_companies(key:str, value):
     else:
         return None
 
-def create_companies(name:str, description:str):
+async def create_companies(name:str, description:str):
     # Create a unique schema name for the company
     company_schema_name = f"company_{str(time.time()).replace('.', '')}"
     companies_data = {
         'name': name,
         'description': description,
-        'schema_name': company_schema_name
+        'schema_name': company_schema_name,
+        'active':True
     }
     try:
         # Insert company data
         response_company = supabase.table('companies').insert([companies_data]).execute()
         if response_company.data:
             # Create company schema and table
-            create_company_tables(company_schema_name)
+            await create_company_tables(company_schema_name)
             return response_company.data[0]
         else:
             return None
@@ -74,15 +75,20 @@ def add_new_user(name:str, email:str, password:str, company_id:str, role:str, in
         "password": password,
         "company_id": company_id,
         "role": role,
-        "invited_by": invited_by
     }
+
+    if invited_by:
+        data["invited_by"] = invited_by
+
+    print(data)
     try:
         response_users = supabase.table('users').insert([data]).execute()
         if response_users.data:
             return response_users.data[0]
         else:
             return None
-    except:
+    except Exception as e :
+        print(e)
         return None
 
 def update_user_by_id(id:str, data:dict):

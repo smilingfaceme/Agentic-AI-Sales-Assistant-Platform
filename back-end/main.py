@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import routes
-from routers import auth, user, company, invite, knowledge, conversation, chat, integration
+from routers import auth, user, company, invite, knowledge, conversation, chat, integration, image
 from middleware.error_handler import add_exception_handlers
 from utils.validate_env import validate_env
 
@@ -37,6 +37,7 @@ app.include_router(user.router, prefix="/api/user", tags=["user"])
 app.include_router(company.router, prefix="/api/company", tags=["company"])
 app.include_router(invite.router, prefix="/api/invite", tags=["invite"])
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
+app.include_router(image.router, prefix="/api/image", tags=["image"])
 app.include_router(conversation.router, prefix="/api/conversation", tags=["conversation"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(integration.router, prefix="/api/integration", tags=["integration"])

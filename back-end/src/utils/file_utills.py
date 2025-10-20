@@ -19,9 +19,17 @@ def dataframe_to_texts(df: pd.DataFrame) -> list[str]:
         list[str]: List of row-based text strings.
     """
     texts = []
-    
+    meta_dict = []
     for _,row in df.iterrows():
         # Convert row to string representation
-        row_text = " | ".join([f"{col}: {str(val)}" for col, val in row.items()])
+        row_values = []
+        result = {}
+        for col, val in row.items():
+            if pd.notna(val):
+                key = col.strip("'")
+                row_values.append(f"{key}: {str(val)}")
+                result[key] = f'{val}'
+        row_text = " | ".join(row_values)
         texts.append(row_text)
-    return texts
+        meta_dict.append(result)
+    return texts, meta_dict

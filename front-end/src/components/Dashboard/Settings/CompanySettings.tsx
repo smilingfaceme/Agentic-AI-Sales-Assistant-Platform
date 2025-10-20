@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { useNotification } from '@/contexts/NotificationContext';
 import { FaBuilding, FaEdit } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { useAppContext } from '@/contexts/AppContext';
@@ -11,6 +12,7 @@ import { logout } from "@/utils/index"
 export default function CompanySettings() {
   const router = useRouter();
   const { currentUser, setCurrentUser } = useAppContext();
+  const { showNotification } = useNotification();
   const { isLoading: isUpdating, error: updateCompanyError, execute: executeUpdateAsync } = useApiCall();
   const { isLoading: isDeleting, execute: executeDeleteAsync } = useApiCall();
 
@@ -21,7 +23,7 @@ export default function CompanySettings() {
   // Loading and error states
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  
+
   // Update Company Function
   const handleCompanyUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +40,6 @@ export default function CompanySettings() {
         description: companyDescription
       });
     });
-
     if (result) {
       setCurrentUser({
         ...currentUser,
@@ -46,6 +47,7 @@ export default function CompanySettings() {
         company_description: result.description
       });
       setSuccess(result.message);
+      showNotification(result.message || 'Company updated successfully!', 'success', false);
     }
   };
 

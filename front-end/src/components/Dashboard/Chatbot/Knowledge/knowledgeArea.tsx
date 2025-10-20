@@ -8,7 +8,7 @@ import Loading from "@/components/Loading";
 import { useApiCall } from "@/hooks/useApiCall";
 import { useChatbotContext } from "@/contexts/ChatbotContext";
 import { knowledgeApi } from "@/services/apiService";
-import FileUploadConfig from "./FileUploadConfig";
+import FileUploadConfig from "@/components/Dashboard/Chatbot/FileUploadConfig";
 
 const tableHeaders = ["Title & Description", "Type", "Status", "Created on", "Actions"];
 
@@ -26,7 +26,7 @@ export default function KnowledgeArea() {
   const [company, setCompany] = useState("");
   const [deleteLoading, setDeleteLoading] = useState<Record<string, boolean>>({});
   const [reprocessLoading, setReprocessLoading] = useState<Record<string, boolean>>({});
-  const { tableTitle, setTableTitle, showModal, setShowModal } = useChatbotContext();
+  const { showModal, setShowModal } = useChatbotContext();
 
   const { isLoading: isLoadingList, error: listError, execute: executeListAsync } = useApiCall();
   const { execute: executeDeleteAsync } = useApiCall();
@@ -48,8 +48,7 @@ export default function KnowledgeArea() {
     } else {
       setKnowledgeList([]);
     }
-    setTableTitle("Documents");
-  }, [executeListAsync, setTableTitle]);
+  }, [executeListAsync]);
 
   const deleteFile = async (id: string) => {
     setDeleteLoading((p) => ({ ...p, [id]: true }));
@@ -131,7 +130,7 @@ export default function KnowledgeArea() {
   return (
     <section className="flex-1 flex flex-col bg-white w-full p-6 h-full">
       <div className="flex items-center justify-between mb-4 border-b-2 border-gray-300 px-4 py-1">
-        <div className="text-md font-semibold">{tableTitle}</div>
+        <div className="text-md font-semibold">Product Data</div>
         <div className="flex gap-2">
           <button
             className="px-3 py-1 hover:bg-gray-200 rounded text-sm flex items-center disabled:opacity-50"

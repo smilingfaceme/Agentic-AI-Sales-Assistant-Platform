@@ -4,6 +4,7 @@ import { AppProvider } from '@/contexts/AppContext';
 import { ChatProvider } from '@/contexts/ChatContext';
 import { ChatAreaProvider } from '@/contexts/ChatAreaContext';
 import PermissionWrapper from '@/components/PermissionWrapper';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 
 export const metadata: Metadata = {
   title: "DoshiAI",
@@ -21,9 +22,11 @@ export default function RootLayout({
         <AppProvider>
           <ChatProvider>
             <ChatAreaProvider>
-              <PermissionWrapper>
-                {children}
-              </PermissionWrapper>
+                <NotificationProvider>
+                  <PermissionWrapper>
+                    {children}
+                  </PermissionWrapper>
+                </NotificationProvider>
             </ChatAreaProvider>
           </ChatProvider>
         </AppProvider>

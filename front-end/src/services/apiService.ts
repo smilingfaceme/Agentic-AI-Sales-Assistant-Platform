@@ -141,6 +141,58 @@ export const knowledgeApi = {
   }
 };
 
+// Knowledge APIs
+export const imageApi = {
+  getImageFiles: async (page_size: number, page_start: number) => {
+  const res = await apiRequest(
+    `/image/list?page_size=${encodeURIComponent(page_size)}&page_start=${encodeURIComponent(page_start)}`,
+    {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
+
+  if (!res.ok) throw new Error('Failed to fetch Image files');
+  return res.json();
+},
+
+  uploadImageFile: async (file: File,) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiRequest(`/image/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Failed to upload file. ${data.message}`);    
+    return data;
+  },
+
+  deleteImageFile: async (fileId: string) => {
+    const res = await apiRequest('/image/remove', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        file_id: fileId
+      })
+    });
+    if (!res.ok) throw new Error('Failed to delete Image file');
+    return res.json();
+  },
+
+  reprocessImageFile: async (fileId: string) => {
+    const res = await apiRequest('/image/reprocess', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        file_id: fileId
+      })
+    });
+    if (!res.ok) throw new Error('Failed to delete Image file');
+    return res.json();
+  }
+};
+
 // Chatbot APIs
 export const chatbotApi = {
   getUnansweredQuestions: async (projectId: string) => {

@@ -89,6 +89,20 @@ export const chatApi = {
     });
     if (!res.ok) throw new Error('Failed to create conversation');
     return res.json();
+  },
+
+  sendImageMessage: async (conversationId: string, file: File, senderType: string, content:string) => {
+    const formData = new FormData();
+    formData.append('conversation_id', conversationId);
+    formData.append('file', file);
+    formData.append('content', content);
+    formData.append('sender_type', senderType);
+    const res = await apiRequest('/chat/send-image', {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) throw new Error('Failed to send image message');
+    return res.json();
   }
 };
 

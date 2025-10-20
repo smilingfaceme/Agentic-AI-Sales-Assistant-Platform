@@ -8,6 +8,7 @@ export type ChatMessage = {
   sender_email?: string | null;
   content: string;
   created_at?: string;
+  extra:object;
 };
 
 export type ChatHistory = {

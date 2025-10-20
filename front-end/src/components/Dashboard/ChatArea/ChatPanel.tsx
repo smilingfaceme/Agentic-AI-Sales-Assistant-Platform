@@ -1,4 +1,6 @@
 import React from "react";
+import Image from "next/image";
+import { SUPABASE_URL } from "@/utils";
 import { FaRobot } from "react-icons/fa";
 import { ChatMessage } from '@/contexts/ChatAreaContext'
 import ReactMarkdown from "react-markdown";
@@ -42,6 +44,23 @@ export default function ChatArea({ chatMessages }: ChatHistoryPageProps) {
                   <div className={`max-w-[90vw] md:max-w-[40%] text-sm flex flex-col`}>
                     <div className={`rounded-tl-xl rounded-tr-xl px-4 py-3 ${msg.sender_type === "customer" ? "bg-gray-200 text-gray-900 rounded-br-xl" : "bg-[#23263b] text-white rounded-bl-xl"}`}>
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      {/* Show images if message.extra is a list of image URLs */}
+                      {Array.isArray(msg.extra) && msg.extra.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {msg.extra.map((imgUrl: string, imgIdx: number) => (
+                            <div key={imgIdx} className="rounded overflow-hidden">
+                              <Image
+                                src={`${SUPABASE_URL}/storage/v1/object/public/${imgUrl}`}
+                                alt={`image-${imgIdx}`}
+                                width={150}
+                                height={100}
+                                unoptimized
+                                className="max-h-32 rounded shadow border border-gray-300"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <span className="flex text-xs text-gray-600 mt-1 self-end">
                       {msg.created_at ? new Date(msg.created_at).toLocaleTimeString() : ""}

@@ -21,8 +21,9 @@ async def get_conversatin_by_phone_integration(company_id: str, phone_number: st
     response = supabase.rpc("exec_sql", {"sql": GET_CONVERSATION_WITH_PHONE_INTEGRATION_QUERY.format(company_id=company_id, phone_number=phone_number, instance_name=instance_name)}).execute()
     return response.data
 
-async def add_new_message(company_id: str, conversation_id:str, sender_type:str, sender_email:str, content:str):
-    response = supabase.rpc("exec_sql", {"sql": UPDATE_MESSAGE_BY_ID_QUERY.format(company_id=company_id, conversation_id=conversation_id, sender_type=sender_type, sender_email=sender_email, content=content)}).execute()
+async def add_new_message(company_id: str, conversation_id:str, sender_type:str, sender_email:str, content:str, extra:str):
+    print(UPDATE_MESSAGE_BY_ID_QUERY.format(company_id=company_id, conversation_id=conversation_id, sender_type=sender_type, sender_email=sender_email, content=content, extra=extra))
+    response = supabase.rpc("exec_sql", {"sql": UPDATE_MESSAGE_BY_ID_QUERY.format(company_id=company_id, conversation_id=conversation_id, sender_type=sender_type, sender_email=sender_email, content=content, extra=extra)}).execute()
     return response.data
 
 async def get_unanswered_conversations(company_id: str):
@@ -55,4 +56,8 @@ async def get_same_image_from_table_with_id(company_id:str, file_id:str):
 
 async def delete_image_from_table(company_id:str, file_id:str):
     response = supabase.rpc("exec_sql", {"sql": DELETE_IMAGE_TABLE.format(company_id=company_id, file_id=file_id)}).execute()
+    return response.data
+
+async def update_image_status_on_table(company_id:str, file_id:str, status:str):
+    response = supabase.rpc("exec_sql", {"sql": UPDATE_IMAGE_STATUS_TABLE.format(company_id=company_id, file_id=file_id, status=status)}).execute()
     return response.data

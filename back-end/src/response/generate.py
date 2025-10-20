@@ -1,10 +1,11 @@
 from typing import List, Dict
-from src.utils.pinecone_utills import search_vectors_product
+from src.utils.pinecone_utills import search_vectors_product, search_vectors
 from db.company_table import get_all_messages
 
 from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.chains.llm import LLMChain
 from langchain.agents import AgentExecutor
 from langchain.agents import create_openai_functions_agent
 from langchain.tools import StructuredTool
@@ -109,4 +110,61 @@ async def generate_response_with_search(company_id:str, company_schema:str, conv
     chat_memory = await get_histroy(company_schema, conversation_id)
     
     response = generate_response(query, chat_memory, company_id, conversation_id)
+    return safe_string(response)
+
+def generate_response_with_image(
+    image_search: list[dict],
+    chat_memory,
+    company_id: str,
+    conversation_id: str,
+    query:str
+):
+    prompt_template = """You are an AI sales assistant helping customers.
+Generate a helpful, persuasive, and natural sales response.
+The response must be clear and short like a human response."""
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", prompt_template),
+        MessagesPlaceholder("history"),
+        ("human", "{input}")
+    ])
+
+    images_info = []
+    for image in image_search:
+        file_name = image['metadata']['pc_file_name'].split('/')[-1]
+        file_extension = image['metadata']['pc_file_extension']
+        file_id = file_name.replace(file_extension, '')
+        
+        # Search vectors (assuming this is defined elsewhere)
+        items = search_vectors(
+            index_name=company_id,
+            company_id=company_id,
+            extra_filter={"Metsec Code": file_id}
+        )
+        print([i["metadata"]['Metsec Code'] for i in items])
+        images_info.append([i["metadata"]['pc_text'] for i in items])
+
+    print(images_info)
+
+    # ✅ Tell memory what the input/output keys are
+    chat_memory.input_key = "input"
+    chat_memory.output_key = "output"
+
+    # ✅ LLMChain now matches the memory keys
+    chain = LLMChain(
+        llm=llm_bot,
+        prompt=prompt,
+        memory=chat_memory,
+        verbose=True,
+        output_key="output"
+    )
+    input_content = f'{query} \n\n Similar Products Info: {images_info}'
+    # Run the chain
+    result = chain.invoke({"input": input_content})
+    return result["output"]
+
+async def generate_response_with_image_search(company_id:str, company_schema:str, conversation_id:str, query: str, image_search:list[dict]):
+    chat_memory = await get_histroy(company_schema, conversation_id)
+    
+    response = generate_response_with_image(image_search, chat_memory, company_id, conversation_id, query)
     return safe_string(response)

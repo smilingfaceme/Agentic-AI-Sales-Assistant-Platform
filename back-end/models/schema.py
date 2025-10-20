@@ -104,7 +104,7 @@ GET_CONVERSATION_WITH_PHONE_INTEGRATION_QUERY = """SELECT * FROM {company_id}.co
 
 GET_MESSAGES_BY_CONVERSATION_ID_QUERY = """SELECT * FROM {company_id}.messages WHERE conversation_id = \'{conversation_id}\';"""
 
-UPDATE_MESSAGE_BY_ID_QUERY = """INSERT INTO {company_id}.messages (conversation_id, sender_type, sender_email, content) VALUES (\'{conversation_id}\', \'{sender_type}\', \'{sender_email}\', \'{content}\')"""
+UPDATE_MESSAGE_BY_ID_QUERY = """INSERT INTO {company_id}.messages (conversation_id, sender_type, sender_email, content, extra) VALUES (\'{conversation_id}\', \'{sender_type}\', \'{sender_email}\', \'{content}\',\'{extra}\')"""
 
 GET_UNANSWERED_CONVERSATIONS_QUERY = """SELECT m.message_id, c.conversation_id, c.conversation_name, c.source, m.sender_type, m.sender_email, m.content, m.created_at
 FROM {company_id}.conversations AS c
@@ -129,3 +129,5 @@ GET_SAME_IMAGE_TABLE = """SELECT * FROM {company_id}.images WHERE file_hash=\'{f
 GET_SAME_IMAGE_TABLE_WITH_ID = """SELECT * FROM {company_id}.images WHERE id=\'{file_id}\';"""
 
 DELETE_IMAGE_TABLE = """DELETE FROM {company_id}.images WHERE id = \'{file_id}\';"""
+
+UPDATE_IMAGE_STATUS_TABLE = """UPDATE {company_id}.images SET status = \'{status}\' WHERE id = \'{file_id}\';"""

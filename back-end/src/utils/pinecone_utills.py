@@ -131,7 +131,7 @@ def delete_file_vectors(index_name: str, file_hash: str):
 # Vector Search
 # -------------------------------------------------------------------
 
-def search_vectors(index_name: str, query_embedding: List[float], company_id: str, file_name: Optional[str] = None, extra_filter: Optional[dict] = None) -> Dict[str, Any]:
+def search_vectors(index_name: str, company_id: str, query_embedding: List[float] = [0] * EMBEDDING_DIMENSION, file_name: Optional[str] = None, extra_filter: Optional[dict] = None) -> Dict[str, Any]:
     """
     Search Pinecone index for similar vectors.
     
@@ -146,7 +146,7 @@ def search_vectors(index_name: str, query_embedding: List[float], company_id: st
     """
     try:
         # Optional filtering (commented out but preserved)
-        filter_dict = {"company_id": company_id}
+        filter_dict = {}
         if file_name:
             filter_dict["pc_file_name"] = file_name
         if extra_filter:
@@ -161,6 +161,7 @@ def search_vectors(index_name: str, query_embedding: List[float], company_id: st
         results = index.query(
             vector=query_embedding,
             top_k=100,
+            filter=filter_dict,
             include_metadata=True,
             include_values=True
         )
@@ -327,14 +328,14 @@ def search_vectors_product(index_name: str, query_text: str, company_id: str, co
         query_embedding = generate_embeddings([query_text])[0]
         features = query_text.split("|")
         defined_features = {}
-        for i in features:
-            key_v = i.split(":")
-            key = key_v[0].strip()
-            value = i.split(f'{key}:')[-1].strip()
-            defined_features[key] = value
+        # for i in features:
+        #     key_v = i.split(":")
+        #     key = key_v[0].strip()
+        #     value = i.split(f'{key}:')[-1].strip()
+        #     defined_features[key] = value
         
         # Step 2: Retrieve top matches from Pinecone
-        initial_results = search_vectors(index_name, query_embedding, company_id, file_name, defined_features)
+        initial_results = search_vectors(index_name, company_id, query_embedding, file_name, defined_features)
         doc_vectors = [r['values'] for r in initial_results]
         
         for i in initial_results:

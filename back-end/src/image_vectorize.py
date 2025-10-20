@@ -31,7 +31,6 @@ def create_index(index_name: str, embedding_dimension: int) -> None:
     """
     Create a Pinecone index if it doesn't exist.
     """
-    print(f"---Index_Name: {index_name}")
     if not pinecone_service.has_index(index_name):
         pinecone_service.create_index(
             name=index_name,
@@ -55,7 +54,7 @@ class CLIPEmbedder:
         if CLIPEmbedder._model_cache is None:
             CLIPEmbedder._model_cache = CLIPModel.from_pretrained(model_name).to(self.device)
         if CLIPEmbedder._processor_cache is None:
-            CLIPEmbedder._processor_cache = CLIPProcessor.from_pretrained(model_name)
+            CLIPEmbedder._processor_cache = CLIPProcessor.from_pretrained(model_name, use_fast=False)
         self.model = CLIPEmbedder._model_cache
         self.processor = CLIPEmbedder._processor_cache
         self.model.eval()
@@ -84,25 +83,28 @@ def store_image_embedding(
     index_name: str,
 ) -> None:
     """Embed a single image (BytesIO) and store its vector in Pinecone."""
-    emb = embedder.encode_image_bytes(image_bytes)
-    dim = emb.shape[0]
+    try:
+        emb = embedder.encode_image_bytes(image_bytes)
+        dim = emb.shape[0]
 
-    if index_name not in pinecone_service.list_indexes():
-        create_index(index_name=index_name, embedding_dimension=dim)
+        if index_name not in pinecone_service.list_indexes():
+            create_index(index_name=index_name, embedding_dimension=dim)
 
-    index = pinecone_service.Index(index_name)
-    _ = delete_image_embedding(index_name, file_hash)
+        index = pinecone_service.Index(index_name)
+        _ = delete_image_embedding(index_name, file_hash)
 
-    metadata = {
-        "pc_file_name": file_name,
-        "pc_file_hash": file_hash,
-        "pc_file_type": "IMAGE",
-        "pc_file_extension": os.path.splitext(file_name)[1].lower(),
-    }
-
-    vector_id = str(uuid.uuid4())
-    index.upsert(vectors=[(vector_id, emb.tolist(), metadata)])
-    print(f"[info] Stored vector {vector_id} (dim={dim}) in Pinecone index '{index_name}'.")
+        metadata = {
+            "pc_file_name": file_name,
+            "pc_file_hash": file_hash,
+            "pc_file_type": "IMAGE",
+            "pc_file_extension": os.path.splitext(file_name)[1].lower(),
+        }
+        
+        vector_id = str(uuid.uuid4())
+        index.upsert(vectors=[(vector_id, emb.tolist(), metadata)])
+        return True
+    except:
+        return False
 
 
 # -------------------------------------------------------------------

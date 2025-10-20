@@ -12,21 +12,30 @@ router = APIRouter()
 # ----------------------------- #
 # Utility: Background Vectorizer
 # ----------------------------- #
-def run_vectorize_in_thread(file_content, file_name, file_hash, company_id, record_id):
+def run_vectorize_in_thread(file_content, file_name, file_hash, company_id, record_id, company_schema):
     """Run vectorization asynchronously inside a separate thread."""
-    asyncio.run(vectorize_in_background(file_content, file_name, file_hash, company_id, record_id))
+    asyncio.run(vectorize_in_background(file_content, file_name, file_hash, company_id, record_id, company_schema))
 
 
-async def vectorize_in_background(file_content: bytes, file_name: str, file_hash: str, company_id: str, record_id: str):
+async def vectorize_in_background(file_content: bytes, file_name: str, file_hash: str, company_id: str, record_id: str, company_schema:str):
     """Handles background image embedding creation."""
-    file_io = io.BytesIO(file_content)
-    store_image_embedding(
-        image_bytes=file_io,
-        file_name=file_name,
-        file_hash=file_hash,
-        index_name=f'{company_id}-image',
-    )
-
+    try:
+        file_io = io.BytesIO(file_content)
+        result = store_image_embedding(
+            image_bytes=file_io,
+            file_name=file_name,
+            file_hash=file_hash,
+            index_name=f'{company_id}-image',
+        )
+        
+        # Update database record status
+        if result:
+            await update_image_status_on_table(company_id=company_schema, file_id=record_id, status='Completed')
+        else:
+            await update_image_status_on_table(company_id=company_schema, file_id=record_id, status='Failed')
+    except Exception as e:
+        print(f"Vectorization failed: {str(e)}")
+        await update_image_status_on_table(company_id=company_schema, file_id=record_id, status='Failed')
 
 # ----------------------------- #
 # Endpoint: List Files
@@ -105,7 +114,7 @@ async def upload_file(
             file_name=file_name,
             file_type=file.content_type,
             file_hash=file_hash,
-            status="Failed",
+            status="Processing",
         )
 
         if image_file["status"] != "success":
@@ -116,7 +125,7 @@ async def upload_file(
         # Start vectorization asynchronously
         thread = threading.Thread(
             target=run_vectorize_in_thread,
-            args=(file_content, file_name, file_hash, company_id, record_id),
+            args=(file_content, file_name, file_hash, company_id, record_id, company_schema),
             daemon=True,
         )
         thread.start()
@@ -208,7 +217,7 @@ async def reprocess_file(
 
         thread = threading.Thread(
             target=run_vectorize_in_thread,
-            args=(file_content, file_name, file_hash, company_id, record_id),
+            args=(file_content, file_name, file_hash, company_id, record_id, company_schema),
             daemon=True,
         )
         thread.start()

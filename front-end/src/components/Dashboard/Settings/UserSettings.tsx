@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { FaUser, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
+import { useNotification } from '@/contexts/NotificationContext';
 import { useAppContext } from '@/contexts/AppContext';
 import Loading from '@/components/Loading';
 import { useApiCall } from "@/hooks/useApiCall";
@@ -8,6 +9,7 @@ import { userApi } from '@/services/apiService';
 
 export default function UserSettings() {
   const { currentUser, setCurrentUser } = useAppContext();
+  const { showNotification } = useNotification();
   const { isLoading: isUpdatingProfile, error: updateProfileError, execute: executeProfileAsync } = useApiCall();
   const { isLoading: isUpdatingPassword, error: updatePasswordError, execute: executePasswordAsync } = useApiCall();
 
@@ -22,12 +24,7 @@ export default function UserSettings() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Loading and error states
-  const [profileError, setProfileError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [profileSuccess, setProfileSuccess] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState("");
+  
 
   // Validation Functions
   const isStrongPassword = (password: string) => {
@@ -40,10 +37,8 @@ export default function UserSettings() {
   // Update Profile Function
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setProfileError("");
-    setProfileSuccess("");
     if (!userName.trim()) {
-      setProfileError("Name is required");
+      showNotification("Name is required", 'error', true);
       return;
     }
     const result = await executeProfileAsync(async () => {
@@ -55,33 +50,35 @@ export default function UserSettings() {
         ...currentUser,
         name: result.name,
       });
-      setProfileSuccess(result.message);
+      showNotification(result.message || 'Profile updated successfully!', 'success', true);
+    }
+    
+    if (updateProfileError) {
+      showNotification(updateProfileError || 'Failed updating profile info!', 'error', true);
     }
   };
 
   // Update Password Function
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPasswordError("");
-    setPasswordSuccess("");
 
     if (!currentPassword) {
-      setPasswordError("Current password is required");
+      showNotification("Current password is required", 'error', true);
       return;
     }
 
     if (!newPassword) {
-      setPasswordError("New password is required");
+      showNotification("New password is required", 'error', true);
       return;
     }
 
     if (!isStrongPassword(newPassword)) {
-      setPasswordError("Password must be at least 8 characters with uppercase, lowercase, and number");
+      showNotification("Password must be at least 8 characters with uppercase, lowercase, and number", 'error', true);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError("New passwords do not match");
+      showNotification("New passwords do not match", 'error', true);
       return;
     }
 
@@ -90,10 +87,14 @@ export default function UserSettings() {
     });
 
     if (result) {
-      setPasswordSuccess(result.message);
+      showNotification(result.message || 'Password updated successfully!', 'success', true);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+    }
+
+    if (updatePasswordError) {
+      showNotification(updatePasswordError || 'Failed updating password!', 'error', true);
     }
   };
 
@@ -141,12 +142,6 @@ export default function UserSettings() {
             />
             <p className="text-xs text-gray-500 mt-1">Email cannot be changed. Contact support if needed.</p>
           </div>
-          {profileError || updateProfileError && (
-            <div className="text-red-600 text-sm bg-red-50 p-3 rounded">{profileError || updateProfileError}</div>
-          )}
-          {profileSuccess && (
-            <div className="text-green-600 text-sm bg-green-50 p-3 rounded">{profileSuccess}</div>
-          )}
           <button
             type="submit"
             disabled={isUpdatingProfile}
@@ -246,14 +241,6 @@ export default function UserSettings() {
               <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
             )}
           </div>
-
-          {passwordError || updatePasswordError && (
-            <div className="text-red-600 text-sm bg-red-50 p-3 rounded">{passwordError || updatePasswordError}</div>
-          )}
-
-          {passwordSuccess && (
-            <div className="text-green-600 text-sm bg-green-50 p-3 rounded">{passwordSuccess}</div>
-          )}
 
           <button
             type="submit"

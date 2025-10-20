@@ -20,18 +20,12 @@ export default function CompanySettings() {
   const [companyName, setCompanyName] = useState(currentUser.company_name);
   const [companyDescription, setCompanyDescription] = useState(currentUser.company_description);
 
-  // Loading and error states
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
   // Update Company Function
   const handleCompanyUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
 
     if (!companyName.trim()) {
-      setError("Company name is required");
+      showNotification("Company name is required", 'error', true);
       return;
     }
     const result = await executeUpdateAsync(async () => {
@@ -46,8 +40,10 @@ export default function CompanySettings() {
         company_name: result.name,
         company_description: result.description
       });
-      setSuccess(result.message);
-      showNotification(result.message || 'Company updated successfully!', 'success', false);
+      showNotification(result.message || 'Company updated successfully!', 'success', true);
+    }
+    if (updateCompanyError){
+      showNotification(updateCompanyError || 'Failed updating company info!', 'error', true);
     }
   };
 
@@ -110,13 +106,9 @@ export default function CompanySettings() {
             </p>
           </div>
 
-          {error || updateCompanyError && (
+          {/* {error || updateCompanyError && (
             <div className="text-red-600 text-sm bg-red-50 p-3 rounded">{error || updateCompanyError}</div>
-          )}
-
-          {success && (
-            <div className="text-green-600 text-sm bg-green-50 p-3 rounded">{success}</div>
-          )}
+          )} */}
 
           <button
             type="submit"

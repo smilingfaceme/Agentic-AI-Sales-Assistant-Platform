@@ -7,6 +7,7 @@ import LoadingWrapper from "@/components/LoadingWrapper";
 import Loading from "@/components/Loading";
 import { useApiCall } from "@/hooks/useApiCall";
 import { useChatbotContext } from "@/contexts/ChatbotContext";
+import { useNotification } from '@/contexts/NotificationContext';
 import { knowledgeApi } from "@/services/apiService";
 import FileUploadConfig from "@/components/Dashboard/Chatbot/FileUploadConfig";
 
@@ -27,6 +28,7 @@ export default function KnowledgeArea() {
   const [deleteLoading, setDeleteLoading] = useState<Record<string, boolean>>({});
   const [reprocessLoading, setReprocessLoading] = useState<Record<string, boolean>>({});
   const { showModal, setShowModal } = useChatbotContext();
+  const { showNotification } = useNotification();
 
   const { isLoading: isLoadingList, error: listError, execute: executeListAsync } = useApiCall();
   const { execute: executeDeleteAsync } = useApiCall();
@@ -50,18 +52,24 @@ export default function KnowledgeArea() {
     }
   }, [executeListAsync]);
 
-  const deleteFile = async (id: string) => {
+  const deleteFile = async (id: string, file_name:string) => {
     setDeleteLoading((p) => ({ ...p, [id]: true }));
     const result = await executeDeleteAsync(() => knowledgeApi.deleteKnowledgeFile(id));
     setDeleteLoading((p) => ({ ...p, [id]: false }));
-    if (result) fetchKnowledgeFileList();
+    if (result) {
+      showNotification(`Deleted ${file_name} successfully!`, 'success', true)
+      fetchKnowledgeFileList()
+    };
   };
 
-  const reprocessFile = async (id: string) => {
+  const reprocessFile = async (id: string, file_name:string) => {
     setReprocessLoading((p) => ({ ...p, [id]: true }));
     const result = await executeReprocessAsync(() => knowledgeApi.reprocessKnowledgeFile(id));
     setReprocessLoading((p) => ({ ...p, [id]: false }));
-    if (result) fetchKnowledgeFileList();
+    if (result) {
+      showNotification(`Restarted processing ${file_name}.`, 'success', true)
+      fetchKnowledgeFileList()
+    };
   };
 
   // Map to table format
@@ -76,6 +84,7 @@ export default function KnowledgeArea() {
           ),
         className: "bg-transparent cursor-pointer",
         icon: <></>,
+        disabled:false
       },
     ],
     Type: item.file_type,
@@ -86,9 +95,10 @@ export default function KnowledgeArea() {
         ? [
           {
             label: "",
-            onClick: () => reprocessFile(item.id),
+            disabled: reprocessLoading[item.id],
+            onClick: () => reprocessFile(item.id, item.file_name),
             className:
-              "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors",
+              "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
             icon: (
               <Loading
                 isLoading={reprocessLoading[item.id] ?? false}
@@ -105,9 +115,10 @@ export default function KnowledgeArea() {
         : []),
       {
         label: "",
-        onClick: () => deleteFile(item.id),
+        disabled: item.status === "Completed" ? deleteLoading[item.id] : true,
+        onClick: () => deleteFile(item.id, item.file_name),
         className:
-          "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors",
+          "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
         icon: (
           <Loading
             isLoading={deleteLoading[item.id] ?? false}

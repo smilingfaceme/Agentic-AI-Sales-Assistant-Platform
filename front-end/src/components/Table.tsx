@@ -6,6 +6,7 @@ export interface TableAction {
   onClick: (rowData: Record<string, string | number | boolean | null | undefined | TableAction[]>, rowIndex: number) => void;
   className?: string;
   icon?: React.ReactNode;
+  disabled: boolean
 }
 
 export interface TableProps {
@@ -139,6 +140,7 @@ const Table = ({ headers, data, actionColumnKey = ["Actions"] }: TableProps) => 
                             onClick={() => action.onClick(row, idx)}
                             className={action.className || "px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"}
                             title={action.label}
+                            disabled={action.disabled}
                           >
                             {action.icon}
                             {action.label}

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { FaUsers, FaPlus, FaTrash, FaSync, FaEnvelope, FaTimes } from "react-icons/fa";
+import { useNotification } from '@/contexts/NotificationContext';
 import { Role } from '@/contexts/AppContext';
 import Table, { TableAction } from '@/components/Table';
 import Loading from '@/components/Loading';
@@ -20,6 +21,7 @@ export default function InviteUsers() {
   // Invited Users State
   const [invitedUsers, setInvitedUsers] = useState<InvitedUser[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const { showNotification } = useNotification();
 
   // Invite Form State
   const [inviteEmail, setInviteEmail] = useState("");
@@ -92,9 +94,9 @@ export default function InviteUsers() {
       return await invitationApi.resendInvitation(userId);
     });
     if (result) {
-      alert(`Invitation resent to ${email}`);
+      showNotification(`Invitation resent to ${email}`, 'success', true);
     } else {
-      alert("Failed to resend invitation");
+      showNotification("Failed to resend invitation", 'error', true);
     }
     setResendLoading({...resendLoading, [userId]:false})
   };
@@ -124,16 +126,18 @@ export default function InviteUsers() {
       "Actions": [
         ...(user.status != 'accepted' ? [{
           label: "",
+          disabled: resendLoading[user.id],
           onClick: () => handleResendInvite(user.id, user.invited_email),
-          className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors mr-1",
+          className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mr-1",
           icon: <Loading isLoading={resendLoading[user.id] ?? false} type="button" size="small" text="Resending" theme="dark">
             <FaEnvelope className="mr-1"/> Resend
           </Loading>
         }] : []),
         {
           label: "",
+          disabled: revokeLoading[user.id],
           onClick: () => handleRevokeInvite(user.id, user.invited_email),
-          className: "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors",
+          className: "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
           icon: <Loading isLoading={revokeLoading[user.id] ?? false} type="button" size="small" text="Revoking" theme="dark">
             <FaTrash className="mr-1"/> Revoke
           </Loading>
@@ -159,7 +163,7 @@ export default function InviteUsers() {
     });
 
     if (result) {
-      setInviteSuccess(`Invitation sent to ${inviteEmail} successfully!`);
+      showNotification(`Invitation resent to ${inviteEmail} successfully!`, 'success', true);
       setInviteEmail("");
       setInviteRole(roles[0].id || "");
       setShowInviteModal(false);

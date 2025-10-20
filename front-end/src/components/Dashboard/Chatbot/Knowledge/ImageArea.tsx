@@ -69,18 +69,24 @@ export default function ImageControlArea() {
     }
   }, [executeListAsync, pageSize]);
 
-  const deleteFile = async (id: string) => {
+  const deleteFile = async (id: string, file_name:string) => {
     setDeleteLoading((p) => ({ ...p, [id]: true }));
     const result = await executeDeleteAsync(() => imageApi.deleteImageFile(id));
     setDeleteLoading((p) => ({ ...p, [id]: false }));
-    if (result) fetchImageFileList(currentPage);
+    if (result) {
+      showNotification(`Deleted ${file_name} successfully!`, 'success', true)
+      fetchImageFileList(currentPage)
+    };
   };
 
-  const reprocessFile = async (id: string) => {
+  const reprocessFile = async (id: string, file_name:string) => {
     setReprocessLoading((p) => ({ ...p, [id]: true }));
     const result = await executeReprocessAsync(() => imageApi.reprocessImageFile(id));
     setReprocessLoading((p) => ({ ...p, [id]: false }));
-    if (result) fetchImageFileList(currentPage);
+    if (result) {
+      showNotification(`Restarted processing ${file_name} successfully!`, 'success', true)
+      fetchImageFileList(currentPage)
+    };
   };
 
   // Map to table format
@@ -88,6 +94,7 @@ export default function ImageControlArea() {
     "Title & Description": [
       {
         label: item.file_name,
+        disabled:false,
         onClick: () =>
           window.open(
             `${SUPABASE_URL}/storage/v1/object/public/images/${companyId}/${item.file_name}`,
@@ -105,9 +112,10 @@ export default function ImageControlArea() {
         ? [
           {
             label: "",
-            onClick: () => reprocessFile(item.id),
+            disabled: reprocessLoading[item.id],
+            onClick: () => reprocessFile(item.id, item.file_name),
             className:
-              "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors",
+              "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
             icon: (
               <Loading
                 isLoading={reprocessLoading[item.id] ?? false}
@@ -124,9 +132,10 @@ export default function ImageControlArea() {
         : []),
       {
         label: "",
-        onClick: () => deleteFile(item.id),
+        disabled: deleteLoading[item.id],
+        onClick: () => deleteFile(item.id, item.file_name),
         className:
-          "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors",
+          "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
         icon: (
           <Loading
             isLoading={deleteLoading[item.id] ?? false}
@@ -205,7 +214,7 @@ export default function ImageControlArea() {
           setShowModal(false);
           fetchImageFileList();
           setPreviewUrl(null);
-          showNotification(`${file.name} uploaded successfully!`, 'success', false);
+          showNotification(`${file.name} uploaded successfully!`, 'success', true);
         } else {
           setUploadError(result?.message || "Upload failed.");
         }
@@ -218,63 +227,6 @@ export default function ImageControlArea() {
         // Close modal right away
         setShowModal(false);
         startBackgroundUpload(folderFiles);
-        // // Run upload process asynchronously in background
-        // (async () => {
-        //   let uploadedCount = 0;
-        //   let failedCount = 0;
-        //   const totalCount = folderFiles.length;
-        //   const progressId = showProgressNotification(`Uploading ${totalCount} images...`, 0);
-
-        //   const updateProgress = () => {
-        //     const percent = Math.round(((uploadedCount + failedCount) / totalCount) * 100);
-        //     updateProgressNotification(
-        //       progressId,
-        //       percent,
-        //       `Uploading images: ${uploadedCount} succeeded, ${failedCount} failed, ${totalCount - uploadedCount - failedCount} remaining...`
-        //     );
-        //   };
-
-        //   const uploadTasks = folderFiles.map(async (file) => {
-        //     try {
-        //       const percent = Math.round(((uploadedCount + failedCount) / totalCount) * 100);
-        //       updateProgressNotification(progressId, percent, `Uploading ${file.name}...`);
-
-        //       const result = await imageApi.uploadImageFile(file);
-
-        //       if (result?.success) {
-        //         uploadedCount++;
-        //       } else {
-        //         failedCount++;
-        //         showNotification(`${file.name} failed: ${result?.message || 'Upload failed.'}`, 'error', true);
-        //       }
-        //     } catch (err) {
-        //       failedCount++;
-        //       const errorMsg = (err && typeof err === 'object' && 'message' in err)
-        //         ? (err as { message?: string }).message || 'Upload failed.'
-        //         : 'Upload failed.';
-        //       showNotification(`${file.name} failed: ${errorMsg}`, 'error', true);
-        //     } finally {
-        //       updateProgress();
-        //     }
-        //   });
-
-        //   // Run all uploads asynchronously in background
-        //   await Promise.allSettled(uploadTasks);
-
-        //   // When done, update progress and notify user
-        //   updateProgressNotification(progressId, 100, `Upload complete: ${uploadedCount} succeeded, ${failedCount} failed.`);
-        //   setTimeout(() => closeNotification(progressId), 2000);
-        //   showNotification(
-        //     `Upload complete: ${uploadedCount} succeeded, ${failedCount} failed.`,
-        //     failedCount ? 'error' : 'success',
-        //     false
-        //   );
-
-        //   // Clean up
-        //   setFolderFiles([]);
-        //   setFolderPreviewUrls([]);
-        //   fetchImageFileList();
-        // })(); // <--- this IIFE runs independently
       }
     } catch (err: unknown) {
       if (typeof err === "object" && err && "message" in err) {

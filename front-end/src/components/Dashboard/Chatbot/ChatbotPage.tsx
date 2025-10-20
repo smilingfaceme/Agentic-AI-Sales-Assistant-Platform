@@ -76,16 +76,6 @@ export default function ChatbotPage({ children }: { children: React.ReactNode })
                   >
                     Image Base
                   </Link>
-
-                  <Link
-                    href="/dashboard/chatbot/knowledge"
-                    className={`text-sm py-1 px-2 rounded-md transition-all ${pathname === '/dashboard/chatbot/knowledge/extra'
-                        ? 'text-blue-700 font-bold'
-                        : 'text-gray-600 hover:text-blue-700 hover:bg-gray-50'
-                      }`}
-                  >
-                    Extra Linked Files
-                  </Link>
                 </div>
               )}
             </div>

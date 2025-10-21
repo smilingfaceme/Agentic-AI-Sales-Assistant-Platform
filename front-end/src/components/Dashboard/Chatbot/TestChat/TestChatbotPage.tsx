@@ -15,7 +15,10 @@ export type ChatMessage = {
   email?: string | null;
   content: string;
   created_at?: string;
-  extra: object;
+  extra: {
+    images?: string[];
+    [key: string]: unknown;
+  };
 };
 
 export default function TestChatbotPage() {
@@ -44,7 +47,9 @@ export default function TestChatbotPage() {
       "sender_type": 'customer',
       "email": "",
       "conversation_id": conversationId,
-      "extra": []
+      "extra": {
+        images: image ? [image.name] : []
+      }
     };
     setChatMessages([...chatMessages, new_message]);
     if (image) {

@@ -71,7 +71,7 @@ export default function ImageControlArea() {
     }
   }, [executeListAsync, pageSize]);
 
-  const deleteFile = async (id: string, file_name:string) => {
+  const deleteFile = async (id: string, file_name: string) => {
     setDeleteLoading((p) => ({ ...p, [id]: true }));
     const result = await executeDeleteAsync(() => imageApi.deleteImageFile(id));
     setDeleteLoading((p) => ({ ...p, [id]: false }));
@@ -81,7 +81,7 @@ export default function ImageControlArea() {
     };
   };
 
-  const reprocessFile = async (id: string, file_name:string) => {
+  const reprocessFile = async (id: string, file_name: string) => {
     setReprocessLoading((p) => ({ ...p, [id]: true }));
     const result = await executeReprocessAsync(() => imageApi.reprocessImageFile(id));
     setReprocessLoading((p) => ({ ...p, [id]: false }));
@@ -96,7 +96,7 @@ export default function ImageControlArea() {
     "Title & Description": [
       {
         label: item.file_name,
-        disabled:false,
+        disabled: false,
         onClick: () =>
           window.open(
             `${SUPABASE_URL}/storage/v1/object/public/images/${companyId}/${item.file_name}`,
@@ -159,7 +159,7 @@ export default function ImageControlArea() {
   }, [fetchImageFileList, currentPage, pageSize]);
 
   // Utility: runs in background
-  const startBackgroundUpload = (files:File[]) => {
+  const startBackgroundUpload = (files: File[]) => {
     (async () => {
       let uploadedCount = 0;
       let failedCount = 0;
@@ -213,15 +213,22 @@ export default function ImageControlArea() {
           setUploading(false);
           return;
         }
-        const result = await executeUploadAsync(() => imageApi.uploadImageFile(file, matchField));
-        if (result?.success) {
-          setShowModal(false);
-          fetchImageFileList();
-          setPreviewUrl(null);
-          setMatchField('');
-          showNotification(`${file.name} uploaded successfully!`, 'success', true);
-        } else {
-          setUploadError(result?.message || "Upload failed.");
+        try {
+          const result = await executeUploadAsync(() => imageApi.uploadImageFile(file, matchField));
+          if (result?.success) {
+            setShowModal(false);
+            fetchImageFileList();
+            setPreviewUrl(null);
+            setMatchField('');
+            showNotification(`${file.name} uploaded successfully!`, 'success', true);
+          } else {
+            fetchImageFileList();
+            setPreviewUrl(null);
+            setMatchField('');
+            showNotification(`${file.name} failed: ${result?.message || 'Upload failed.'}`, 'error', true);
+          }
+        } catch (err) {
+          showNotification(`${file.name} failed: ${err || 'Upload failed.'}`, 'error', true);
         }
       } else {
         if (!folderFiles.length) {
@@ -348,7 +355,7 @@ export default function ImageControlArea() {
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
-              onClick={() => { setShowModal(false); setPreviewUrl(null); setMatchField('');}}
+              onClick={() => { setShowModal(false); setPreviewUrl(null); setMatchField(''); }}
               disabled={uploading}
               aria-label="Close"
             >

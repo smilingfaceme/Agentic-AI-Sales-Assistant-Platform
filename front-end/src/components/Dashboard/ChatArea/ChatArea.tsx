@@ -1,4 +1,5 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useRef, useState } from "react";
+import Image from "next/image";
 import { chatApi } from "@/services/apiService";
 import { FaWhatsapp, FaGlobe } from "react-icons/fa";
 import LoadingWrapper from "@/components/LoadingWrapper";
@@ -8,6 +9,8 @@ import { useChatAreaContext } from '@/contexts/ChatAreaContext';
 
 export default function ChatArea() {
   const { activeChatHistory, chatMessages, setChatMessages, agentMessage, setAgentMessage } = useChatAreaContext();
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Use the API call hook for managing loading states and preventing duplicate requests
   const { isLoading, error, execute } = useApiCall();
@@ -24,12 +27,23 @@ export default function ChatArea() {
     }
   }, [activeChatHistory?.conversation_id, execute, setChatMessages]);
 
-  const sendNewMessage = async (message: string, sender_type: string) => {
-    if (!activeChatHistory?.conversation_id || !message.trim()) return;
+  const sendNewMessage = async (message: string, sender_type: string, image?: File | null) => {
+    if (!activeChatHistory?.conversation_id || (!message.trim() && !image)) return;
     setAgentMessage("");
-    const data = await chatApi.sendMessage(activeChatHistory.conversation_id, message, sender_type);
-    if (data.messages) {
-      setChatMessages([...chatMessages, ...data.messages]);
+
+    if (image) {
+      // For image message, use sendImageMessage API
+      const data = await chatApi.sendImageMessage(activeChatHistory.conversation_id, image, sender_type, message);
+      if (data.messages) {
+        setChatMessages([...chatMessages, ...data.messages]);
+      }
+      return;
+    } else {
+      // For text-only message
+      const data = await chatApi.sendMessage(activeChatHistory.conversation_id, message, sender_type);
+      if (data.messages) {
+        setChatMessages([...chatMessages, ...data.messages]);
+      }
     }
   };
 
@@ -67,32 +81,91 @@ export default function ChatArea() {
       </div>
 
       {/* Message Input Area */}
-      <footer className="flex items-center gap-2 border-t border-gray-200 bg-white px-4 md:px-6 py-4">
-        <input
-          className="flex-1 px-4 py-2 rounded-full border bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
-          placeholder="Type message or '/' for quick response"
-          type="text"
-          value={agentMessage}
-          onChange={(e) => setAgentMessage(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              sendNewMessage(agentMessage, "agent");
-            }
-          }}
-        />
-        <button
-          className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white"
-          aria-label="Send"
-          onClick={() => {
-            sendNewMessage(agentMessage, "agent");
-            setAgentMessage("");
-          }}
-        >
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
-        </button>
+      <footer className="flex flex-col gap-2 border-t border-gray-200 bg-white px-4 md:px-6 py-4">
+        {/* Image preview above input */}
+        {imageFile && (
+          <div className="flex items-center gap-2 mb-2">
+            <Image
+              width={200}
+              height={200}
+              src={URL.createObjectURL(imageFile)}
+              alt="preview"
+              className="w-16 h-16 object-cover rounded-lg border"
+            />
+            <button
+              className="text-xs px-2 py-1 bg-red-100 text-red-600 rounded"
+              onClick={() => {
+                setImageFile(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+            >Remove</button>
+          </div>
+        )}
+        <div className="flex items-center gap-2 w-full">
+          {/* Image upload button */}
+          <button
+            className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500"
+            aria-label="Attach image"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M4 17V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-2l4-4 4 4 4-4" />
+            </svg>
+          </button>
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            style={{ display: "none" }}
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                setImageFile(e.target.files[0]);
+              }
+            }}
+          />
+          <input
+            className="flex-1 px-4 py-2 rounded-full border bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            placeholder="Type message or '/' for quick response"
+            type="text"
+            value={agentMessage}
+            onChange={(e) => setAgentMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (agentMessage.trim() || imageFile)) {
+                e.preventDefault();
+                if (imageFile) {
+                  sendNewMessage(agentMessage, "agent", imageFile);
+                  setImageFile(null);
+                  setAgentMessage("");
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                } else if (agentMessage.trim()) {
+                  sendNewMessage(agentMessage, "agent");
+                  setAgentMessage("");
+                }
+              }
+            }}
+          />
+          {/* Single send button for text or image */}
+          <button
+            className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
+            aria-label="Send"
+            disabled={!(agentMessage.trim() || imageFile)}
+            onClick={() => {
+              if (imageFile) {
+                sendNewMessage(agentMessage, "agent", imageFile);
+                setImageFile(null);
+                setAgentMessage("");
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              } else if (agentMessage.trim()) {
+                sendNewMessage(agentMessage, "agent");
+                setAgentMessage("");
+              }
+            }}
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </footer>
     </section>
   );

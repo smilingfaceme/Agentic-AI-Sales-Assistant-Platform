@@ -11,7 +11,10 @@ export type ChatMessage = {
   email?: string | null;
   content: string;
   created_at?: string;
-  extra:object;
+  extra: {
+    images?: string[];
+    [key: string]: unknown;
+  };
 };
 
 function formatDate(date: string) {
@@ -54,9 +57,9 @@ export default function TestChatBotPanel({ chatMessages }: TestChatPanelProps) {
                     <div className={`rounded-tl-xl rounded-tr-xl px-4 py-3 ${msg.sender_type != "customer" ? "bg-gray-200 text-gray-900 rounded-br-xl" : "bg-[#23263b] text-white rounded-bl-xl"}`}>
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                       {/* Show images if message.extra is a list of image URLs */}
-                      {Array.isArray(msg.extra) && msg.extra.length > 0 && (
+                      {Array.isArray(msg.extra.images) && msg.extra.images.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {msg.extra.map((imgUrl: string, imgIdx: number) => (
+                          {msg.extra.images?.map((imgUrl: string, imgIdx: number) => (
                             <div key={imgIdx} className="rounded overflow-hidden">
                               <Image
                                 src={`${SUPABASE_URL}/storage/v1/object/public/${imgUrl}`}

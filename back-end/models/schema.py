@@ -71,6 +71,7 @@ COMPANY_MESSAGE_TABLE = """create table {company_id}.messages (
   sender_email text null,
   content text not null,
   created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  extra json null,
   constraint messages_pkey primary key (message_id),
   constraint messages_conversation_id_fkey foreign KEY (conversation_id) references {company_id}.conversations (conversation_id),
   constraint messages_sender_type_check check (
@@ -89,6 +90,7 @@ COMPANY_IMAGE_TABLE = """create table {company_id}.images (
   file_type text not null,
   file_hash text not null,
   status text not null,
+  match_field text not null,
   extra json null,
   created_at timestamp with time zone not null default now(),
   constraint images_pkey primary key (id)
@@ -118,7 +120,7 @@ JOIN LATERAL (
 WHERE m.sender_type = 'customer';
 """
 
-ADD_IMAGE_INTO_TABLE = """INSERT INTO {company_id}.images (file_name, file_type, file_hash, status) VALUES (\'{file_name}\', \'{file_type}\', \'{file_hash}\', \'{status}\')"""
+ADD_IMAGE_INTO_TABLE = """INSERT INTO {company_id}.images (file_name, file_type, file_hash, status, match_field) VALUES (\'{file_name}\', \'{file_type}\', \'{file_hash}\', \'{status}\', \'{match_field}\')"""
 
 GET_IMAGES_FROM_TABLE = """SELECT * FROM {company_id}.images ORDER BY created_at ASC LIMIT {page_size} OFFSET {page_start};"""
 

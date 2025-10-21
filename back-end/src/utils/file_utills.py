@@ -26,7 +26,7 @@ def dataframe_to_texts(df: pd.DataFrame) -> list[str]:
         result = {}
         for col, val in row.items():
             if pd.notna(val):
-                key = col.strip("'")
+                key = col.strip("'").upper()
                 row_values.append(f"{key}: {str(val)}")
                 result[key] = f'{val}'
         row_text = " | ".join(row_values)

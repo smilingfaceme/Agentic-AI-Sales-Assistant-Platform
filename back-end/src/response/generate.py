@@ -134,14 +134,14 @@ The response must be clear and short like a human response."""
         file_name = image['metadata']['pc_file_name'].split('/')[-1]
         file_extension = image['metadata']['pc_file_extension']
         file_id = file_name.replace(file_extension, '')
-        
+        match_field = image['metadata']['match_field'].upper()
         # Search vectors (assuming this is defined elsewhere)
         items = search_vectors(
             index_name=company_id,
             company_id=company_id,
-            extra_filter={"Metsec Code": file_id}
+            extra_filter={match_field: file_id}
         )
-        print([i["metadata"]['Metsec Code'] for i in items])
+        print([i["metadata"][match_field] for i in items])
         images_info.append([i["metadata"]['pc_text'] for i in items])
 
     print(images_info)

@@ -81,6 +81,7 @@ def store_image_embedding(
     file_name: str,
     file_hash: str,
     index_name: str,
+    match_field: str,
 ) -> None:
     """Embed a single image (BytesIO) and store its vector in Pinecone."""
     try:
@@ -98,6 +99,7 @@ def store_image_embedding(
             "pc_file_hash": file_hash,
             "pc_file_type": "IMAGE",
             "pc_file_extension": os.path.splitext(file_name)[1].lower(),
+            "match_field": match_field
         }
         
         vector_id = str(uuid.uuid4())

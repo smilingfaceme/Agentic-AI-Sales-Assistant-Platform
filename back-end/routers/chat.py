@@ -74,7 +74,7 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
     email = ""
     if sender_type == "agent":
         email = user["email"]
-    
+    extra_data = {}
     # Insert new message into database    
     add_query = await add_new_message(
         company_id=company_schema, 
@@ -82,7 +82,7 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
         sender_email=email, 
         sender_type=sender_type, 
         content=content,
-        extra='[]'
+        extra=f'{extra_data}'
     )
     
     if add_query["status"] == "success":
@@ -94,8 +94,8 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
                 ]
             }
         
-        response = await generate_response_with_search(user["company_id"], company_schema, conversation_id, content)
-        print(response)
+        response, extra_info = await generate_response_with_search(user["company_id"], company_schema, conversation_id, content)
+        extra_info = f'{extra_info}'.replace('\'', '\"')
         
         # Insert new message into database        
         add_response = await add_new_message(
@@ -104,7 +104,7 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
             sender_email="",
             sender_type="bot", 
             content=response,
-            extra='[]'
+            extra=extra_info
         )
     
         if add_response["status"] == "success":
@@ -173,13 +173,7 @@ async def send_image_message(
             pass
         else:
             raise HTTPException(status_code=400, detail="You are not authorized to perform this action")  
-    
-    # If conversation source is WhatsApp, send message via WhatsApp Bot
-    if current_conversation['source'] == 'WhatsApp':
-        result = await send_message_whatsapp(current_conversation["instance_name"], current_conversation['phone_number'], content, {'images':[full_path]})
-        if not result:
-            raise HTTPException(status_code=500, detail="Error sending message")
-    
+       
     # If sender is an agent, attach their email
     email = ""
     if sender_type == "agent":
@@ -200,6 +194,13 @@ async def send_image_message(
         full_path = result_file.fullPath
     # Insert new message into database
     extra_data = {"images":[full_path]}
+    
+    # If conversation source is WhatsApp, send message via WhatsApp Bot
+    if current_conversation['source'] == 'WhatsApp' and sender_type == "agent":
+        result = await send_message_whatsapp(current_conversation["instance_name"], current_conversation['phone_number'], content, extra_data)
+        if not result:
+            raise HTTPException(status_code=500, detail="Error sending message")
+        
     extra_data = f'{extra_data}'.replace('\'', '\"')
     add_query = await add_new_message(
         company_id=company_schema, 
@@ -291,12 +292,14 @@ async def get_chats(conversation_id: str = Query(...), user = Depends(verify_tok
 
 async def response_in_background(conversation_id: str, company_id: str, company_schema: str, query: str, instance_name:str, phone_number:str):
     try:
-        response = await generate_response_with_search(
+        response, extra_info = await generate_response_with_search(
             company_id=company_id,
             company_schema=company_schema,
             conversation_id=conversation_id,
             query=query
         )
+        
+        extra_info_db = f'{extra_info}'.replace('\'', '\"')
         # Insert new message into database        
         add_response = await add_new_message(
             company_id=company_schema, 
@@ -304,9 +307,9 @@ async def response_in_background(conversation_id: str, company_id: str, company_
             sender_email="",
             sender_type="bot", 
             content=response,
-            extra='[]'
+            extra=extra_info_db
         )
-        await send_message_whatsapp(instance_name, phone_number, response, {'images':[]})
+        await send_message_whatsapp(instance_name, phone_number, response, extra_info)
         return response
     except Exception as e:
         print(e)

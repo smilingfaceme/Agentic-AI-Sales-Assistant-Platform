@@ -134,3 +134,5 @@ GET_SAME_IMAGE_TABLE_WITH_ID = """SELECT * FROM {company_id}.images WHERE id=\'{
 DELETE_IMAGE_TABLE = """DELETE FROM {company_id}.images WHERE id = \'{file_id}\';"""
 
 UPDATE_IMAGE_STATUS_TABLE = """UPDATE {company_id}.images SET status = \'{status}\' WHERE id = \'{file_id}\';"""
+
+GET_LINKED_IAMGES_FROM_TABLE = """SELECT * FROM {company_id}.images WHERE file_name LIKE \'%{product_id}.%\' LIMIT 1"""

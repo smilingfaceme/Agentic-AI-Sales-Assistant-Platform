@@ -1,6 +1,17 @@
 from db.supabase_client import supabase
 from models.schema import *
 
+def safe_string(value: str) -> str:
+    """
+    Escape a string for safe use in SQL queries by doubling single quotes.
+    """
+    if not isinstance(value, str):
+        value = str(value)
+    
+    # Escape backslashes and quotes
+    safe_value = value.replace("'", "''")
+    return safe_value
+
 async def create_company_tables(company_id: str):
     response = supabase.rpc("exec_sql", {"sql": f'{COMPNY_SCHEMA_CREATE.format(company_id=company_id)}\n{COMPANY_CONVERSATION_TABLE.format(company_id=company_id)}\n{COMPANY_MESSAGE_TABLE.format(company_id=company_id)}\n{COMPANY_IMAGE_TABLE.format(company_id=company_id)}'}).execute()
     return response
@@ -22,8 +33,8 @@ async def get_conversatin_by_phone_integration(company_id: str, phone_number: st
     return response.data
 
 async def add_new_message(company_id: str, conversation_id:str, sender_type:str, sender_email:str, content:str, extra:str):
-    print(UPDATE_MESSAGE_BY_ID_QUERY.format(company_id=company_id, conversation_id=conversation_id, sender_type=sender_type, sender_email=sender_email, content=content, extra=extra))
-    response = supabase.rpc("exec_sql", {"sql": UPDATE_MESSAGE_BY_ID_QUERY.format(company_id=company_id, conversation_id=conversation_id, sender_type=sender_type, sender_email=sender_email, content=content, extra=extra)}).execute()
+    message_content = safe_string(content)
+    response = supabase.rpc("exec_sql", {"sql": UPDATE_MESSAGE_BY_ID_QUERY.format(company_id=company_id, conversation_id=conversation_id, sender_type=sender_type, sender_email=sender_email, content=message_content, extra=extra)}).execute()
     return response.data
 
 async def get_unanswered_conversations(company_id: str):
@@ -60,4 +71,8 @@ async def delete_image_from_table(company_id:str, file_id:str):
 
 async def update_image_status_on_table(company_id:str, file_id:str, status:str):
     response = supabase.rpc("exec_sql", {"sql": UPDATE_IMAGE_STATUS_TABLE.format(company_id=company_id, file_id=file_id, status=status)}).execute()
+    return response.data
+
+async def get_linked_images_from_table(company_id:str, product_id:str):
+    response = supabase.rpc("exec_sql", {"sql": GET_LINKED_IAMGES_FROM_TABLE.format(company_id=company_id, product_id=product_id)}).execute()
     return response.data

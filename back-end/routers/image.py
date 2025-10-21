@@ -101,8 +101,9 @@ async def upload_file(
 
     try:
         file_content = await file.read()
-        file_name = file.filename
-        file_hash = generate_file_hash(file_content)
+        file_name = file.filename.split("/")[-1]
+        file_hash_init_content =  file_content + b'::FILENAME::' + file_name.encode('utf-8')
+        file_hash = generate_file_hash(file_hash_init_content)
 
         existing_file = await get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
         if existing_file["status"] == "success" and existing_file.get("rows"):
@@ -218,11 +219,12 @@ async def reprocess_file(
             raise HTTPException(status_code=404, detail="File not found in storage")
 
         file_content = file_response
-        file_hash = generate_file_hash(file_content)
+        file_hash_init_content =  file_content + b'::FILENAME::' + file_name.encode('utf-8')
+        file_hash = generate_file_hash(file_hash_init_content)
 
         thread = threading.Thread(
             target=run_vectorize_in_thread,
-            args=(file_content, file_name, file_hash, company_id, record_id, company_schema, match_field),
+            args=(file_content, file_name, file_hash, company_id, record_id, company_schema, match_field, full_path),
             daemon=True,
         )
         thread.start()

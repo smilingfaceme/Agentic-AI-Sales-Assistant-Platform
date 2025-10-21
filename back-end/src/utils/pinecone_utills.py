@@ -230,7 +230,7 @@ def extract_differentiating_features(retrieved_items: List[Dict], query:str) -> 
     # Second LLM prompt: refine features to exclude those already mentioned in the query
     prompt_second = f"""
         You are given a dictionary of candidate product features and their possible values.
-    Your task is to select the top 3–5 most important features that would be most helpful for a user to decide between products.
+    Your task is to select the top 1 most important features that would be most helpful for a user to decide between products.
 
     Focus on features that:
 
@@ -246,6 +246,8 @@ def extract_differentiating_features(retrieved_items: List[Dict], query:str) -> 
     Features:
     {response_content}
     """
+    if len(response_content.keys()) <= 3:
+        return None
     response_second = llm_bot.invoke(prompt_second)
     response_second.content = response_second.content.replace("```", "").replace("json\n{", "{")
 

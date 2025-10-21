@@ -117,10 +117,11 @@ export const knowledgeApi = {
     return res.json();
   },
 
-  uploadKnowledgeFile: async (file: File, columns: string[]) => {
+  uploadKnowledgeFile: async (file: File, columns: string[], primary:string) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('columns', JSON.stringify(columns));
+    formData.append('primary_column', primary);
     const res = await apiRequest(`/knowledge/upload`, {
       method: 'POST',
       body: formData

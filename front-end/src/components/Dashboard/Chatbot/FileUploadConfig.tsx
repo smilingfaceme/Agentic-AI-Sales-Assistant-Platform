@@ -47,6 +47,7 @@ const UnifiedUploadModal: React.FC<UnifiedUploadModalProps> = ({
 }) => {
   const { showNotification } = useNotification();
   const [step, setStep] = useState<"upload" | "config">("upload");
+  const [primaryColumn, setPrimaryColumn] = useState("")
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [parsedFiles, setParsedFiles] = useState<ParsedFileData[]>([]);
   const [availableColumns, setAvailableColumns] = useState<ColumnItem[]>([]);
@@ -153,7 +154,8 @@ const UnifiedUploadModal: React.FC<UnifiedUploadModalProps> = ({
       for (const f of parsedFiles) {
         const response = await knowledgeApi.uploadKnowledgeFile(
           f.file,
-          selectedColumns.map((c) => c.name)
+          selectedColumns.map((c) => c.name),
+          primaryColumn
         );
         if (!response) {
           throw new Error(`Upload failed for ${f.file.name}`);
@@ -184,6 +186,7 @@ const UnifiedUploadModal: React.FC<UnifiedUploadModalProps> = ({
     setSelectedColumns([]);
     setError("");
     setFocusedColumn(null);
+    setPrimaryColumn("")
     onClose();
   };
 
@@ -222,6 +225,30 @@ const UnifiedUploadModal: React.FC<UnifiedUploadModalProps> = ({
         {step === "config" && (
           <div className="p-6 overflow-y-auto max-h-[80vh] overflow-x-hidden">
             <div className="text-base text-gray-700 mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select the primary column that links to additional files and related information.</label>
+              <select
+                value={primaryColumn}
+                onChange={(e) => setPrimaryColumn(e.target.value)}
+                id="primary-column"
+                name="primary-column"
+                className="py-1 px-2 form-select block border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900"
+                required={true}
+              >
+                <option value="">-- Select a column --</option>
+                {parsedFiles[0].columns.length ? (
+                  parsedFiles[0].columns.map((col) => (
+                    <>
+                      <option value={col}>{col}</option>
+                    </>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 text-sm py-6">
+                    No columns available
+                  </p>
+                )}
+              </select>
+            </div>
+            <div className="text-base text-gray-700 mb-4">
               Select the columns that contain the question and answer text. DoshiAI will automatically extract and index content from the selected columns.<br />
               Please choose only the columns relevant to user queries and answers, and avoid selecting IDs or other non-meaningful fields.
             </div>
@@ -244,8 +271,8 @@ const UnifiedUploadModal: React.FC<UnifiedUploadModalProps> = ({
                           className="text-blue-600 hover:text-blue-800 transition-colors"
                           title="Move to Selected"
                         >
-                          <FaArrowRight className="hidden md:block"/>
-                          <FaArrowDown className="block md:hidden"/>
+                          <FaArrowRight className="hidden md:block" />
+                          <FaArrowDown className="block md:hidden" />
                         </button>
                       </div>
                     ))
@@ -314,8 +341,8 @@ const UnifiedUploadModal: React.FC<UnifiedUploadModalProps> = ({
                           className="text-red-600 hover:text-red-800 transition-colors"
                           title="Move back"
                         >
-                          <FaArrowLeft className="hidden md:block"/>
-                          <FaArrowUp className="block md:hidden"/>
+                          <FaArrowLeft className="hidden md:block" />
+                          <FaArrowUp className="block md:hidden" />
                         </button>
                       </div>
                     ))
@@ -393,7 +420,7 @@ const UnifiedUploadModal: React.FC<UnifiedUploadModalProps> = ({
             disabled={
               step === "upload"
                 ? !selectedFiles.length
-                : !parsedFiles.length || !selectedColumns.length || loading
+                : !parsedFiles.length || !selectedColumns.length || loading || !primaryColumn
             }
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >

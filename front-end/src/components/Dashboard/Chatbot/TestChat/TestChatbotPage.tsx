@@ -139,6 +139,7 @@ export default function TestChatbotPage() {
                 if (imageFile) {
                   sendNewMessage(agentMessage, "customer", imageFile);
                   setImageFile(null);
+                  setAgentMessage("");
                   if (fileInputRef.current) fileInputRef.current.value = "";
                 } else if (agentMessage.trim()) {
                   sendNewMessage(agentMessage, "customer");
@@ -156,6 +157,7 @@ export default function TestChatbotPage() {
               if (imageFile) {
                 sendNewMessage(agentMessage, "customer", imageFile);
                 setImageFile(null);
+                setAgentMessage("");
                 if (fileInputRef.current) fileInputRef.current.value = "";
               } else if (agentMessage.trim()) {
                 sendNewMessage(agentMessage, "customer");

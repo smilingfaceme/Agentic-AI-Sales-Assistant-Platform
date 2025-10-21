@@ -53,6 +53,7 @@ export default function UnansweredQuestionArea() {
           "Send At": item.created_at,
           'Actions': [{
             label: "View",
+            disabled:false,
             onClick: () => { setActiveChatHistory(item); setShowModal(true) },
             className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors",
             icon: <FaEdit />

@@ -170,15 +170,17 @@ export const imageApi = {
   return res.json();
 },
 
-  uploadImageFile: async (file: File,) => {
+  uploadImageFile: async (file: File, match: string) => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('match_field', match);
+    
     const res = await apiRequest(`/image/upload`, {
       method: 'POST',
       body: formData
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(`Failed to upload file. ${data.message}`);    
+    if (!res.ok) throw new Error(`Failed to upload file. ${data.message}`);
     return data;
   },
 

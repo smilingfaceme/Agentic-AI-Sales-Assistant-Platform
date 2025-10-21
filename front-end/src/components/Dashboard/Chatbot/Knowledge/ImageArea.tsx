@@ -11,7 +11,7 @@ import { useChatbotContext } from "@/contexts/ChatbotContext";
 import { imageApi } from "@/services/apiService";
 import { useNotification } from '@/contexts/NotificationContext';
 
-const tableHeaders = ["Title & Description", "Type", "Status", "Created on", "Actions"];
+const tableHeaders = ["Title & Description", "Matching Field", "Type", "Status", "Created on", "Actions"];
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
@@ -21,6 +21,7 @@ type ImageFile = {
   file_type: string;
   status: string;
   created_at: string;
+  match_field?: string;
 };
 
 export default function ImageControlArea() {
@@ -42,6 +43,7 @@ export default function ImageControlArea() {
   const [uploadMode, setUploadMode] = useState<'file' | 'folder'>('file');
   const [folderFiles, setFolderFiles] = useState<File[]>([]);
   const [folderPreviewUrls, setFolderPreviewUrls] = useState<string[]>([]);
+  const [matchField, setMatchField] = useState<string>('');
 
   const { isLoading: isLoadingList, error: listError, execute: executeListAsync } = useApiCall();
   const { execute: executeDeleteAsync } = useApiCall();
@@ -104,6 +106,7 @@ export default function ImageControlArea() {
         icon: <></>,
       },
     ],
+    "Matching Field": item.match_field || "-",
     Type: item.file_type,
     Status: item.status,
     "Created on": new Date(item.created_at).toLocaleDateString(),
@@ -132,7 +135,7 @@ export default function ImageControlArea() {
         : []),
       {
         label: "",
-        disabled: deleteLoading[item.id],
+        disabled: item.status === "Completed" ? deleteLoading[item.id] : true,
         onClick: () => deleteFile(item.id, item.file_name),
         className:
           "flex items-center px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
@@ -173,7 +176,7 @@ export default function ImageControlArea() {
         try {
           const percent = Math.round(((uploadedCount + failedCount) / totalCount) * 100);
           updateProgressNotification(progressId, percent, `Uploading images: ${uploadedCount} succeeded, ${failedCount} failed, ${totalCount - uploadedCount - failedCount} remaining...`);
-          const result = await imageApi.uploadImageFile(file);
+          const result = await imageApi.uploadImageFile(file, matchField);
           if (result?.success) {
             uploadedCount++;
           } else {
@@ -191,6 +194,7 @@ export default function ImageControlArea() {
       setFolderFiles([]);
       setFolderPreviewUrls([]);
       fetchImageFileList();
+      setMatchField("");
       updateProgressNotification(progressId, 100, `Upload complete (${uploadedCount} success, ${failedCount} failed)`);
       setTimeout(() => closeNotification(progressId), 2000);
     })();
@@ -209,11 +213,12 @@ export default function ImageControlArea() {
           setUploading(false);
           return;
         }
-        const result = await executeUploadAsync(() => imageApi.uploadImageFile(file));
+        const result = await executeUploadAsync(() => imageApi.uploadImageFile(file, matchField));
         if (result?.success) {
           setShowModal(false);
           fetchImageFileList();
           setPreviewUrl(null);
+          setMatchField('');
           showNotification(`${file.name} uploaded successfully!`, 'success', true);
         } else {
           setUploadError(result?.message || "Upload failed.");
@@ -297,7 +302,7 @@ export default function ImageControlArea() {
         <Table
           headers={tableHeaders}
           data={tabledata}
-          actionColumnKey={["Title & Description", "Actions"]}
+          actionColumnKey={["Title & Description", "Caption", "Actions"]}
         />
         {/* Pagination Controls */}
         <div className="flex flex-wrap justify-between items-center mt-4 gap-2">
@@ -343,7 +348,7 @@ export default function ImageControlArea() {
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
-              onClick={() => { setShowModal(false); setPreviewUrl(null); }}
+              onClick={() => { setShowModal(false); setPreviewUrl(null); setMatchField('');}}
               disabled={uploading}
               aria-label="Close"
             >
@@ -442,6 +447,21 @@ export default function ImageControlArea() {
                 onChange={handleFileChange}
                 {...(uploadMode === 'folder' ? { multiple: true, webkitdirectory: "" } : {})}
               />
+              <div className="flex flex-col gap-2">
+                <label htmlFor="caption" className="text-sm font-medium text-gray-700">
+                  Field Matching with Product Table Data
+                </label>
+                <textarea
+                  id="match"
+                  required={true}
+                  value={matchField}
+                  onChange={(e) => setMatchField(e.target.value)}
+                  placeholder="Enter the field name that corresponds to the image name associated with the product ID."
+                  className="border rounded px-3 py-2 text-sm resize-none"
+                  rows={2}
+                  disabled={uploading}
+                />
+              </div>
               {uploadError && <div className="text-red-500 text-sm">{uploadError}</div>}
               <button
                 type="submit"

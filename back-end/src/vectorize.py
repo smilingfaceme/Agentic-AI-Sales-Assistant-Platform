@@ -43,7 +43,7 @@ def split_texts_into_batches(chunks, max_tokens=MAX_TOKENS_PER_REQUEST, model=EM
 
     return batches_chuncks, batches
 
-def vectorize_file(file_content: io.BytesIO, file_name: str, index_name: str, company_id: str) -> Dict[str, Any]:
+def vectorize_file(file_content: io.BytesIO, file_name: str, index_name: str, primary_column: str) -> Dict[str, Any]:
     """
     Main function to vectorize a CSV/XLSX file and store in Pinecone
     
@@ -75,9 +75,9 @@ def vectorize_file(file_content: io.BytesIO, file_name: str, index_name: str, co
     # Validate file type and chunk the file
     file_extension = os.path.splitext(file_name)[1].lower()
     if file_extension in ['.xlsx', '.xls']:
-        chunks = load_xlsx_file(file_content, file_name, file_hash)
+        chunks = load_xlsx_file(file_content, file_name, file_hash, primary_column)
     elif file_extension in ['.csv']:
-        chunks = load_csv_file(file_content, file_name, file_hash)
+        chunks = load_csv_file(file_content, file_name, file_hash, primary_column)
     else:
         raise Exception(f"Unsupported file type: {file_extension}. Only CSV and Excel files are supported.")
     

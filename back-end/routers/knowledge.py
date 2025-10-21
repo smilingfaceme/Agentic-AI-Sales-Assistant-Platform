@@ -14,10 +14,10 @@ import io, asyncio
 # Create a new FastAPI router for handling file storage operations
 router = APIRouter()
 
-def run_vectorize_in_thread(file_content, file_name, company_id, record_id):
-    asyncio.run(vectorize_in_background(file_content, file_name, company_id, record_id))
+def run_vectorize_in_thread(file_content, file_name, company_id, record_id, primary_column):
+    asyncio.run(vectorize_in_background(file_content, file_name, company_id, record_id, primary_column))
 
-async def vectorize_in_background(file_content: bytes, file_name: str, company_id: str, record_id: str):
+async def vectorize_in_background(file_content: bytes, file_name: str, company_id: str, record_id: str, primary_column:str):
     """Background task to vectorize uploaded file"""
     try:
         # Convert bytes to BytesIO for vectorize_file function
@@ -28,7 +28,7 @@ async def vectorize_in_background(file_content: bytes, file_name: str, company_i
             file_content=file_io,
             file_name=file_name,
             index_name=company_id,
-            company_id=company_id
+            primary_column=primary_column
         )
         
         # Update database record status
@@ -80,6 +80,7 @@ async def get_file_list(
 async def upload_file(
     file: UploadFile = File(...),
     columns = Form(..., default_factory=list),
+    primary_column:str = Form(...),
     user = Depends(verify_token)
 ):
     """
@@ -119,6 +120,7 @@ async def upload_file(
                 "file_name": file_name,
                 "file_type": file.content_type,
                 "file_hash": file_hash,
+                "primary_column": primary_column,
                 "status": "Processing",
                 "extra": selected_columns
             }]).execute()
@@ -129,7 +131,7 @@ async def upload_file(
                 # Start vectorization in background thread
                 thread = threading.Thread(
                     target=run_vectorize_in_thread,
-                    args=(file_content, file_name, company_id, record_id)
+                    args=(file_content, file_name, company_id, record_id, primary_column)
                 )
                 thread.daemon = True
                 thread.start()
@@ -190,6 +192,7 @@ async def reprocess_file(
         raise HTTPException(status_code=404, detail="File not found")
 
     file_name = file_info.data["file_name"]
+    primary_column = file_info.data["primary_column"]
 
     # Download file from Supabase Storage (as bytes)
     try:
@@ -206,7 +209,7 @@ async def reprocess_file(
     try:
         thread = threading.Thread(
             target=run_vectorize_in_thread,
-            args=(file_content, file_name, company_id, file_id),
+            args=(file_content, file_name, company_id, file_id, primary_column),
             daemon=True
         )
         thread.start()

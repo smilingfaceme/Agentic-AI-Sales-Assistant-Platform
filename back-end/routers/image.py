@@ -83,12 +83,12 @@ async def get_file_list(
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    match_field = Form(...),
+    match_field:str = Form(...),
     user=Depends(verify_token),
 ):
     if not user['permission'].get("knowledge"):
         raise HTTPException(status_code=400, detail="You are not authorized to perform this action")
-
+    match_field = match_field.strip()
     company_id = user.get("company_id")
     if not file or not company_id:
         raise HTTPException(status_code=400, detail="No file provided")

@@ -54,10 +54,15 @@ async def get_histroy(company_schema: str, conversation_id: str):
 async def get_linked_info(retrieval_results:list[dict], company_schema:str, conversation_id:str):
     global extra_info_conversations
     extra_info = {'images': []}
+    product_info = []
     for r in retrieval_results:
+        if r['metadata']['pc_text'] in product_info:
+            continue
+        product_info.append(r['metadata']['pc_text'])
+        primary_column_name = r['metadata']['pc_primary_column']
         image_linked = await get_linked_images_from_table(
             company_id=company_schema,
-            product_id=r['metadata']['METSEC CODE']
+            product_id=r['metadata'][primary_column_name]
         )
         try:
             if image_linked["status"] == "success" and image_linked["rows"]:

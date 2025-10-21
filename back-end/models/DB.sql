@@ -109,6 +109,7 @@ create table if not exists public.knowledges (
   file_type text not null,
   file_hash text not null,
   status text not null,
+  primary_column text not null,
   extra json null,
   created_at timestamp with time zone not null default now(),
   constraint knowledges_pkey primary key (id),

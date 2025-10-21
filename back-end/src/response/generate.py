@@ -59,7 +59,9 @@ async def get_histroy(company_schema: str, conversation_id: str):
         return memory
 
 def generate_response(user_message:str, chat_memory:ConversationSummaryBufferMemory, company_id:str, conversation_id:str):
-    prompt_Tempalte = f"""You are an AI sales assistant helping customers. Generate a helpful, persuasive, and natural sales response. The response must be clear and short like human response."""
+    prompt_Tempalte = f"""You are an AI sales assistant helping customers. 
+Generate a helpful, detailed, and natural sales response.
+The response must be clear and short like a human response."""
     prompt = ChatPromptTemplate.from_messages([
         ("system", prompt_Tempalte),
         MessagesPlaceholder("history"),
@@ -119,8 +121,8 @@ def generate_response_with_image(
     conversation_id: str,
     query:str
 ):
-    prompt_template = """You are an AI sales assistant helping customers.
-Generate a helpful, persuasive, and natural sales response.
+    prompt_template = """You are an AI sales assistant helping customers. 
+Generate a helpful, detailed, and natural sales response.
 The response must be clear and short like a human response."""
 
     prompt = ChatPromptTemplate.from_messages([
@@ -130,6 +132,7 @@ The response must be clear and short like a human response."""
     ])
 
     images_info = []
+    extra_info = {'images':[]}
     for image in image_search:
         file_name = image['metadata']['pc_file_name'].split('/')[-1]
         file_extension = image['metadata']['pc_file_extension']
@@ -141,10 +144,9 @@ The response must be clear and short like a human response."""
             company_id=company_id,
             extra_filter={match_field: file_id}
         )
-        print([i["metadata"][match_field] for i in items])
-        images_info.append([i["metadata"]['pc_text'] for i in items])
-
-    print(images_info)
+        for i in items:
+            extra_info['images'].append(image['metadata']['full_path'])
+            images_info.append(i['metadata']['pc_text'])
 
     # ✅ Tell memory what the input/output keys are
     chat_memory.input_key = "input"
@@ -161,10 +163,10 @@ The response must be clear and short like a human response."""
     input_content = f'{query} \n\n Similar Products Info: {images_info}'
     # Run the chain
     result = chain.invoke({"input": input_content})
-    return result["output"]
+    return result["output"], extra_info
 
 async def generate_response_with_image_search(company_id:str, company_schema:str, conversation_id:str, query: str, image_search:list[dict]):
     chat_memory = await get_histroy(company_schema, conversation_id)
     
-    response = generate_response_with_image(image_search, chat_memory, company_id, conversation_id, query)
-    return safe_string(response)
+    response, extra_info = generate_response_with_image(image_search, chat_memory, company_id, conversation_id, query)
+    return safe_string(response), extra_info

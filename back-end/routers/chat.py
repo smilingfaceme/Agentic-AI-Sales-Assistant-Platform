@@ -66,7 +66,7 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
     
     # If conversation source is WhatsApp, send message via WhatsApp Bot
     if current_conversation['source'] == 'WhatsApp':
-        result = await send_message_whatsapp(current_conversation["instance_name"], current_conversation['phone_number'], content)
+        result = await send_message_whatsapp(current_conversation["instance_name"], current_conversation['phone_number'], content, {'images':[]})
         if not result:
             raise HTTPException(status_code=500, detail="Error sending message")
     
@@ -176,7 +176,7 @@ async def send_image_message(
     
     # If conversation source is WhatsApp, send message via WhatsApp Bot
     if current_conversation['source'] == 'WhatsApp':
-        result = await send_message_whatsapp(current_conversation["instance_name"], current_conversation['phone_number'], content)
+        result = await send_message_whatsapp(current_conversation["instance_name"], current_conversation['phone_number'], content, {'images':[full_path]})
         if not result:
             raise HTTPException(status_code=500, detail="Error sending message")
     
@@ -199,8 +199,8 @@ async def send_image_message(
         )
         full_path = result_file.fullPath
     # Insert new message into database
-    extra_data = f'{[full_path]}'.replace('\'', '\"')
-    print(extra_data)
+    extra_data = {"images":[full_path]}
+    extra_data = f'{extra_data}'.replace('\'', '\"')
     add_query = await add_new_message(
         company_id=company_schema, 
         conversation_id=conversation_id, 
@@ -221,8 +221,8 @@ async def send_image_message(
             
         file_io = io.BytesIO(file_content)
         matches = search_similar_images(query_image_bytes=file_io, index_name=f'{user["company_id"]}-image')
-        response = await generate_response_with_image_search(user["company_id"], company_schema, conversation_id, content, matches)
-        
+        response, extra_info = await generate_response_with_image_search(user["company_id"], company_schema, conversation_id, content, matches)
+        extra_info = f'{extra_info}'.replace('\'', '\"')
         # Insert new message into database        
         add_response = await add_new_message(
             company_id=company_schema, 
@@ -230,7 +230,7 @@ async def send_image_message(
             sender_email="",
             sender_type="bot", 
             content=response,
-            extra='[]'
+            extra=extra_info
         )
     
         if add_response["status"] == "success":
@@ -306,7 +306,7 @@ async def response_in_background(conversation_id: str, company_id: str, company_
             content=response,
             extra='[]'
         )
-        await send_message_whatsapp(instance_name, phone_number, response)
+        await send_message_whatsapp(instance_name, phone_number, response, {'images':[]})
         return response
     except Exception as e:
         print(e)
@@ -319,24 +319,25 @@ def run_response_in_thread(conversation_id, company_id, company_schema, query, i
 async def response_for_image_in_background(conversation_id: str, company_id: str, company_schema: str, query: str, instance_name:str, phone_number:str, file_io:io.BytesIO):
     try:
         matches = search_similar_images(query_image_bytes=file_io, index_name=f'{company_id}-image')
-        response = await generate_response_with_image_search(
+        response, extra_info = await generate_response_with_image_search(
             company_id=company_id,
             company_schema=company_schema,
             conversation_id=conversation_id,
             query=query,
             image_search=matches
         )
+        extra_info_db = f'{extra_info}'.replace('\'', '\"')
         # Insert new message into database        
         add_response = await add_new_message(
             company_id=company_schema, 
             conversation_id=conversation_id, 
             sender_email="",
-            sender_type="bot", 
+            sender_type="bot",
             content=response,
-            extra='[]'
+            extra=extra_info_db
         )
     
-        await send_message_whatsapp(instance_name, phone_number, response)
+        await send_message_whatsapp(instance_name, phone_number, response, extra_info)
         return response
     except Exception as e:
         print(e)
@@ -517,7 +518,8 @@ async def reply_to_image_message(
         )
         full_path = result_file.fullPath
     # Insert new message into database
-    extra_data = f'{[full_path]}'.replace('\'', '\"')
+    extra_data = {"images":[full_path]}
+    extra_data = f'{extra_data}'.replace('\'', '\"')
     messages = await add_new_message(
         company_id=company_schema, 
         conversation_id=conversation_id, 

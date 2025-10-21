@@ -89,9 +89,10 @@ COMPANY_IMAGE_TABLE = """create table {company_id}.images (
   file_name text not null,
   file_type text not null,
   file_hash text not null,
+  full_path text not null,
   status text not null,
-  match_field text not null,
   extra json null,
+  match_field text not null,
   created_at timestamp with time zone not null default now(),
   constraint images_pkey primary key (id)
 ) TABLESPACE pg_default;"""
@@ -120,7 +121,7 @@ JOIN LATERAL (
 WHERE m.sender_type = 'customer';
 """
 
-ADD_IMAGE_INTO_TABLE = """INSERT INTO {company_id}.images (file_name, file_type, file_hash, status, match_field) VALUES (\'{file_name}\', \'{file_type}\', \'{file_hash}\', \'{status}\', \'{match_field}\')"""
+ADD_IMAGE_INTO_TABLE = """INSERT INTO {company_id}.images (file_name, file_type, file_hash, full_path, status, match_field) VALUES (\'{file_name}\', \'{file_type}\', \'{file_hash}\', \'{full_path}\', \'{status}\', \'{match_field}\')"""
 
 GET_IMAGES_FROM_TABLE = """SELECT * FROM {company_id}.images ORDER BY created_at ASC LIMIT {page_size} OFFSET {page_start};"""
 

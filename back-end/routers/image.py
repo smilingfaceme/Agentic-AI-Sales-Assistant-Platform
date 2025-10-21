@@ -12,12 +12,12 @@ router = APIRouter()
 # ----------------------------- #
 # Utility: Background Vectorizer
 # ----------------------------- #
-def run_vectorize_in_thread(file_content, file_name, file_hash, company_id, record_id, company_schema, match_field):
+def run_vectorize_in_thread(file_content, file_name, file_hash, company_id, record_id, company_schema, match_field, full_path):
     """Run vectorization asynchronously inside a separate thread."""
-    asyncio.run(vectorize_in_background(file_content, file_name, file_hash, company_id, record_id, company_schema, match_field))
+    asyncio.run(vectorize_in_background(file_content, file_name, file_hash, company_id, record_id, company_schema, match_field, full_path))
 
 
-async def vectorize_in_background(file_content: bytes, file_name: str, file_hash: str, company_id: str, record_id: str, company_schema:str, match_field:str):
+async def vectorize_in_background(file_content: bytes, file_name: str, file_hash: str, company_id: str, record_id: str, company_schema:str, match_field:str, full_path:str):
     """Handles background image embedding creation."""
     try:
         file_io = io.BytesIO(file_content)
@@ -26,7 +26,8 @@ async def vectorize_in_background(file_content: bytes, file_name: str, file_hash
             file_name=file_name,
             file_hash=file_hash,
             index_name=f'{company_id}-image',
-            match_field=match_field
+            match_field=match_field,
+            full_path=full_path
         )
         
         # Update database record status
@@ -107,15 +108,16 @@ async def upload_file(
         if existing_file["status"] == "success" and existing_file.get("rows"):
             raise HTTPException(status_code=400, detail="File already exists")
 
-        supabase.storage.from_("images").upload(
+        upload_file = supabase.storage.from_("images").upload(
             f"{company_id}/{file_name}", file_content, {"content-type": file.content_type}
         )
-
+        full_path = upload_file.fullPath
         image_file = await add_new_image(
             company_id=company_schema,
             file_name=file_name,
             file_type=file.content_type,
             file_hash=file_hash,
+            full_path=full_path,
             status="Processing",
             match_field=match_field
         )
@@ -128,7 +130,7 @@ async def upload_file(
         # Start vectorization asynchronously
         thread = threading.Thread(
             target=run_vectorize_in_thread,
-            args=(file_content, file_name, file_hash, company_id, record_id, company_schema, match_field),
+            args=(file_content, file_name, file_hash, company_id, record_id, company_schema, match_field, full_path),
             daemon=True,
         )
         thread.start()
@@ -208,7 +210,7 @@ async def reprocess_file(
         raise HTTPException(status_code=400, detail="File not found")
 
     file_info = existing_file["rows"][0]
-    file_name, record_id, match_field = file_info["file_name"], file_info["id"], file_info["match_field"]
+    file_name, record_id, match_field, full_path = file_info["file_name"], file_info["id"], file_info["match_field"], file_info['full_path']
 
     try:
         file_response = supabase.storage.from_("images").download(f"{company_id}/{file_name}")

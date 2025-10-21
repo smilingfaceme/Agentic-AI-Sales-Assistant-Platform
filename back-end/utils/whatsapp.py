@@ -3,6 +3,7 @@ import httpx
 import hashlib
 
 WhatsApp_Bot_URL = os.getenv("WhatsApp_Bot_URL")
+SUPABASE_URL = os.getenv('SUPABASE_URL')
 
 def combine_uuids(uuid1: str, uuid2: str, order:int) -> str:
     combined = uuid1 + uuid2 + str(order)
@@ -33,14 +34,19 @@ async def logout_whatsapp(instance_name:str):
         )
     return response.json()
 
-async def send_message_whatsapp(instance_name:str, to:str, message:str):
+async def send_message_whatsapp(instance_name:str, to:str, message:str, extra_info:dict):
+    image_urls = []
+    for i in extra_info.get('images', []):
+        url_i = f'{SUPABASE_URL}/storage/v1/object/public/{i}'
+        image_urls.append(url_i)
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{WhatsApp_Bot_URL}/send",
             json={
                 "project_id": instance_name,
                 'to': to,
-                'message': message
+                'message': message,
+                'image_urls': image_urls
             }
         )
         if response.status_code > 300:

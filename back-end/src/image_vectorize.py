@@ -82,6 +82,7 @@ def store_image_embedding(
     file_hash: str,
     index_name: str,
     match_field: str,
+    full_path: str
 ) -> None:
     """Embed a single image (BytesIO) and store its vector in Pinecone."""
     try:
@@ -99,7 +100,8 @@ def store_image_embedding(
             "pc_file_hash": file_hash,
             "pc_file_type": "IMAGE",
             "pc_file_extension": os.path.splitext(file_name)[1].lower(),
-            "match_field": match_field
+            "match_field": match_field,
+            "full_path":full_path
         }
         
         vector_id = str(uuid.uuid4())
@@ -115,7 +117,7 @@ def store_image_embedding(
 def search_similar_images(
     query_image_bytes: io.BytesIO,
     index_name: str,
-    k: int = 5,
+    k: int = 2,
 ):
     """Find visually similar images for a query image (BytesIO)."""
     query_emb = embedder.encode_image_bytes(query_image_bytes)

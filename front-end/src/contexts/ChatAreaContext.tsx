@@ -18,6 +18,7 @@ export type ChatHistory = {
   conversation_name: string;
   conversation_id: string;
   source: string;
+  ai_reply: boolean;
   [key: string]: unknown;
 };
 

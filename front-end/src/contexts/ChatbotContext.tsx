@@ -20,6 +20,7 @@ export type MessageFile = {
   content: string;
   created_at: string;
   source: string;
+  ai_reply: boolean;
   [key: string]: unknown;
 };
 
@@ -35,7 +36,8 @@ export function ChatbotProvider({ children }: { children: ReactNode }) {
     conversation_id: '',
     content: '',
     created_at: '',
-    source: ''
+    source: '',
+    ai_reply: false
   });
 
   return (

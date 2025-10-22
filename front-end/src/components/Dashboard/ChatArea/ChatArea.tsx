@@ -8,16 +8,17 @@ import { useApiCall } from "@/hooks/useApiCall";
 import { useChatAreaContext } from '@/contexts/ChatAreaContext';
 
 export default function ChatArea() {
-  const { activeChatHistory, chatMessages, setChatMessages, agentMessage, setAgentMessage } = useChatAreaContext();
+  const { activeChatHistory, setActiveChatHistory, chatMessages, setChatMessages, agentMessage, setAgentMessage } = useChatAreaContext();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Use the API call hook for managing loading states and preventing duplicate requests
   const { isLoading, error, execute } = useApiCall();
+  const { isLoading: isTogglingAIReply, execute: executeToggleAIReply } = useApiCall();
 
   const fetchChatHistory = useCallback(async () => {
     if (!activeChatHistory?.conversation_id) return;
-    
+
     const result = await execute(async () => {
       return await chatApi.getChatHistory(activeChatHistory.conversation_id);
     });
@@ -47,6 +48,17 @@ export default function ChatArea() {
     }
   };
 
+  const toggleAIReply = async () => {
+    if (!activeChatHistory?.conversation_id) return;
+    const result = await executeToggleAIReply(async () => {
+      return await chatApi.toggleAIReply(activeChatHistory.conversation_id);
+    });
+    if (result) {
+      setActiveChatHistory({ ...activeChatHistory, ai_reply: !activeChatHistory.ai_reply });
+      activeChatHistory.ai_reply = !activeChatHistory.ai_reply;
+    }
+  };
+
   useEffect(() => {
     fetchChatHistory();
   }, [fetchChatHistory]);
@@ -66,6 +78,15 @@ export default function ChatArea() {
             <p className="text-sm text-gray-500">{activeChatHistory.source}</p>
           </div>
         </div>
+        <button
+          className={`border border-gray-500 relative inline-flex h-6 w-11 items-center rounded-full transition ${activeChatHistory.ai_reply ? "bg-gray-800" : "bg-gray-100"}`}
+          onClick={toggleAIReply}
+          disabled = {isTogglingAIReply}
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full border border-gray-500 bg-gray-300 transition ${activeChatHistory.ai_reply ? "translate-x-6" : "translate-x-0"}`}
+          />
+        </button>
       </header>
       {/* Main chat area */}
       <div className="flex-1 px-2 md:px-10 py-4 md:py-6 overflow-y-auto bg-[#fafbfc] flex flex-col-reverse">

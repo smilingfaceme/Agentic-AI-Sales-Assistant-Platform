@@ -103,7 +103,20 @@ export const chatApi = {
     });
     if (!res.ok) throw new Error('Failed to send image message');
     return res.json();
+  },
+
+  toggleAIReply: async (conversationId: string) => {
+    const res = await apiRequest('/conversation/toggle-ai-reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversation_id: conversationId
+      })
+    });
+    if (!res.ok) throw new Error('Failed to toggle AI reply');
+    return res.json();
   }
+
 };
 
 // Knowledge APIs

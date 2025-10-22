@@ -389,20 +389,19 @@ async def reply_to_message(data = Body(...)):
     
     # Return success response with new message details
     if messages["status"] == "success":
-        
-        # Start vectorization in background thread
-        thread = threading.Thread(
-            target=run_response_in_thread,
-            args=(conversation_id, company_id, company_schema,message['message']['conversation'], instanceName, phone_number)
-        )
-        thread.daemon = True
-        thread.start()
-        
+        if conversation[0]['ai_reply'] == True:
+            # Start vectorization in background thread
+            thread = threading.Thread(
+                target=run_response_in_thread,
+                args=(conversation_id, company_id, company_schema,message['message']['conversation'], instanceName, phone_number)
+            )
+            thread.daemon = True
+            thread.start()
         return {
-            "status": 'success',
+            "success": True,
         }
     else:
-        raise HTTPException(status_code=500, detail=messages['message'])
+        raise HTTPException(status_code=500, detail="Failed to add message")
 
 
 @router.post("/voice")
@@ -456,20 +455,19 @@ async def reply_to_voice_message(
     
     # Return success response with new message details
     if messages["status"] == "success":
-        
-        # Start vectorization in background thread
-        thread = threading.Thread(
-            target=run_response_in_thread,
-            args=(conversation_id, company_id, company_schema,message_content, instanceName, phone_number)
-        )
-        thread.daemon = True
-        thread.start()
-        
+        if conversation[0]['ai_reply'] == True:
+            # Start vectorization in background thread
+            thread = threading.Thread(
+                target=run_response_in_thread,
+                args=(conversation_id, company_id, company_schema,message_content, instanceName, phone_number)
+            )
+            thread.daemon = True
+            thread.start()
         return {
-            "status": 'success',
+            "success": True,
         }
     else:
-        raise HTTPException(status_code=500, detail=messages['message'])
+        raise HTTPException(status_code=500, detail="Failed to add message")
 
 
 @router.post("/image")
@@ -534,17 +532,17 @@ async def reply_to_image_message(
     
     # Return success response with new message details
     if messages["status"] == "success":
-        file_io = io.BytesIO(file_content)
-        # Start vectorization in background thread
-        thread = threading.Thread(
-            target=run_response_for_image_in_thread,
-            args=(conversation_id, company_id, company_schema,content, instanceName, phone_number, file_io)
-        )
-        thread.daemon = True
-        thread.start()
-        
+        if conversation[0]['ai_reply'] == True:
+            file_io = io.BytesIO(file_content)
+            # Start vectorization in background thread
+            thread = threading.Thread(
+                target=run_response_for_image_in_thread,
+                args=(conversation_id, company_id, company_schema,content, instanceName, phone_number, file_io)
+            )
+            thread.daemon = True
+            thread.start()
         return {
-            "status": 'success',
+            "success": True,
         }
     else:
-        raise HTTPException(status_code=500, detail=messages['message'])
+        raise HTTPException(status_code=500, detail="Failed to add message")

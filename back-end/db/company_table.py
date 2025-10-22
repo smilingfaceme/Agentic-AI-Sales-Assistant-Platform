@@ -20,6 +20,10 @@ async def add_new_conversation(company_id: str, conversation_name: str, source: 
     response = supabase.rpc("exec_sql", {"sql": ADD_CONVERSATION_INTO_TABLE.format(company_id=company_id, conversation_name=conversation_name, source=source, phone_number=phone_number, instance_name=instance_name)}).execute()
     return response.data
 
+async def toggle_ai_reply_for_conversation(company_id: str, conversation_id: str):
+    response = supabase.rpc("exec_sql", {"sql": TOGGLE_AI_REPLY_FOR_CONVERSATION.format(company_id=company_id, conversation_id=conversation_id)}).execute()
+    return response.data
+
 async def get_all_conversations(company_id: str):
     response = supabase.rpc("exec_sql", {"sql": GET_ALL_CONVERSATIONS_QUERY.format(company_id=company_id)}).execute()
     return response.data

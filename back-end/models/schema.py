@@ -99,6 +99,8 @@ COMPANY_IMAGE_TABLE = """create table {company_id}.images (
 
 ADD_CONVERSATION_INTO_TABLE =  """INSERT INTO {company_id}.conversations (conversation_name, source, phone_number, instance_name) VALUES (\'{conversation_name}\', \'{source}\', \'{phone_number}\', \'{instance_name}\')"""
 
+TOGGLE_AI_REPLY_FOR_CONVERSATION = """UPDATE {company_id}.conversations SET ai_reply = NOT ai_reply WHERE conversation_id = \'{conversation_id}\';"""
+
 GET_ALL_CONVERSATIONS_QUERY = """SELECT * FROM {company_id}.conversations;"""
 
 GET_CONVERSATION_WITH_ID_QUERY = """SELECT * FROM {company_id}.conversations WHERE conversation_id = \'{conversation_id}\';"""

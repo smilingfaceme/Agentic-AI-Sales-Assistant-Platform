@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from middleware.auth import verify_token
 from db.public_table import get_companies
-from db.company_table import add_new_conversation, get_all_conversations, get_unanswered_conversations
+from db.company_table import add_new_conversation, get_all_conversations, get_unanswered_conversations, toggle_ai_reply_for_conversation
 
 # Initialize FastAPI router for conversation-related routes
 router = APIRouter()
@@ -122,3 +122,40 @@ async def create_new_conversation(data = Body(...), user = Depends(verify_token)
         }
     else:
         raise HTTPException(status_code=500, detail=new_record['message'])
+
+@router.post("/toggle-ai-reply")
+async def toggle_ai_reply(data = Body(...), user = Depends(verify_token)):
+    """
+    Toggle AI reply for a conversation.
+
+    Request Body:
+    - conversation_id (str): ID of the conversation to toggle AI reply.
+
+    Process:
+    - Validates request body fields.
+    - Retrieves company schema using the authenticated user's company ID.
+    - Toggles the AI reply status for the conversation.
+    - Returns the updated conversation in JSON format.
+    """
+    conversation_id = data["conversation_id"]
+    if not conversation_id:
+        raise HTTPException(status_code=400, detail="conversation_id is required")
+    
+    company_id = user["company_id"]
+    company_info = get_companies("id", company_id)
+
+    if not company_info:
+        raise HTTPException(status_code=400, detail="Company not found")
+
+    company_schema = company_info["schema_name"]
+
+    # Toggle AI reply for the conversation
+    toggle_ai_reply = await toggle_ai_reply_for_conversation(company_schema, conversation_id)
+
+    if toggle_ai_reply["status"] == "success":
+        return {
+            "status": 'success',
+            "conversations": toggle_ai_reply.get('rows', [])
+        }
+    else:
+        raise HTTPException(status_code=500, detail=toggle_ai_reply['message'])

@@ -91,6 +91,14 @@ export async function login(email: string, password: string) {
   return res.json();
 }
 
+export async function forget_password(email: string) {
+  const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  return res.json();
+}
 
 export async function register(name: string, email: string, company:string, description:string, password: string) {
   const res = await fetch(`${API_BASE}/auth/register`, {

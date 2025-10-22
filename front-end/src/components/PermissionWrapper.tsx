@@ -4,7 +4,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAppContext, User } from '@/contexts/AppContext';
 import { isAuthenticated, getCookie } from '@/utils';
 import Loading from '@/components/Loading';
-import path from 'path';
 
 interface PermissionWrapperProps {
   children: React.ReactNode;
@@ -33,7 +32,7 @@ const REDIRECT_ROUTES = {
 } as const;
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ['/', '/auth/login', '/auth/register', '/accept-invite', '/dashboard/settings/user', '/dashboard/chatbot'];
+const PUBLIC_ROUTES = ['/', '/auth/login', '/auth/register', '/accept-invite', 'reset-password', '/dashboard/settings/user', '/dashboard/chatbot'];
 
 export default function PermissionWrapper({ children }: PermissionWrapperProps) {
   const router = useRouter();

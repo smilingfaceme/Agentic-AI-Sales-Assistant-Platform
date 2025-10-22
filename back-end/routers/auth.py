@@ -1,8 +1,8 @@
 # Import required modules from FastAPI, Pydantic, utilities, and external libraries
-from fastapi import APIRouter, HTTPException, status, Body
-
+from fastapi import APIRouter, HTTPException, status, Body, Query
+from utils.send_email import send_reset_password_email
 from db.public_table import *
-from utils.token_handler import hash_password, create_access_token, verify_password
+from utils.token_handler import hash_password, create_access_token, verify_password, decode_valide_access_token
 
 # Initialize API router
 router = APIRouter()
@@ -115,6 +115,119 @@ async def login(
     if not verify_password(password, user['password']):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    
+    # Create JWT token with user info
+    token_data = {
+        "id": user["user_id"],
+        "email": user["email"],
+        "name": user["name"],
+        "role": user["role_name"],
+        "company_id": user["company_id"],
+        "permissions": user['permissions']
+    }
+    token = create_access_token(token_data)
+    
+    return {
+        "message": "Login successful",
+        "token": token,
+        "user": {
+            "name": user["name"], 
+            "email": user["email"],
+            "company_name": user['company_name'],
+            "company_description": user["company_description"],
+            "role": user['role_name'],
+            "permissions": user['permissions']
+        }
+    }
+
+@router.post("/forgot-password")
+async def forgot_password(data = Body(...)):
+    """
+    Send a password reset email to the user.
+    
+    - Validates the user exists.
+    - Generates a reset token.
+    - Sends a password reset email.
+    """
+    email = data['email']
+    # Validate required fields
+    if not email:
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    user = get_user_with_permission("email", email)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    # Generate reset token
+    token_data = {
+        "email": email
+    }
+    token = create_access_token(token_data, period=3)
+    
+    # Send reset email
+    re = send_reset_password_email(email, token)
+    if not re:
+        raise HTTPException(status_code=400, detail="Failed to send reset email")
+    
+    return {
+        "success": True,
+        "message": "Reset email sent successfully!"
+    }
+
+@router.get("/forgot-password/validate")
+async def forgot_password(token:str = Query(...)):
+    """
+    Send a password reset email to the user.
+    
+    - Validates the user exists.
+    - Generates a reset token.
+    - Sends a password reset email.
+    """
+    # Decode token
+    payload = decode_valide_access_token(token)
+    email = payload.get('email')
+    # Validate required fields
+    if not email:
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    user = get_user_with_permission("email", email)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    return {
+        "valid": True,
+        "email": email,
+    }
+
+@router.post("/reset-password")
+async def forgot_password(data = Body(...)):
+    """
+    Send a password reset email to the user.
+    
+    - Validates the user exists.
+    - Generates a reset token.
+    - Sends a password reset email.
+    """
+    # Decode token
+    password = data['password']
+    token = data['token']
+    if not token or not password:
+        raise HTTPException(status_code=400, detail="token, name and password are required")
+    payload = decode_valide_access_token(token)
+    email = payload.get('email')
+    # Validate required fields
+    if not email:
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    user = get_user_with_permission("email", email)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    # Create user
+    hashed_password = hash_password(password)
+    # Update the password in the database
+    updated_user = update_user_by_id(user['user_id'], {"password": hashed_password})
+    if not updated_user:
+        raise HTTPException(status_code=401, detail="Failed to update password")
     
     # Create JWT token with user info
     token_data = {

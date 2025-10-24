@@ -1,6 +1,6 @@
 # Import required modules from FastAPI, Pydantic, utilities, and external libraries
 from fastapi import APIRouter, HTTPException, status, Body, Query
-from utils.send_email import send_reset_password_email
+from utils.send_email_without_smtp import send_reset_password_email
 from db.public_table import *
 from utils.token_handler import hash_password, create_access_token, verify_password, decode_valide_access_token
 

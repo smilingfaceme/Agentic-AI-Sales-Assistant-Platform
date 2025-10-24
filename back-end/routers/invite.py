@@ -3,7 +3,7 @@ from middleware.auth import verify_token
 
 from db.public_table import *
 from utils.token_handler import hash_password, create_access_token, decode_valide_access_token
-from utils.send_email import send_invitation
+from utils.send_email_without_smtp import send_invitation
 import os, time
 
 # Define API router

@@ -111,7 +111,7 @@ GET_MESSAGES_BY_CONVERSATION_ID_QUERY = """SELECT * FROM {company_id}.messages W
 
 UPDATE_MESSAGE_BY_ID_QUERY = """INSERT INTO {company_id}.messages (conversation_id, sender_type, sender_email, content, extra) VALUES (\'{conversation_id}\', \'{sender_type}\', \'{sender_email}\', \'{content}\',\'{extra}\')"""
 
-GET_UNANSWERED_CONVERSATIONS_QUERY = """SELECT m.message_id, c.conversation_id, c.conversation_name, c.source, m.sender_type, m.sender_email, m.content, m.created_at
+GET_UNANSWERED_CONVERSATIONS_QUERY = """SELECT m.message_id, c.conversation_id, c.conversation_name, c.source, c.ai_reply, m.sender_type, m.sender_email, m.content, m.created_at
 FROM {company_id}.conversations AS c
 JOIN LATERAL (
   SELECT *

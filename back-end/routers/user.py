@@ -37,15 +37,12 @@ async def update_password(data = Body(...), user = Depends(verify_token)):
     
     # Verify the provided current password against stored hash
     if not verify_password(current_password, request_user['password']):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    # Hash the new password
-    hashed_new_password = hash_password(data["newPassword"])
+        raise HTTPException(status_code=500, detail="Current password is incorrect")
     
     # Update the password in the database
-    updated_user = update_user_by_id(user['id'], {"password": hashed_new_password})
+    updated_user = update_user_by_id(user['id'], {"password": new_password})
     if not updated_user:
-        raise HTTPException(status_code=401, detail="Failed to update password")
+        raise HTTPException(status_code=500, detail="Failed to update password")
     
     return {
         "message": "Password updated successfully!"

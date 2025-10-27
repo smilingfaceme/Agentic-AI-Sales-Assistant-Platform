@@ -7,7 +7,7 @@ from typing import Optional
 from src.vectorize import vectorize_file
 import pandas as pd
 from src.utils.file_utills import generate_file_hash
-from src.utils.pinecone_utills import delete_file_vectors
+from src.utils.chroma_utils import delete_file_vectors
 import threading
 import io, asyncio
 

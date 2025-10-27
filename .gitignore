@@ -44,3 +44,6 @@ back-end/.DS_Store
 session_auth_*
 credentials.json
 token.json
+
+# VectorDB
+chroma_data/

@@ -5,15 +5,12 @@ import numpy as np
 from PIL import Image
 import torch
 from transformers import CLIPProcessor, CLIPModel
-from src.service_client import pinecone_service
-from pinecone import ServerlessSpec
+from src.service_client import chroma_client
 
 # -------------------------------------------------------------------
 # Configuration
 # -------------------------------------------------------------------
 MODEL_NAME = "openai/clip-vit-base-patch32"
-PINECONE_METRIC = "cosine"
-SPEC = ServerlessSpec(cloud="aws", region="us-east-1")
 
 
 # -------------------------------------------------------------------
@@ -29,15 +26,15 @@ def get_device() -> str:
 # -------------------------------------------------------------------
 def create_index(index_name: str, embedding_dimension: int) -> None:
     """
-    Create a Pinecone index if it doesn't exist.
+    Create a ChromaDB collection if it doesn't exist.
     """
-    if not pinecone_service.has_index(index_name):
-        pinecone_service.create_index(
+    try:
+        chroma_client.get_or_create_collection(
             name=index_name,
-            dimension=embedding_dimension,
-            metric=PINECONE_METRIC,
-            spec=SPEC,
+            metadata={"hnsw:space": "cosine"}
         )
+    except Exception as e:
+        raise Exception(f"Error creating ChromaDB collection: {str(e)}")
 
 
 # -------------------------------------------------------------------
@@ -84,31 +81,42 @@ def store_image_embedding(
     match_field: str,
     full_path: str
 ) -> None:
-    """Embed a single image (BytesIO) and store its vector in Pinecone."""
-    try:
-        emb = embedder.encode_image_bytes(image_bytes)
-        dim = emb.shape[0]
+    """Embed a single image (BytesIO) and store its vector in ChromaDB."""
+    # try:
+    emb = embedder.encode_image_bytes(image_bytes)
+    dim = emb.shape[0]
 
-        if index_name not in pinecone_service.list_indexes():
-            create_index(index_name=index_name, embedding_dimension=dim)
+    # Create collection if it doesn't exist
+    create_index(index_name=index_name, embedding_dimension=dim)
 
-        index = pinecone_service.Index(index_name)
-        _ = delete_image_embedding(index_name, file_hash)
+    collection = chroma_client.get_or_create_collection(
+        name=index_name,
+        metadata={"hnsw:space": "cosine"}
+    )
 
-        metadata = {
-            "pc_file_name": file_name,
-            "pc_file_hash": file_hash,
-            "pc_file_type": "IMAGE",
-            "pc_file_extension": os.path.splitext(file_name)[1].lower(),
-            "match_field": match_field,
-            "full_path":full_path
-        }
-        
-        vector_id = str(uuid.uuid4())
-        index.upsert(vectors=[(vector_id, emb.tolist(), metadata)])
-        return True
-    except:
-        return False
+    # Delete existing vectors for this file hash
+    _ = delete_image_embedding(index_name, file_hash)
+
+    metadata = {
+        "pc_file_name": file_name,
+        "pc_file_hash": file_hash,
+        "pc_file_type": "IMAGE",
+        "pc_file_extension": os.path.splitext(file_name)[1].lower(),
+        "match_field": match_field,
+        "full_path": full_path
+    }
+
+    vector_id = str(uuid.uuid4())
+    collection.add(
+        ids=[vector_id],
+        embeddings=[emb.tolist()],
+        metadatas=[metadata],
+        documents=[file_name]
+    )
+    return True
+    # except Exception as e:
+    #     print(f"Error storing image embedding: {str(e)}")
+    #     return False
 
 
 # -------------------------------------------------------------------
@@ -120,37 +128,60 @@ def search_similar_images(
     k: int = 2,
 ):
     """Find visually similar images for a query image (BytesIO)."""
-    query_emb = embedder.encode_image_bytes(query_image_bytes)
-    index = pinecone_service.Index(index_name)
+    try:
+        query_emb = embedder.encode_image_bytes(query_image_bytes)
+        collection = chroma_client.get_or_create_collection(name=index_name)
 
-    result = index.query(vector=query_emb.tolist(), top_k=k, include_metadata=True)
-    matches = result.get("matches", [])
+        result = collection.query(
+            query_embeddings=[query_emb.tolist()],
+            n_results=k,
+            include=["embeddings", "metadatas", "documents", "distances"]
+        )
 
-    if matches:
-        print("\n[results] Similar Images:")
-        for m in matches:
-            print(f"ID={m['id']}  Score={m['score']:.4f}  Metadata={m.get('metadata', {})}")
+        # Transform results to match Pinecone format
+        matches = []
+        if result["ids"] and len(result["ids"]) > 0:
+            for i, id_ in enumerate(result["ids"][0]):
+                distance = result["distances"][0][i]
+                similarity_score = 1 - distance
 
-    return matches
+                matches.append({
+                    "id": id_,
+                    "score": similarity_score,
+                    "metadata": result["metadatas"][0][i]
+                })
+
+        if matches:
+            print("\n[results] Similar Images:")
+            for m in matches:
+                print(f"ID={m['id']}  Score={m['score']:.4f}  Metadata={m.get('metadata', {})}")
+
+        return matches
+    except Exception as e:
+        print(f"Error searching similar images: {str(e)}")
+        return []
 
 
 # -------------------------------------------------------------------
 # 3. DELETE IMAGE EMBEDDING
 # -------------------------------------------------------------------
 def delete_image_embedding(index_name: str, file_hash: str) -> int:
-    """Delete all vectors related to a specific file hash from Pinecone."""
+    """Delete all vectors related to a specific file hash from ChromaDB."""
     try:
-        index = pinecone_service.Index(index_name)
-        query_response = index.query(
-            vector=[0.0] * 512,  # Dummy vector for filtering
-            filter={"pc_file_hash": file_hash},
-            top_k=10000,
-            include_metadata=True,
-        )
-        ids_to_delete = [match.id for match in query_response.matches]
+        collection = chroma_client.get_or_create_collection(name=index_name)
 
-        for i in range(0, len(ids_to_delete), 1000):
-            index.delete(ids=ids_to_delete[i : i + 1000])
+        # Query for all vectors associated with this file hash
+        results = collection.get(
+            where={"pc_file_hash": file_hash}
+        )
+
+        ids_to_delete = results["ids"]
+
+        # Delete in manageable batches
+        if ids_to_delete:
+            batch_size = 1000
+            for i in range(0, len(ids_to_delete), batch_size):
+                collection.delete(ids=ids_to_delete[i : i + batch_size])
 
         return len(ids_to_delete)
 

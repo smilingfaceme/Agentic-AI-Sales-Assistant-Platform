@@ -3,6 +3,7 @@ from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta
 import os, time
+import hashlib
 
 # Initialize password hashing context using bcrypt
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -11,17 +12,20 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Utility Functions
 # -------------------------------
 
-def hash_password(password: str) -> str:
-    """
-    Hashes a plain-text password using bcrypt.
-    """
-    return pwd_context.hash(password)
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
+def hash_password(password: str) -> str:
+    # Encode to bytes, hash with SHA-256, and return hex digest
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+def verify_password(plain_password: str, db_password: str) -> bool:
     """
     Verifies a plain-text password against a hashed password.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    hashed_password = hash_password(db_password)
+    if hashed_password == plain_password:
+        return True
+    else:
+        return False
 
 def create_access_token(data: dict, period: int = 1):
     """

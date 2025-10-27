@@ -1,7 +1,7 @@
 from langchain.memory import ConversationBufferMemory
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_pinecone import PineconeVectorStore
-from langchain.chains import create_retrieval_chain
+from langchain_chroma import Chroma
+from langchain.chains import create_retrieval_chain, ConversationalRetrievalChain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.chat_history import InMemoryChatMessageHistory
@@ -12,46 +12,26 @@ from sqlalchemy import create_engine, Column, String, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from langchain.chat_models import ChatOpenAI
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import Pinecone
-from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory
-from langchain.schema import HumanMessage, SystemMessage
-
-from langchain_pinecone import PineconeVectorStore
-
 import os
 
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_MODEL", "text-embedding-3-small")
-PINECONE_KEY = os.getenv("PINECONE_API_KEY")
 
-embed = OpenAIEmbeddings(model=OPENAI_EMBEDDING_MODEL)
-pinecone_vectorstore = PineconeVectorStore(
-    index_name=settings.PINECONE_INDEX_NAME,
-    embedding=embed,
-    text_key="text",
-    pinecone_api_key=PINECONE_KEY,
-)
-# ---------- init Pinecone vectorstore wrapper for LangChain ----------
+# ---------- init ChromaDB vectorstore wrapper for LangChain ----------
 def init_vectorstore():
-    # initialize pinecone client (needed by langchain's Pinecone wrapper)
-    pinecone.init(api_key="")
     # create LangChain embeddings and vectorstore
-    embedder = OpenAIEmbeddings(model=settings.OPENAI_EMBEDDING_MODEL, openai_api_key=settings.OPENAI_API_KEY)
-    # Using LangChain's Pinecone wrapper:
-    vectordb = Pinecone(
-        index=pinecone.Index(settings.PINECONE_INDEX_NAME),
-        embedding_function=embedder.embed_query,
-        text_key="text",   # if storing raw text, ensure metadata includes 'text' or adjust retrieval
-        namespace=settings.PINECONE_NAMESPACE
+    embedder = OpenAIEmbeddings(model=OPENAI_EMBEDDING_MODEL, openai_api_key=OPENAI_KEY)
+    # Using LangChain's Chroma wrapper:
+    vectordb = Chroma(
+        collection_name="documents",
+        embedding_function=embedder,
+        persist_directory="./back-end/chroma_data"
     )
     return vectordb
 
 def build_conversational_chain():
     # LLM client (ChatOpenAI wrapper)
-    llm = ChatOpenAI(model=settings.OPENAI_LLM_MODEL, temperature=0.1, openai_api_key=settings.OPENAI_API_KEY)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1, openai_api_key=OPENAI_KEY)
     vectordb = init_vectorstore()
 
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)

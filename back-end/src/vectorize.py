@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Optional
-from src.utils.pinecone_utills import create_index, store_vectors_in_pinecone, delete_file_vectors, search_vectors
+from src.utils.chroma_utils import create_index, store_vectors_in_chroma, delete_file_vectors, search_vectors_by_embedding
 from src.utils.embedding_utills import generate_embeddings
 from src.utils.file_utills import generate_file_hash
 from src.utils.splitter import chunk_file
@@ -100,7 +100,7 @@ def vectorize_file(file_content: io.BytesIO, file_name: str, index_name: str, pr
     for i, batch in enumerate(batches):
         print("-------> Generating Embeddings: ", i)
         embeddings = generate_embeddings(batch)  # your function calling OpenAI
-        store_vectors_in_pinecone(index_name, batches_chuncks[i], embeddings)
+        store_vectors_in_chroma(index_name, batches_chuncks[i], embeddings)
         all_embeddings.extend(embeddings)
     # Add company_id to metadata
     # for chunk in chunks:

@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { FaSyncAlt, FaTrash, FaRegImage } from "react-icons/fa";
-import { SUPABASE_URL } from "@/utils";
+import { API_BASE } from "@/utils";
 import Table, { TableAction } from "@/components/Table";
 import LoadingWrapper from "@/components/LoadingWrapper";
 import Loading from "@/components/Loading";
@@ -19,6 +19,7 @@ type ImageFile = {
   id: string;
   file_name: string;
   file_type: string;
+  full_path: string;
   status: string;
   created_at: string;
   match_field?: string;
@@ -26,7 +27,6 @@ type ImageFile = {
 
 export default function ImageControlArea() {
   const { showNotification, showProgressNotification, updateProgressNotification, closeNotification } = useNotification();
-  const [companyId, setCompanyID] = useState('')
   const [imageList, setImageList] = useState<ImageFile[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalImages, setTotalImages] = useState(0);
@@ -64,7 +64,6 @@ export default function ImageControlArea() {
       setReprocessLoading(loadingState);
       setImageList(result.images);
       setTotalImages(result.total ?? result.images.length);
-      setCompanyID(result.company_id) // expects API to return total
     } else {
       setImageList([]);
       setTotalImages(0);
@@ -99,7 +98,7 @@ export default function ImageControlArea() {
         disabled: false,
         onClick: () =>
           window.open(
-            `${SUPABASE_URL}/storage/v1/object/public/images/${companyId}/${item.file_name}`,
+            `${API_BASE}/${item.full_path}`,
             "_blank"
           ),
         className: "bg-transparent cursor-pointer",

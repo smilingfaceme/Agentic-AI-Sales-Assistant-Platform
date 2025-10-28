@@ -1,6 +1,11 @@
+// For Node.js:
+import { createHash } from 'crypto';
 
+export function hashPassword(password:string) {
+  return createHash('sha256').update(password, 'utf8').digest('hex');
+}
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 // Cookie utility functions with JSON support
@@ -83,10 +88,11 @@ export function logout() {
 
 
 export async function login(email: string, password: string) {
+  const hashed_password = hashPassword(password);
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify({ email, 'password':hashed_password })
   });
   return res.json();
 }

@@ -1,6 +1,6 @@
 import React from "react";
 import Image from "next/image";
-import { SUPABASE_URL } from "@/utils";
+import { API_BASE } from "@/utils";
 import { FaRobot } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 export type ChatMessage = {
@@ -62,7 +62,7 @@ export default function TestChatBotPanel({ chatMessages }: TestChatPanelProps) {
                           {msg.extra.images?.map((imgUrl: string, imgIdx: number) => (
                             <div key={imgIdx} className="rounded overflow-hidden">
                               <Image
-                                src={`${SUPABASE_URL}/storage/v1/object/public/${imgUrl}`}
+                                src={`${API_BASE}/${imgUrl}`}
                                 alt={`image-${imgIdx}`}
                                 width={150}
                                 height={100}

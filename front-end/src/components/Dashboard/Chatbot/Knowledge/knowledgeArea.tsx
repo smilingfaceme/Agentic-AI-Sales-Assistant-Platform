@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { FaSyncAlt, FaTrash } from "react-icons/fa";
-import { SUPABASE_URL } from "@/utils";
+import { API_BASE } from "@/utils";
 import Table, { TableAction } from "@/components/Table";
 import LoadingWrapper from "@/components/LoadingWrapper";
 import Loading from "@/components/Loading";
@@ -18,13 +18,13 @@ type KnowledgeFile = {
   company_id: string;
   file_name: string;
   file_type: string;
+  full_path: string;
   status: string;
   created_at: string;
 };
 
 export default function KnowledgeArea() {
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeFile[]>([]);
-  const [company, setCompany] = useState("");
   const [deleteLoading, setDeleteLoading] = useState<Record<string, boolean>>({});
   const [reprocessLoading, setReprocessLoading] = useState<Record<string, boolean>>({});
   const { showModal, setShowModal } = useChatbotContext();
@@ -45,7 +45,6 @@ export default function KnowledgeArea() {
       }, {});
       setDeleteLoading(loadingState);
       setReprocessLoading(loadingState);
-      setCompany(result.company_id);
       setKnowledgeList(result.knowledges);
     } else {
       setKnowledgeList([]);
@@ -79,7 +78,7 @@ export default function KnowledgeArea() {
         label: item.file_name,
         onClick: () =>
           window.open(
-            `${SUPABASE_URL}/storage/v1/object/public/knowledges/${company}/${encodeURIComponent(item.file_name)}`,
+            `${API_BASE}/${item.full_path}`,
             "_blank"
           ),
         className: "bg-transparent cursor-pointer",

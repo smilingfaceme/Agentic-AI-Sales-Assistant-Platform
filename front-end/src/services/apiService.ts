@@ -1,4 +1,4 @@
-import { apiRequest } from '@/utils';
+import { apiRequest, hashPassword } from '@/utils';
 
 // Auth APIs
 export const authApi = {
@@ -296,10 +296,11 @@ export const userApi = {
   },
 
   updatePassword: async (passwordData: { currentPassword: string; newPassword: string }) => {
+    const hashed_password = hashPassword(passwordData.currentPassword);
     const res = await apiRequest('/user/password', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(passwordData)
+      body: JSON.stringify({'currentPassword':hashed_password, 'newPassword':passwordData.newPassword})
     });
     if (!res.ok) throw new Error('Failed to update password');
     return res.json();

@@ -43,12 +43,11 @@ class RetrievalQueryInput(BaseModel):
 # ---------------------------
 async def get_history(company_schema: str, conversation_id: str):
     print("Fetching chat history for", company_schema, conversation_id)
-    messages = await get_all_messages(company_schema, conversation_id)
+    messages = get_all_messages(company_schema, conversation_id)
 
     memory = InMemoryChatMessageHistory()
-    if messages["status"] == "success":
-        rows = sorted(messages["rows"], key=lambda k: k["created_at"])
-        for m in rows:
+    if messages:
+        for m in messages:
             if m["sender_type"] == "customer":
                 memory.add_user_message(m["content"])
             else:
@@ -71,13 +70,13 @@ async def get_linked_info(retrieval_results: list[dict], company_schema: str, co
         seen.add(pc_text)
         primary_col = r["metadata"]["pc_primary_column"]
 
-        image_linked = await get_linked_images_from_table(
+        image_linked = get_linked_images_from_table(
             company_id=company_schema,
             product_id=r["metadata"][primary_col],
         )
         try:
-            if image_linked["status"] == "success" and image_linked["rows"]:
-                extra_info["images"].append(image_linked["rows"][0]["full_path"])
+            if image_linked:
+                extra_info["images"].append(image_linked[0]["full_path"])
         except Exception:
             pass
 

@@ -100,23 +100,6 @@ create table if not exists public.users (
   constraint users_role_fkey foreign KEY (role) references roles (id)
 ) TABLESPACE pg_default;
 
--- public.knowledges schema
-create table if not exists public.knowledges (
-  id uuid not null default gen_random_uuid (),
-  company_id uuid not null,
-  uploaded_by uuid not null,
-  file_name text not null,
-  file_type text not null,
-  file_hash text not null,
-  status text not null,
-  primary_column text not null,
-  extra json null,
-  created_at timestamp with time zone not null default now(),
-  constraint knowledges_pkey primary key (id),
-  constraint knowledges_company_id_fkey foreign KEY (company_id) references companies (id),
-  constraint knowledges_uploaded_by_fkey foreign KEY (uploaded_by) references users (id)
-) TABLESPACE pg_default;
-
 -- public.invitations schema
 create table if not exists public.invitations (
   id uuid not null default gen_random_uuid (),

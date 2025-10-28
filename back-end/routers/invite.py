@@ -273,17 +273,16 @@ async def complete_invitation(data = Body(...)):
         raise HTTPException(status_code=400, detail="Invalid token")
     
     # Create user
-    hashed_password = hash_password(password)
     data = {
         "name": name,
         "email": payload.get('email'),
-        "password": hashed_password,
+        "password": password,
         "company_id": payload.get('company_id'),
         "role": payload.get('role'),
         "invited_by": payload.get('invited_by')
     }
 
-    new_user = add_new_user(name, payload.get('email'), hashed_password, payload.get('company_id'), payload.get('role'), payload.get('invited_by'))
+    new_user = add_new_user(name, payload.get('email'), password, payload.get('company_id'), payload.get('role'), payload.get('invited_by'))
     if not new_user:
         raise HTTPException(status_code=400, detail="Failed to create user")
     

@@ -1,12 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, Body, File, Query, Form
 from middleware.auth import verify_token
-from db.supabase_client import supabase
 from src.image_vectorize import store_image_embedding, delete_image_embedding
 from src.utils.file_utills import generate_file_hash
 from db.public_table import get_companies
 from db.company_table import *
-import io, asyncio, threading
-
+import io, asyncio, threading, os
+from collections import defaultdict
 router = APIRouter()
 
 # ----------------------------- #
@@ -33,14 +32,14 @@ async def vectorize_in_background(file_content: bytes, file_name: str, file_hash
         # Update database record status
         for record_id in record_ids:
             if result:
-                await update_image_status_on_table(company_id=company_schema, file_id=record_id, status='Completed')
+                update_image_status_on_table(company_id=company_schema, file_id=record_id, status='Completed')
             else:
-                await update_image_status_on_table(company_id=company_schema, file_id=record_id, status='Failed')
+                update_image_status_on_table(company_id=company_schema, file_id=record_id, status='Failed')
     except Exception as e:
         print(f"Vectorization failed: {str(e)}")
         # Update database record status
         for record_id in record_ids:
-            await update_image_status_on_table(company_id=company_schema, file_id=record_id, status='Failed')
+            update_image_status_on_table(company_id=company_schema, file_id=record_id, status='Failed')
 
 # ----------------------------- #
 # Endpoint: List Files
@@ -65,16 +64,47 @@ async def get_file_list(
     company_schema = company_info["schema_name"]
 
     try:
-        files = await get_images_from_table(company_schema, page_size, page_start)
-        if files["status"] != "success":
-            raise HTTPException(status_code=500, detail=files['message'])
+        files = get_images_from_table(company_schema, page_size, page_start)
+        # group items by file_hash
+        groups = defaultdict(list)
+        for item in files:
+            groups[item["file_hash"]].append(item)
 
-        count = await get_all_image_from_table(company_schema)
+        # build result list
+        result = []
+
+        for file_hash, items in groups.items():
+            statuses = {item["status"] for item in items}
+            target_status = None
+
+            if "Failed" in statuses:
+                target_status = "Failed"
+            elif "Completed" in statuses:
+                target_status = "Completed"
+
+            # only return if there is a status to update
+            if target_status:
+                ids_to_update = [item["id"] for item in items if item["status"] != target_status]
+                if ids_to_update:  # only include if something actually changes
+                    result.append({
+                        "file_hash": file_hash,
+                        "ids": ids_to_update,
+                        "target_status": target_status
+                    })
+        
+        for item in result:
+            for record_id in item["ids"]:
+                update_image_status_on_table(company_id=company_schema, file_id=record_id, status=item["target_status"])
+        
+        if result:
+            files = get_images_from_table(company_schema, page_size, page_start)
+        
+        count = get_all_image_from_table(company_schema)
         return {
             "status": "success",
             "company_id": company_id,
-            "images": files["rows"],
-            "total": count["rows"][0]["count"],
+            "images": files,
+            "total": count[0]["count"],
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -107,42 +137,39 @@ async def upload_file(
         file_name = file.filename.split("/")[-1]
         file_hash = generate_file_hash(file_content)
 
-        existing_file = await get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
-        if existing_file["status"] == "success" and existing_file.get("rows"):
-            full_path = existing_file["rows"][0]["full_path"]
-            status = existing_file["rows"][0]["status"]
-            image_file = await add_new_image(
-                company_id=company_schema,
-                file_name=file_name,
-                file_type=file.content_type,
-                file_hash=file_hash,
-                full_path=full_path,
-                status=status,
-                match_field=match_field
-            )
+        existing_file = get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
 
+        if existing_file:
+            full_path = existing_file[0]["full_path"]
+            status = existing_file[0]["status"]
         else:
-            upload_file = supabase.storage.from_("images").upload(
-                f"{company_id}/{file_name}", file_content, {"content-type": file.content_type}
-            )
-            full_path = upload_file.fullPath
-            status = "Processing"
-            image_file = await add_new_image(
-                company_id=company_schema,
-                file_name=file_name,
-                file_type=file.content_type,
-                file_hash=file_hash,
-                full_path=full_path,
-                status=status,
-                match_field=match_field
-            )
+            # Define local save path
+            save_dir = os.path.join("files", "images",str(company_id))
+            os.makedirs(save_dir, exist_ok=True)
 
-        if image_file["status"] != "success":
+            # Build full path for the file
+            full_path = os.path.join(save_dir, file_name)
+
+            # Save the file locally
+            with open(full_path, "wb") as f:
+                f.write(file_content)
+            status = "Processing"
+        
+        image_file = add_new_image(
+            company_id=company_schema,
+            file_name=file_name,
+            file_type=file.content_type,
+            file_hash=file_hash,
+            full_path=full_path,
+            status=status,
+            match_field=match_field
+        )
+        if not image_file:
             raise HTTPException(status_code=500, detail="Failed to upload file")
 
-        record_id = image_file["rows"][0]["id"]
+        record_id = image_file[0]["id"]
 
-        if status == "Processing":
+        if status == "Processing" and not existing_file:
             # Start vectorization asynchronously
             thread = threading.Thread(
                 target=run_vectorize_in_thread,
@@ -154,7 +181,7 @@ async def upload_file(
         return {
             "success": True,
             "message": "File uploaded successfully, vectorization started",
-            "data": image_file["rows"][0],
+            "data": image_file[0],
         }
 
     except Exception as e:
@@ -181,28 +208,28 @@ async def remove_file(
 
     company_schema = company_info["schema_name"]
 
-    existing_file = await get_same_image_from_table_with_id(company_id=company_schema, file_id=file_id)
-    if existing_file["status"] != "success" or not existing_file.get("rows"):
+    existing_file = get_same_image_from_table_with_id(company_id=company_schema, file_id=file_id)
+    if not existing_file:
         raise HTTPException(status_code=400, detail="File not found")
 
-    file_info = existing_file["rows"][0]
+    file_info = existing_file[0]
     file_name, file_hash = file_info["file_name"], file_info["file_hash"]
 
     try:
-        existing_file = await get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
-        if existing_file["status"] == "success" and existing_file.get("rows"):
-            if len(existing_file["rows"]) > 1:
-                deleting_file = await delete_image_from_table(company_id=company_schema, file_id=file_id)
-                if deleting_file["status"] != "success":
-                    raise HTTPException(status_code=400, detail="Failed to delete database record")
-                return {"message": "File removed successfully"}
+        existing_file = get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
+        if len(existing_file) > 1:
+            deleting_file = delete_image_from_table(company_id=company_schema, file_id=file_id)
+            if not deleting_file:
+                raise HTTPException(status_code=400, detail="Failed to delete database record")
+            return {"message": "File removed successfully"}
         delete_image_embedding(f"{company_id}-image", file_hash)
-        deleting_file = await delete_image_from_table(company_id=company_schema, file_id=file_id)
-        if deleting_file["status"] != "success":
+        deleting_file = delete_image_from_table(company_id=company_schema, file_id=file_id)
+        if not deleting_file:
             raise HTTPException(status_code=400, detail="Failed to delete database record")
-
-        response = supabase.storage.from_("images").remove([f"{company_id}/{file_name}"])
-        return {"message": "File removed successfully", "data": response}
+        
+        file_path = file_info["full_path"]
+        os.remove(file_path)
+        return {"message": "File removed successfully"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -228,30 +255,30 @@ async def reprocess_file(
 
     company_schema = company_info["schema_name"]
 
-    existing_file = await get_same_image_from_table_with_id(company_id=company_schema, file_id=file_id)
-    if existing_file["status"] != "success" or not existing_file.get("rows"):
+    existing_file = get_same_image_from_table_with_id(company_id=company_schema, file_id=file_id)
+    if not existing_file:
         raise HTTPException(status_code=400, detail="File not found")
 
-    file_info = existing_file["rows"][0]
+    file_info = existing_file[0]
     file_name, file_hash, match_field, full_path = file_info["file_name"], file_info["file_hash"], file_info["match_field"], file_info['full_path']
 
     try:
-        existing_file = await get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
+        existing_file = get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
         record_ids = []
         status = "Processing"
-        if existing_file["status"] == "success" and existing_file.get("rows"):
-            for i in existing_file.get("rows"):
+        if existing_file:
+            for i in existing_file:
                 if i['status'] == "Completed":
                     status = "Completed"
                 record_ids.append(i['id'])
         if status != "Completed":
-            bucket_name = full_path.split("/")[0]
-            file_path = full_path.split(bucket_name + "/", 1)[1]
-            file_response = supabase.storage.from_(bucket_name).download(file_path)
-            if not file_response:
-                raise HTTPException(status_code=404, detail="File not found in storage")
-            
-            file_content = file_response
+            # Check if file exists locally
+            if not os.path.exists(full_path):
+                raise HTTPException(status_code=404, detail="File not found locally")
+
+            # Read file content as bytes
+            with open(full_path, "rb") as f:
+                file_content = f.read()
             file_hash = generate_file_hash(file_content)
 
             thread = threading.Thread(
@@ -262,7 +289,7 @@ async def reprocess_file(
             thread.start()
         else:
             for record_id in record_ids:
-                await update_image_status_on_table(company_id=company_schema, file_id=record_id, status='Completed')
+                update_image_status_on_table(company_id=company_schema, file_id=record_id, status='Completed')
 
         return {
             "success": True,

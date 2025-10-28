@@ -97,6 +97,21 @@ COMPANY_IMAGE_TABLE = """create table {company_id}.images (
   constraint images_pkey primary key (id)
 ) TABLESPACE pg_default;"""
 
+COMPANY_KNOWLEDGE_TABLE = """create table {company_id}.knowledges (
+  id uuid not null default gen_random_uuid (),
+  file_name text not null,
+  file_type text not null,
+  file_hash text not null,
+  full_path text not null,
+  status text not null,
+  primary_column text not null,
+  extra json null,
+  created_at timestamp with time zone not null default now(),
+  constraint knowledges_pkey primary key (id)
+) TABLESPACE pg_default;
+"""
+
+
 ADD_CONVERSATION_INTO_TABLE =  """INSERT INTO {company_id}.conversations (conversation_name, source, phone_number, instance_name) VALUES (\'{conversation_name}\', \'{source}\', \'{phone_number}\', \'{instance_name}\')"""
 
 TOGGLE_AI_REPLY_FOR_CONVERSATION = """UPDATE {company_id}.conversations SET ai_reply = NOT ai_reply WHERE conversation_id = \'{conversation_id}\';"""

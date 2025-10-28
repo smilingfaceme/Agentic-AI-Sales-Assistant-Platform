@@ -51,12 +51,12 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
     company_schema = company_info["schema_name"]
     
     # Fetch conversation details by ID
-    conversations = await get_conversation_by_id(company_schema, conversation_id)
+    conversations = get_conversation_by_id(company_schema, conversation_id)
     
-    if conversations["status"] != "success" or conversations["rows"] == []:
+    if not conversations:
         raise HTTPException(status_code=500, detail=conversations['message'])
 
-    current_conversation = conversations["rows"][0]
+    current_conversation = conversations[0]
     
     if not user['permission'].get("chat", False):
         if current_conversation['source'] == "Test" and user['permission'].get("knowledge", False):
@@ -76,7 +76,7 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
         email = user["email"]
     extra_data = {}
     # Insert new message into database    
-    add_query = await add_new_message(
+    add_query = add_new_message(
         company_id=company_schema, 
         conversation_id=conversation_id, 
         sender_email=email, 
@@ -85,12 +85,12 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
         extra=f'{extra_data}'
     )
     
-    if add_query["status"] == "success":
+    if add_query:
         if current_conversation['ai_reply'] == False or sender_type == "agent":
             return {
                 "status": 'success',
                 "messages": [
-                    add_query['rows'][0]
+                    add_query[0]
                 ]
             }
         
@@ -98,7 +98,7 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
         extra_info = f'{extra_info}'.replace('\'', '\"')
         
         # Insert new message into database        
-        add_response = await add_new_message(
+        add_response = add_new_message(
             company_id=company_schema, 
             conversation_id=conversation_id, 
             sender_email="",
@@ -107,22 +107,22 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
             extra=extra_info
         )
     
-        if add_response["status"] == "success":
+        if add_response:
             return {
                 "status": 'success',
                 "messages": [
-                    add_query['rows'][0], 
-                    add_response['rows'][0]]
+                    add_query[0], 
+                    add_response[0]]
             }
         else:
             return {
                 "status": 'success',
                 "messages": [
-                            add_query['rows'][0]
+                            add_query[0]
                         ]
             }
     else:
-        raise HTTPException(status_code=500, detail=add_query['message'])
+        raise HTTPException(status_code=500, detail="Failed to add message")
 
 @router.post("/send-image")
 async def send_image_message(
@@ -161,12 +161,12 @@ async def send_image_message(
     company_schema = company_info["schema_name"]
     
     # Fetch conversation details by ID
-    conversations = await get_conversation_by_id(company_schema, conversation_id)
+    conversations = get_conversation_by_id(company_schema, conversation_id)
     
-    if conversations["status"] != "success" or conversations["rows"] == []:
+    if not conversations:
         raise HTTPException(status_code=500, detail=conversations['message'])
 
-    current_conversation = conversations["rows"][0]
+    current_conversation = conversations[0]
     
     if not user['permission'].get("chat", False):
         if current_conversation['source'] == "Test" and user['permission'].get("knowledge", False):
@@ -181,17 +181,16 @@ async def send_image_message(
     
     file_content = await file.read()
     file_name = file.filename
-    storage = supabase.storage.from_("messages-extra")
-    existing_file = storage.list(company_schema)
-    full_path = False
-    for f in existing_file:
-        if f['name'] == file_name:
-            full_path = f"messages-extra/{company_schema}/{file_name}"
-    if not full_path:
-        result_file = supabase.storage.from_("messages-extra").upload(
-            f"{company_schema}/{file_name}", file_content, {"content-type": file.content_type}
-        )
-        full_path = result_file.fullPath
+    # Define local save path
+    save_dir = os.path.join("files", "messages-extra")
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Build full path for the file
+    full_path = os.path.join(save_dir, file_name)
+
+    # Save the file locally
+    with open(full_path, "wb") as f:
+        f.write(file_content)
     # Insert new message into database
     extra_data = {"images":[full_path]}
     
@@ -202,7 +201,7 @@ async def send_image_message(
             raise HTTPException(status_code=500, detail="Error sending message")
         
     extra_data = f'{extra_data}'.replace('\'', '\"')
-    add_query = await add_new_message(
+    add_query = add_new_message(
         company_id=company_schema, 
         conversation_id=conversation_id, 
         sender_email=email, 
@@ -211,12 +210,12 @@ async def send_image_message(
         extra = extra_data
     )
     
-    if add_query["status"] == "success":
+    if add_query:
         if current_conversation['ai_reply'] == False or sender_type == "agent":
             return {
                 "status": 'success',
                 "messages": [
-                    add_query['rows'][0]
+                    add_query[0]
                 ]
             }
             
@@ -225,7 +224,7 @@ async def send_image_message(
         response, extra_info = await generate_response_with_image_search(user["company_id"], company_schema, conversation_id, content, matches)
         extra_info = f'{extra_info}'.replace('\'', '\"')
         # Insert new message into database        
-        add_response = await add_new_message(
+        add_response = add_new_message(
             company_id=company_schema, 
             conversation_id=conversation_id, 
             sender_email="",
@@ -234,22 +233,22 @@ async def send_image_message(
             extra=extra_info
         )
     
-        if add_response["status"] == "success":
+        if add_response:
             return {
                 "status": 'success',
                 "messages": [
-                    add_query['rows'][0], 
-                    add_response['rows'][0]]
+                    add_query[0], 
+                    add_response[0]]
             }
         else:
             return {
                 "status": 'success',
                 "messages": [
-                            add_query['rows'][0]
+                            add_query[0]
                         ]
             }
     else:
-        raise HTTPException(status_code=500, detail=add_query['message'])
+        raise HTTPException(status_code=500, detail="Failed to add message")
 
 
 @router.get("/history")
@@ -281,13 +280,13 @@ async def get_chats(conversation_id: str = Query(...), user = Depends(verify_tok
         raise HTTPException(status_code=400, detail="Missing conversation_id parameter")
     
     # Retrieve all messages from the database
-    messages = await get_all_messages(company_schema, conversation_id)
-    if messages["status"] != "success":
-        raise HTTPException(status_code=500, detail=messages['message'])
+    messages = get_all_messages(company_schema, conversation_id)
+    if not messages:
+        raise HTTPException(status_code=500, detail="Failed to retrieve messages")
     
     return {
         "status": 'success',
-        "messages": messages['rows']
+        "messages": messages
     }
 
 async def response_in_background(conversation_id: str, company_id: str, company_schema: str, query: str, instance_name:str, phone_number:str):
@@ -301,7 +300,7 @@ async def response_in_background(conversation_id: str, company_id: str, company_
         
         extra_info_db = f'{extra_info}'.replace('\'', '\"')
         # Insert new message into database        
-        add_response = await add_new_message(
+        add_response = add_new_message(
             company_id=company_schema, 
             conversation_id=conversation_id, 
             sender_email="",
@@ -331,7 +330,7 @@ async def response_for_image_in_background(conversation_id: str, company_id: str
         )
         extra_info_db = f'{extra_info}'.replace('\'', '\"')
         # Insert new message into database        
-        add_response = await add_new_message(
+        add_response = add_new_message(
             company_id=company_schema, 
             conversation_id=conversation_id, 
             sender_email="",
@@ -366,19 +365,19 @@ async def reply_to_message(data = Body(...)):
         raise HTTPException(status_code=400, detail="Company not found")
     company_schema = company_info["schema_name"]
     
-    conversation = await get_conversatin_by_phone_integration(company_schema, phone_number, instanceName)
+    conversation = get_conversatin_by_phone_integration(company_schema, phone_number, instanceName)
     conversation = conversation.get('rows', [])    
     if not conversation:
         whatsapp_name = message['pushName']
-        new_conversation = await add_new_conversation(company_schema, whatsapp_name, "WhatsApp", phone_number, instanceName)
-        if new_conversation["status"] == "success":
-            conversation_id = new_conversation['rows'][0]['conversation_id']
+        new_conversation = add_new_conversation(company_schema, whatsapp_name, "WhatsApp", phone_number, instanceName)
+        if new_conversation:
+            conversation_id = new_conversation[0]['conversation_id']
         else:
-            raise HTTPException(status_code=500, detail=new_conversation['message'])
+            raise HTTPException(status_code=500, detail="Failed to create conversation")
     else:
         conversation_id = conversation[0]['conversation_id']
     
-    messages = await add_new_message(
+    messages = add_new_message(
         company_id=company_schema, 
         conversation_id=conversation_id, 
         sender_email="", 
@@ -388,7 +387,7 @@ async def reply_to_message(data = Body(...)):
     )
     
     # Return success response with new message details
-    if messages["status"] == "success":
+    if messages:
         if conversation[0]['ai_reply'] == True:
             # Start vectorization in background thread
             thread = threading.Thread(
@@ -433,18 +432,17 @@ async def reply_to_voice_message(
         raise HTTPException(status_code=400, detail="Company not found")
     company_schema = company_info["schema_name"]
     
-    conversation = await get_conversatin_by_phone_integration(company_schema, phone_number, instanceName)
-    conversation = conversation.get('rows', [])    
+    conversation = get_conversatin_by_phone_integration(company_schema, phone_number, instanceName)
     if not conversation:
-        new_conversation = await add_new_conversation(company_schema, whatsapp_name, "WhatsApp", phone_number, instanceName)
-        if new_conversation["status"] == "success":
-            conversation_id = new_conversation['rows'][0]['conversation_id']
+        new_conversation = add_new_conversation(company_schema, whatsapp_name, "WhatsApp", phone_number, instanceName)
+        if new_conversation:
+            conversation_id = new_conversation[0]['conversation_id']
         else:
             raise HTTPException(status_code=500, detail=new_conversation['message'])
     else:
         conversation_id = conversation[0]['conversation_id']
     
-    messages = await add_new_message(
+    messages = add_new_message(
         company_id=company_schema, 
         conversation_id=conversation_id, 
         sender_email="", 
@@ -454,7 +452,7 @@ async def reply_to_voice_message(
     )
     
     # Return success response with new message details
-    if messages["status"] == "success":
+    if messages:
         if conversation[0]['ai_reply'] == True:
             # Start vectorization in background thread
             thread = threading.Thread(
@@ -493,12 +491,11 @@ async def reply_to_image_message(
     company_schema = company_info["schema_name"]
     
     # Check and Add conversation
-    conversation = await get_conversatin_by_phone_integration(company_schema, phone_number, instanceName)
-    conversation = conversation.get('rows', [])    
+    conversation = get_conversatin_by_phone_integration(company_schema, phone_number, instanceName)
     if not conversation:
-        new_conversation = await add_new_conversation(company_schema, whatsapp_name, "WhatsApp", phone_number, instanceName)
-        if new_conversation["status"] == "success":
-            conversation_id = new_conversation['rows'][0]['conversation_id']
+        new_conversation = add_new_conversation(company_schema, whatsapp_name, "WhatsApp", phone_number, instanceName)
+        if new_conversation:
+            conversation_id = new_conversation[0]['conversation_id']
         else:
             raise HTTPException(status_code=500, detail=new_conversation['message'])
     else:
@@ -507,21 +504,20 @@ async def reply_to_image_message(
     # Extra file upload in storage
     file_content = await image.read()
     file_name = image.filename
-    storage = supabase.storage.from_("messages-extra")
-    existing_file = storage.list(company_schema)
-    full_path = False
-    for f in existing_file:
-        if f['name'] == file_name:
-            full_path = f"messages-extra/{company_schema}/{file_name}"
-    if not full_path:
-        result_file = supabase.storage.from_("messages-extra").upload(
-            f"{company_schema}/{file_name}", file_content, {"content-type": image.content_type}
-        )
-        full_path = result_file.fullPath
+    # Define local save path
+    save_dir = os.path.join("files", "messages-extra")
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Build full path for the file
+    full_path = os.path.join(save_dir, file_name)
+
+    # Save the file locally
+    with open(full_path, "wb") as f:
+        f.write(file_content)
     # Insert new message into database
     extra_data = {"images":[full_path]}
     extra_data = f'{extra_data}'.replace('\'', '\"')
-    messages = await add_new_message(
+    messages = add_new_message(
         company_id=company_schema, 
         conversation_id=conversation_id, 
         sender_email="", 
@@ -531,7 +527,7 @@ async def reply_to_image_message(
     ) 
     
     # Return success response with new message details
-    if messages["status"] == "success":
+    if messages:
         if conversation[0]['ai_reply'] == True:
             file_io = io.BytesIO(file_content)
             # Start vectorization in background thread

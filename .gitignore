@@ -47,3 +47,4 @@ token.json
 
 # VectorDB
 chroma_data/
+files/

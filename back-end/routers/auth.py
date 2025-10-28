@@ -44,7 +44,7 @@ async def register(
             raise HTTPException(status_code=400, detail="User already exists")
     
     # Insert new company data and create company schema and table
-    new_company = await create_companies(name=company, description=description)
+    new_company = create_companies(name=company, description=description)
     if not new_company:
         raise HTTPException(status_code=400, detail="Registration failed")
     
@@ -54,8 +54,7 @@ async def register(
         raise HTTPException(status_code=400, detail="Role not found")
     
     # Hash password and create user
-    hashed_password = hash_password(password)
-    new_user = add_new_user(name=name, email=email, password=hashed_password, company_id=new_company['id'], role=role_info['id'])
+    new_user = add_new_user(name=name, email=email, password=password, company_id=new_company['id'], role=role_info['id'])
     
     if not new_user:
         raise HTTPException(status_code=400, detail="Registration failed")
@@ -222,10 +221,9 @@ async def forgot_password(data = Body(...)):
     user = get_user_with_permission("email", email)
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
-    # Create user
-    hashed_password = hash_password(password)
+    
     # Update the password in the database
-    updated_user = update_user_by_id(user['user_id'], {"password": hashed_password})
+    updated_user = update_user_by_id(user['user_id'], {"password": password})
     if not updated_user:
         raise HTTPException(status_code=401, detail="Failed to update password")
     

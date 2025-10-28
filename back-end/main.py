@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
 from dotenv import load_dotenv
@@ -30,7 +30,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+os.makedirs("files", exist_ok=True)
+app.mount("/api/files", StaticFiles(directory="files"), name="files")
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(user.router, prefix="/api/user", tags=["user"])

@@ -29,16 +29,12 @@ async def get_conversations(user = Depends(verify_token)):
     company_schema = company_info["schema_name"]
 
     # Fetch all conversations for this company
-    all_companies = await get_all_conversations(company_schema)
+    all_companies = get_all_conversations(company_schema)
 
-    if all_companies["status"] == "success":
-        return {
-            "status": 'success',
-            "conversations": all_companies.get('rows', [])
-        }
-    else:
-        # Internal server error if DB query fails
-        raise HTTPException(status_code=500, detail=all_companies['message'])
+    return {
+        "status": 'success',
+        "conversations": all_companies
+    }
 
 
 @router.get("/unanswered")
@@ -64,15 +60,12 @@ async def get_unanswered_questions(user = Depends(verify_token)):
     company_schema = company_info["schema_name"]
 
     # Fetch unanswered conversations/messages
-    all_companies = await get_unanswered_conversations(company_schema)
+    all_companies = get_unanswered_conversations(company_schema)
 
-    if all_companies["status"] == "success":
-        return {
-            "status": 'success',
-            "messages": all_companies.get('rows', [])
-        }
-    else:
-        raise HTTPException(status_code=500, detail=all_companies['message'])
+    return {
+        "status": 'success',
+        "messages": all_companies
+    }
 
 
 @router.post("/create")
@@ -113,15 +106,15 @@ async def create_new_conversation(data = Body(...), user = Depends(verify_token)
     company_schema = company_info["schema_name"]
 
     # Insert a new conversation into database
-    new_record = await add_new_conversation(company_schema, conversation_name, source, phone_number)
+    new_record = add_new_conversation(company_schema, conversation_name, source, phone_number)
 
-    if new_record["status"] == "success":
+    if new_record:
         return {
             "status": 'success',
-            "conversations": new_record.get('rows', [])
+            "conversations": new_record
         }
     else:
-        raise HTTPException(status_code=500, detail=new_record['message'])
+        raise HTTPException(status_code=500, detail="Failed to create conversation")
 
 @router.post("/toggle-ai-reply")
 async def toggle_ai_reply(data = Body(...), user = Depends(verify_token)):
@@ -150,12 +143,12 @@ async def toggle_ai_reply(data = Body(...), user = Depends(verify_token)):
     company_schema = company_info["schema_name"]
 
     # Toggle AI reply for the conversation
-    toggle_ai_reply = await toggle_ai_reply_for_conversation(company_schema, conversation_id)
+    toggle_ai_reply = toggle_ai_reply_for_conversation(company_schema, conversation_id)
 
-    if toggle_ai_reply["status"] == "success":
+    if toggle_ai_reply:
         return {
             "status": 'success',
-            "conversations": toggle_ai_reply.get('rows', [])
+            "conversations": toggle_ai_reply
         }
     else:
-        raise HTTPException(status_code=500, detail=toggle_ai_reply['message'])
+        raise HTTPException(status_code=500, detail="Failed to toggle AI reply")

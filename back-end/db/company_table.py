@@ -21,6 +21,10 @@ def create_company_tables(company_id: str):
         images_query = COMPANY_IMAGE_TABLE.format(company_id=company_id)
         db.execute_raw(images_query)
         
+        # Create images table
+        extra_query = COMPANY_EXTRA_TABLE.format(company_id=company_id)
+        db.execute_raw(extra_query)
+        
         # Create KNOWLEDGE table
         knowledge_query = COMPANY_KNOWLEDGE_TABLE.format(company_id=company_id)
         db.execute_raw(knowledge_query)
@@ -237,6 +241,121 @@ def update_image_status_on_table(company_id:str, file_id:str, status:str):
     try:
         query = f"UPDATE {company_id}.images SET status = %s WHERE id = %s RETURNING *"
         result = db.execute_update(query, (status, file_id))
+        if result:
+            return [dict(result)]
+        return []
+    except Exception as e:
+        print(f"Error updating image status: {e}")
+        return []
+
+def update_image_status_on_table_by_hash(company_id:str, file_hash:str, status:str):
+    """Update image status"""
+    try:
+        query = f"UPDATE {company_id}.images SET status = %s WHERE file_hash = %s RETURNING *"
+        result = db.execute_update(query, (status, file_hash))
+        if result:
+            return [dict(result)]
+        return []
+    except Exception as e:
+        print(f"Error updating image status: {e}")
+        return []
+
+# Extra
+def add_new_document(company_id:str, file_name:str, file_type:str, file_hash:str, full_path:str, status: str, match_field:str):
+    """Add a new document"""
+    try:
+        query = f"""
+            INSERT INTO {company_id}.documents (file_name, file_type, file_hash, full_path, status, match_field)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING *
+        """
+        result = db.execute_insert(query, (file_name, file_type, file_hash, full_path, status, match_field))
+        if result:
+            return [dict(result)]
+        return []
+    except Exception as e:
+        print(f"Error adding image: {e}")
+        return []
+
+def get_documents_from_table(company_id:str, page_size:int = 50, page_start:int = 0):
+    """Get paginated documents"""
+    try:
+        query = f"""
+            SELECT * FROM {company_id}.documents
+            ORDER BY created_at ASC
+            LIMIT %s OFFSET %s
+        """
+        result = db.execute_query(query, (page_size, page_start))
+        if result:
+            return [dict(row) for row in result]
+        return []
+    except Exception as e:
+        print(f"Error getting images: {e}")
+        return []
+
+def get_all_documents_from_table(company_id:str):
+    """Get count of all documents"""
+    try:
+        query = f"SELECT count(*) as count FROM {company_id}.documents"
+        result = db.execute_query(query)
+        if result:
+            return [dict(result[0])]
+        return []
+    except Exception as e:
+        print(f"Error getting image count: {e}")
+        return []
+
+def get_same_documents_from_table(company_id:str, file_hash:str):
+    """Get image by file hash"""
+    try:
+        query = f"SELECT * FROM {company_id}.documents WHERE file_hash = %s"
+        result = db.execute_query(query, (file_hash,))
+        if result:
+            return [dict(row) for row in result]
+        return []
+    except Exception as e:
+        print(f"Error getting image by hash: {e}")
+        return []
+
+def get_same_documents_from_table_with_id(company_id:str, file_id:str):
+    """Get image by ID"""
+    try:
+        query = f"SELECT * FROM {company_id}.documents WHERE id = %s"
+        result = db.execute_query(query, (file_id,))
+        if result:
+            return [dict(result[0])]
+        return []
+    except Exception as e:
+        print(f"Error getting image by ID: {e}")
+        return []
+
+def delete_documents_from_table(company_id:str, file_id:str):
+    """Delete an image"""
+    try:
+        query = f"DELETE FROM {company_id}.documents WHERE id = %s"
+        db.execute_delete(query, (file_id,))
+        return True
+    except Exception as e:
+        print(f"Error deleting image: {e}")
+        return False
+
+def update_documents_status_on_table(company_id:str, file_id:str, status:str):
+    """Update image status"""
+    try:
+        query = f"UPDATE {company_id}.documents SET status = %s WHERE id = %s RETURNING *"
+        result = db.execute_update(query, (status, file_id))
+        if result:
+            return [dict(result)]
+        return []
+    except Exception as e:
+        print(f"Error updating image status: {e}")
+        return []
+
+def update_documents_status_on_table_by_hash(company_id:str, file_hash:str, status:str):
+    """Update image status"""
+    try:
+        query = f"UPDATE {company_id}.documents SET status = %s WHERE file_hash = %s RETURNING *"
+        result = db.execute_update(query, (status, file_hash))
         if result:
             return [dict(result)]
         return []

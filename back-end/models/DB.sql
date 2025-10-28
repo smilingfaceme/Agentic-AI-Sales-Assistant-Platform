@@ -1,66 +1,3 @@
-
--- Exec SQL function
-CREATE OR REPLACE FUNCTION exec_sql(sql text)
-RETURNS json
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  rec RECORD;
-  rows jsonb := '[]'::jsonb;
-  rows_count int := 0;
-  rows_affected bigint := 0;
-  trimmed text := trim(both from sql);
-  firstword text := lower(split_part(trimmed, ' ', 1));
-  modified_sql text := sql;
-BEGIN
-  -- If it's an INSERT/UPDATE/DELETE and does not contain a RETURNING clause, try to append RETURNING *
-  IF firstword IN ('insert','update','delete') THEN
-    -- Naive check: if " returning " (with spaces) not present (case-insensitive)
-    IF position(' returning ' in lower(sql)) = 0 THEN
-      modified_sql := sql || ' RETURNING *';
-    ELSE
-      modified_sql := sql;
-    END IF;
-  END IF;
-
-  -- Try executing modified_sql and collecting rows (works for SELECT and for INSERT/UPDATE/DELETE with RETURNING)
-  BEGIN
-    FOR rec IN EXECUTE modified_sql
-    LOOP
-      rows := rows || to_jsonb(rec);
-      rows_count := rows_count + 1;
-    END LOOP;
-
-    IF rows_count > 0 THEN
-      RETURN json_build_object(
-        'status', 'success',
-        'type', 'rows',
-        'row_count', rows_count,
-        'rows', rows
-      );
-    END IF;
-  EXCEPTION WHEN others THEN
-    -- If collecting rows failed, attempt to run original SQL as a command
-  END;
-
-  -- If no rows were returned by the above, run original SQL to get rows_affected (for non-returning commands)
-  BEGIN
-    EXECUTE sql;
-    GET DIAGNOSTICS rows_affected = ROW_COUNT;
-    RETURN json_build_object(
-      'status', 'success',
-      'type', 'command',
-      'command', 'executed',
-      'rows_affected', rows_affected
-    );
-  EXCEPTION WHEN others THEN
-    RETURN json_build_object('status', 'error', 'message', SQLERRM);
-  END;
-END;
-$$;
-
-
 -- public.roles schema
 create table if not exists public.roles (
   id uuid not null default gen_random_uuid (),
@@ -189,6 +126,21 @@ select
   u.name as created_by_name
 from public.integrations i
 left join public.users u on i.created_by = u.id;
+
+create table if not exists public.bot_personality (
+  id uuid not null default gen_random_uuid (),
+  company_id uuid not null,
+  bot_name text null,
+  bot_prompt text not null,
+  sample_response text null,
+  length_of_response text not null,
+  chatbot_tone text not null,
+  prefered_lang text not null,
+  use_emojis boolean not null default true,
+  use_bullet_points boolean not null default true,
+  constraint bot_personality_pkey primary key (id),
+  constraint bot_personality_company_id_fkey foreign KEY (company_id) references companies (id)
+) TABLESPACE pg_default;
 
 INSERT INTO roles (name, permissions) VALUES ('admin', '{"chat": true, "knowledge": true, "invite": true, "company": true, "integration": true, "conversation": true}'::jsonb) RETURNING id, name, permissions;
 INSERT INTO roles (name, permissions) VALUES ('knowledge_manager', '{"chat": false, "knowledge": true, "invite": false, "company": false, "integration": false, "conversation": false}'::jsonb) RETURNING id, name, permissions;

@@ -22,10 +22,12 @@ def create_companies(name:str, description:str):
             RETURNING *
         """
         result = db.execute_insert(query, (name, description, company_schema_name, True))
+        result = dict(result)
         if result:
             # Create company schema and table
+            add_chatbot_personality(result['id'], "You are a helpful assistant")
             create_company_tables(company_schema_name)
-            return dict(result)
+            return result
         else:
             return None
     except Exception as e:
@@ -212,4 +214,43 @@ def update_integration_by_id(id:str, data:dict):
             return None
     except Exception as e:
         print(f"Error updating integration: {e}")
+        return None
+
+def add_chatbot_personality(company_id, bot_prompt):
+    try:
+        query = """
+            INSERT INTO public.bot_personality (company_id, bot_prompt, length_of_response, chatbot_tone, prefered_lang)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING *
+        """
+        result = db.execute_insert(query, (company_id, bot_prompt, 'Medium', 'Neutral', 'None'))
+        if result:
+            return dict(result)
+        else:
+            return None
+    except Exception as e:
+        print(f"Error adding chatbot personality: {e}")
+        return None
+
+def update_chatbot_personality_by_id(comany_id:str, data:dict):
+    try:
+        # Build dynamic UPDATE query
+        set_clause = ", ".join([f"{key} = %s" for key in data.keys()])
+        values = list(data.values()) + [comany_id]
+        query = f"UPDATE public.bot_personality SET {set_clause} WHERE company_id = %s RETURNING *"
+        result = db.execute_update(query, values)
+        if result:
+            return dict(result)
+        else:
+            return None
+    except Exception as e:
+        print(f"Error updating chatbot personality: {e}")
+        return None
+
+def get_chatbot_personality(company_id:str):
+    query = "SELECT * FROM public.bot_personality WHERE company_id = %s"
+    result = db.execute_query(query, (company_id,))
+    if result:
+        return dict(result[0])
+    else:
         return None

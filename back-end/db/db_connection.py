@@ -6,11 +6,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # PostgreSQL connection parameters
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "bot_admin_panel")
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
+DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
+DB_PORT = os.getenv("POSTGRES_PORT", "5432")
+DB_NAME = os.getenv("POSTGRES_DB", "")
+DB_USER = os.getenv("POSTGRES_USER", "")
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "")
 
 class PostgreSQLClient:
     """PostgreSQL database client for Bot Admin Panel"""

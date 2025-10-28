@@ -4,10 +4,7 @@ import sys
 def validate_env():
     """Validate required environment variables"""
     required_vars = [
-        "SUPABASE_URL",
-        "SUPABASE_KEY", 
         "JWT_SECRET",
-        "PINECONE_API_KEY",
         "OPENAI_API_KEY"
     ]
     

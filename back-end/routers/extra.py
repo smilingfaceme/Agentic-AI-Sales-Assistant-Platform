@@ -1,45 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, Body, File, Query, Form
 from middleware.auth import verify_token
-from src.image_vectorize import store_image_embedding, delete_image_embedding
 from src.utils.file_utills import generate_file_hash
 from db.public_table import get_companies
 from db.company_table import *
-import io, asyncio, threading, os
+import os
 from collections import defaultdict
 router = APIRouter()
-
-# ----------------------------- #
-# Utility: Background Vectorizer
-# ----------------------------- #
-def run_vectorize_in_thread(file_content, file_name, file_hash, company_id, record_ids, company_schema, match_field, full_path):
-    """Run vectorization asynchronously inside a separate thread."""
-    asyncio.run(vectorize_in_background(file_content, file_name, file_hash, company_id, record_ids, company_schema, match_field, full_path))
-
-
-async def vectorize_in_background(file_content: bytes, file_name: str, file_hash: str, company_id: str, record_ids: list[str], company_schema:str, match_field:str, full_path:str):
-    """Handles background image embedding creation."""
-    try:
-        file_io = io.BytesIO(file_content)
-        result = store_image_embedding(
-            image_bytes=file_io,
-            file_name=file_name,
-            file_hash=file_hash,
-            index_name=f'{company_id}-image',
-            match_field=match_field,
-            full_path=full_path
-        )
-        
-        # Update database record status
-        for record_id in record_ids:
-            if result:
-                update_image_status_on_table_by_hash(company_id=company_schema, file_hash=file_hash, status='Completed')
-            else:
-                update_image_status_on_table_by_hash(company_id=company_schema, file_hash=file_hash, status='Failed')
-    except Exception as e:
-        print(f"Vectorization failed: {str(e)}")
-        # Update database record status
-        for record_id in record_ids:
-            update_image_status_on_table_by_hash(company_id=company_schema, file_hash=file_hash, status='Failed')
 
 # ----------------------------- #
 # Endpoint: List Files
@@ -64,7 +30,7 @@ async def get_file_list(
     company_schema = company_info["schema_name"]
 
     try:
-        files = get_images_from_table(company_schema, page_size, page_start)
+        files = get_documents_from_table(company_schema, page_size, page_start)
         # group items by file_hash
         groups = defaultdict(list)
         for item in files:
@@ -93,16 +59,16 @@ async def get_file_list(
                     })
         
         for item in result:
-            update_image_status_on_table_by_hash(company_id=company_schema, file_hash=item["file_hash"], status=item["target_status"])
+            update_documents_status_on_table_by_hash(company_id=company_schema, file_hash=item["file_hash"], status=item["target_status"])
         
         if result:
-            files = get_images_from_table(company_schema, page_size, page_start)
+            files = get_documents_from_table(company_schema, page_size, page_start)
         
-        count = get_all_image_from_table(company_schema)
+        count = get_all_documents_from_table(company_schema)
         return {
             "status": "success",
             "company_id": company_id,
-            "images": files,
+            "documents": files,
             "total": count[0]["count"],
         }
     except Exception as e:
@@ -136,7 +102,7 @@ async def upload_file(
         file_name = file.filename.split("/")[-1]
         file_hash = generate_file_hash(file_content)
 
-        existing_file = get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
+        existing_file = get_same_documents_from_table(company_id=company_schema, file_hash=file_hash)
 
         if existing_file:
             existing_file_name = [i["file_name"] for i in existing_file]
@@ -147,7 +113,7 @@ async def upload_file(
             status = existing_file[0]["status"]
         else:
             # Define local save path
-            save_dir = os.path.join("files", "images",str(company_id))
+            save_dir = os.path.join("files", "documents",str(company_id))
             os.makedirs(save_dir, exist_ok=True)
 
             # Build full path for the file
@@ -156,9 +122,9 @@ async def upload_file(
             # Save the file locally
             with open(full_path, "wb") as f:
                 f.write(file_content)
-            status = "Processing"
+            status = "Completed"
         
-        image_file = add_new_image(
+        image_file = add_new_document(
             company_id=company_schema,
             file_name=file_name,
             file_type=file.content_type,
@@ -168,19 +134,7 @@ async def upload_file(
             match_field=match_field
         )
         if not image_file:
-            raise HTTPException(status_code=500, detail="Failed to upload file")
-
-        record_id = image_file[0]["id"]
-
-        if status == "Processing" and not existing_file:
-            # Start vectorization asynchronously
-            thread = threading.Thread(
-                target=run_vectorize_in_thread,
-                args=(file_content, file_name, file_hash, company_id, [record_id], company_schema, match_field, full_path),
-                daemon=True,
-            )
-            thread.start()
-            
+            raise HTTPException(status_code=500, detail="Failed to upload file")          
         return {
             "success": True,
             "message": "File uploaded successfully, vectorization started",
@@ -211,7 +165,7 @@ async def remove_file(
 
     company_schema = company_info["schema_name"]
 
-    existing_file = get_same_image_from_table_with_id(company_id=company_schema, file_id=file_id)
+    existing_file = get_same_documents_from_table_with_id(company_id=company_schema, file_id=file_id)
     if not existing_file:
         raise HTTPException(status_code=400, detail="File not found")
 
@@ -219,14 +173,13 @@ async def remove_file(
     file_name, file_hash = file_info["file_name"], file_info["file_hash"]
 
     try:
-        existing_file = get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
+        existing_file = get_same_documents_from_table(company_id=company_schema, file_hash=file_hash)
         if len(existing_file) > 1:
-            deleting_file = delete_image_from_table(company_id=company_schema, file_id=file_id)
+            deleting_file = delete_documents_from_table(company_id=company_schema, file_id=file_id)
             if not deleting_file:
                 raise HTTPException(status_code=400, detail="Failed to delete database record")
             return {"message": "File removed successfully"}
-        delete_image_embedding(f"{company_id}-image", file_hash)
-        deleting_file = delete_image_from_table(company_id=company_schema, file_id=file_id)
+        deleting_file = delete_documents_from_table(company_id=company_schema, file_id=file_id)
         if not deleting_file:
             raise HTTPException(status_code=400, detail="Failed to delete database record")
         
@@ -258,7 +211,7 @@ async def reprocess_file(
 
     company_schema = company_info["schema_name"]
 
-    existing_file = get_same_image_from_table_with_id(company_id=company_schema, file_id=file_id)
+    existing_file = get_same_documents_from_table_with_id(company_id=company_schema, file_id=file_id)
     if not existing_file:
         raise HTTPException(status_code=400, detail="File not found")
 
@@ -266,9 +219,9 @@ async def reprocess_file(
     file_name, file_hash, match_field, full_path = file_info["file_name"], file_info["file_hash"], file_info["match_field"], file_info['full_path']
 
     try:
-        existing_file = get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
+        existing_file = get_same_documents_from_table(company_id=company_schema, file_hash=file_hash)
         record_ids = []
-        status = "Processing"
+        status = "Completed"
         if existing_file:
             for i in existing_file:
                 if i['status'] == "Completed":
@@ -283,15 +236,8 @@ async def reprocess_file(
             with open(full_path, "rb") as f:
                 file_content = f.read()
             file_hash = generate_file_hash(file_content)
-
-            thread = threading.Thread(
-                target=run_vectorize_in_thread,
-                args=(file_content, file_name, file_hash, company_id, record_ids, company_schema, match_field, full_path),
-                daemon=True,
-            )
-            thread.start()
         else:
-            update_image_status_on_table_by_hash(company_id=company_schema, file_hash=file_hash, status='Completed')
+            update_documents_status_on_table_by_hash(company_id=company_schema, file_hash=file_hash, status='Completed')
 
         return {
             "success": True,

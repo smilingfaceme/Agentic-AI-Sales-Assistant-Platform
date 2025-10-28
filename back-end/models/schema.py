@@ -97,6 +97,19 @@ COMPANY_IMAGE_TABLE = """create table {company_id}.images (
   constraint images_pkey primary key (id)
 ) TABLESPACE pg_default;"""
 
+COMPANY_EXTRA_TABLE = """create table {company_id}.documents (
+  id uuid not null default gen_random_uuid (),
+  file_name text not null,
+  file_type text not null,
+  file_hash text not null,
+  full_path text not null,
+  status text not null,
+  extra json null,
+  match_field text not null,
+  created_at timestamp with time zone not null default now(),
+  constraint documents_pkey primary key (id)
+) TABLESPACE pg_default;"""
+
 COMPANY_KNOWLEDGE_TABLE = """create table {company_id}.knowledges (
   id uuid not null default gen_random_uuid (),
   file_name text not null,

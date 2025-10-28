@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import routes
-from routers import auth, user, company, invite, knowledge, conversation, chat, integration, image
+from routers import auth, user, company, invite, knowledge, conversation, chat, integration, image, chatbot_setting, extra
 from middleware.error_handler import add_exception_handlers
 from utils.validate_env import validate_env
 
@@ -42,6 +42,8 @@ app.include_router(image.router, prefix="/api/image", tags=["image"])
 app.include_router(conversation.router, prefix="/api/conversation", tags=["conversation"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(integration.router, prefix="/api/integration", tags=["integration"])
+app.include_router(chatbot_setting.router, prefix="/api/personality", tags=["personality"])
+app.include_router(extra.router, prefix="/api/document", tags=["document"])
 
 # Add exception handlers
 add_exception_handlers(app)

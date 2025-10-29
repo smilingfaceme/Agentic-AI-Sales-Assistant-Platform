@@ -1,21 +1,20 @@
 "use client";
-import Image from "next/image";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { FaSyncAlt, FaTrash, FaRegImage } from "react-icons/fa";
+import { FaSyncAlt, FaTrash, FaFile } from "react-icons/fa";
 import { API_BASE } from "@/utils";
 import Table, { TableAction } from "@/components/Table";
 import LoadingWrapper from "@/components/LoadingWrapper";
 import Loading from "@/components/Loading";
 import { useApiCall } from "@/hooks/useApiCall";
 import { useChatbotContext } from "@/contexts/ChatbotContext";
-import { imageApi } from "@/services/apiService";
+import { documentApi } from "@/services/apiService";
 import { useNotification } from '@/contexts/NotificationContext';
 
 const tableHeaders = ["Title & Description", "Matching Field", "Type", "Status", "Created on", "Actions"];
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
-type ImageFile = {
+type DocumentFile = {
   id: string;
   file_name: string;
   file_type: string;
@@ -25,11 +24,11 @@ type ImageFile = {
   match_field?: string;
 };
 
-export default function ImageControlArea() {
+export default function ExtraDocumentArea() {
   const { showNotification, showProgressNotification, updateProgressNotification, closeNotification } = useNotification();
-  const [imageList, setImageList] = useState<ImageFile[]>([]);
+  const [documentList, setDocumentList] = useState<DocumentFile[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalImages, setTotalImages] = useState(0);
+  const [totalDocuments, setTotalDocuments] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[1]);
   const [deleteLoading, setDeleteLoading] = useState<Record<string, boolean>>({});
   const [reprocessLoading, setReprocessLoading] = useState<Record<string, boolean>>({});
@@ -44,7 +43,6 @@ export default function ImageControlArea() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadMode, setUploadMode] = useState<'file' | 'folder'>('file');
   const [folderFiles, setFolderFiles] = useState<File[]>([]);
-  const [folderPreviewUrls, setFolderPreviewUrls] = useState<string[]>([]);
   const [matchField, setMatchField] = useState<string>('');
 
   const { isLoading: isLoadingList, error: listError, execute: executeListAsync } = useApiCall();
@@ -52,43 +50,43 @@ export default function ImageControlArea() {
   const { execute: executeReprocessAsync } = useApiCall();
   const { execute: executeUploadAsync } = useApiCall();
 
-  // Fetch knowledge files with pagination
-  const fetchImageFileList = useCallback(async (page = 1, size = pageSize) => {
+  // Fetch document files with pagination
+  const fetchDocumentFileList = useCallback(async (page = 1, size = pageSize) => {
     const offset = (page - 1) * size;
-    const result = await executeListAsync(() => imageApi.getImageFiles(size, offset));
+    const result = await executeListAsync(() => documentApi.getDocumentFiles(size, offset));
 
-    if (result?.images?.length) {
-      const loadingState = result.images.reduce((acc: Record<string, boolean>, item: ImageFile) => {
+    if (result?.documents?.length) {
+      const loadingState = result.documents.reduce((acc: Record<string, boolean>, item: DocumentFile) => {
         acc[item.id] = false;
         return acc;
       }, {});
       setDeleteLoading(loadingState);
       setReprocessLoading(loadingState);
-      setImageList(result.images);
-      setTotalImages(result.total ?? result.images.length);
+      setDocumentList(result.documents);
+      setTotalDocuments(result.total ?? result.documents.length);
     } else {
-      setImageList([]);
-      setTotalImages(0);
+      setDocumentList([]);
+      setTotalDocuments(0);
     }
   }, [executeListAsync, pageSize]);
 
   const deleteFile = async (id: string, file_name: string) => {
     setDeleteLoading((p) => ({ ...p, [id]: true }));
-    const result = await executeDeleteAsync(() => imageApi.deleteImageFile(id));
+    const result = await executeDeleteAsync(() => documentApi.deleteDocumentFile(id));
     setDeleteLoading((p) => ({ ...p, [id]: false }));
     if (result) {
       showNotification(`Deleted ${file_name} successfully!`, 'success', true)
-      fetchImageFileList(currentPage)
+      fetchDocumentFileList(currentPage)
     };
   };
 
   const reprocessFile = async (id: string, file_name: string) => {
     setReprocessLoading((p) => ({ ...p, [id]: true }));
-    const result = await executeReprocessAsync(() => imageApi.reprocessImageFile(id));
+    const result = await executeReprocessAsync(() => documentApi.reprocessDocumentFile(id));
     setReprocessLoading((p) => ({ ...p, [id]: false }));
     if (result) {
       showNotification(`Restarted processing ${file_name} successfully!`, 'success', true)
-      fetchImageFileList(currentPage)
+      fetchDocumentFileList(currentPage)
     };
   };
 
@@ -98,7 +96,7 @@ export default function ImageControlArea() {
       return;
     }
 
-    const filesToDelete = selectedRows.map(idx => imageList[idx]);
+    const filesToDelete = selectedRows.map(idx => documentList[idx]);
     const fileNames = filesToDelete.map(f => f.file_name).join(', ');
 
     // Confirm deletion
@@ -110,12 +108,9 @@ export default function ImageControlArea() {
     let successCount = 0;
     let failureCount = 0;
 
-    const progressId = showProgressNotification(`Deleting ${selectedRows.length} file(s)...`, 0);
-
-    for (let i = 0; i < filesToDelete.length; i++) {
-      const file = filesToDelete[i];
+    for (const file of filesToDelete) {
       try {
-        const result = await executeDeleteAsync(() => imageApi.deleteImageFile(file.id));
+        const result = await executeDeleteAsync(() => documentApi.deleteDocumentFile(file.id));
         if (result) {
           successCount++;
         } else {
@@ -124,25 +119,26 @@ export default function ImageControlArea() {
       } catch {
         failureCount++;
       }
-      const percent = Math.round(((i + 1) / filesToDelete.length) * 100);
-      updateProgressNotification(progressId, percent, `Deleted: ${successCount}, Failed: ${failureCount}`);
     }
 
     setBulkDeleteLoading(false);
     setSelectedRows([]);
-    fetchImageFileList(currentPage);
 
-    if (failureCount === 0) {
-      showNotification(`Successfully deleted ${successCount} file(s)!`, 'success', true);
+    if (successCount > 0) {
+      showNotification(
+        `Deleted ${successCount} file(s) successfully!${failureCount > 0 ? ` (${failureCount} failed)` : ''}`,
+        failureCount > 0 ? 'alarm' : 'success',
+        true
+      );
     } else {
-      showNotification(`Deleted ${successCount} file(s), ${failureCount} failed`, 'alarm', true);
+      showNotification('Failed to delete selected files', 'error', true);
     }
 
-    setTimeout(() => closeNotification(progressId), 2000);
+    fetchDocumentFileList(currentPage);
   };
 
   // Map to table format
-  const tabledata = imageList.map((item) => ({
+  const tabledata = documentList.map((item) => ({
     "Title & Description": [
       {
         label: item.file_name,
@@ -205,8 +201,8 @@ export default function ImageControlArea() {
   }));
 
   useEffect(() => {
-    fetchImageFileList(currentPage, pageSize);
-  }, [fetchImageFileList, currentPage, pageSize]);
+    fetchDocumentFileList(currentPage, pageSize);
+  }, [fetchDocumentFileList, currentPage, pageSize]);
 
   // Utility: runs in background
   const startBackgroundUpload = (files: File[]) => {
@@ -214,7 +210,7 @@ export default function ImageControlArea() {
       let uploadedCount = 0;
       let failedCount = 0;
       const totalCount = files.length;
-      const progressId = showProgressNotification(`Uploading ${totalCount} images...`, 0);
+      const progressId = showProgressNotification(`Uploading ${totalCount} documents...`, 0);
 
       const updateProgress = () => {
         const percent = Math.round(((uploadedCount + failedCount) / totalCount) * 100);
@@ -225,8 +221,8 @@ export default function ImageControlArea() {
       for (const file of files) {
         try {
           const percent = Math.round(((uploadedCount + failedCount) / totalCount) * 100);
-          updateProgressNotification(progressId, percent, `Uploading images: ${uploadedCount} succeeded, ${failedCount} failed, ${totalCount - uploadedCount - failedCount} remaining...`);
-          const result = await imageApi.uploadImageFile(file, matchField);
+          updateProgressNotification(progressId, percent, `Uploading documents: ${uploadedCount} succeeded, ${failedCount} failed, ${totalCount - uploadedCount - failedCount} remaining...`);
+          const result = await documentApi.uploadDocumentFile(file, matchField);
           if (result?.success) {
             uploadedCount++;
           } else {
@@ -242,8 +238,7 @@ export default function ImageControlArea() {
       }
       // Clean up
       setFolderFiles([]);
-      setFolderPreviewUrls([]);
-      fetchImageFileList();
+      fetchDocumentFileList();
       setMatchField("");
       updateProgressNotification(progressId, 100, `Upload complete (${uploadedCount} success, ${failedCount} failed)`);
       setTimeout(() => closeNotification(progressId), 2000);
@@ -264,15 +259,15 @@ export default function ImageControlArea() {
           return;
         }
         try {
-          const result = await executeUploadAsync(() => imageApi.uploadImageFile(file, matchField));
+          const result = await executeUploadAsync(() => documentApi.uploadDocumentFile(file, matchField));
           if (result?.success) {
             setShowModal(false);
-            fetchImageFileList();
+            fetchDocumentFileList();
             setPreviewUrl(null);
             setMatchField('');
             showNotification(`${file.name} uploaded successfully!`, 'success', true);
           } else {
-            fetchImageFileList();
+            fetchDocumentFileList();
             setPreviewUrl(null);
             setMatchField('');
             showNotification(`${file.name} failed: ${result?.message || 'Upload failed.'}`, 'error', true);
@@ -282,7 +277,7 @@ export default function ImageControlArea() {
         }
       } else {
         if (!folderFiles.length) {
-          setUploadError("Please select a folder with images.");
+          setUploadError("Please select a folder with documents.");
           setUploading(false);
           return;
         }
@@ -307,8 +302,7 @@ export default function ImageControlArea() {
     if (uploadMode === 'file') {
       const file = fileInputRef.current?.files?.[0];
       if (file) {
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
+        setPreviewUrl("file-selected");
       } else {
         setPreviewUrl(null);
       }
@@ -317,10 +311,8 @@ export default function ImageControlArea() {
       if (files && files.length > 0) {
         const arr = Array.from(files);
         setFolderFiles(arr);
-        setFolderPreviewUrls(arr.map(f => URL.createObjectURL(f)));
       } else {
         setFolderFiles([]);
-        setFolderPreviewUrls([]);
       }
     }
   };
@@ -329,7 +321,7 @@ export default function ImageControlArea() {
     <section className="flex-1 flex flex-col bg-white w-full p-6 h-full">
 
       <div className="flex items-center justify-between mb-4 border-b-2 border-gray-300 px-4 py-1">
-        <div className="text-md font-semibold">Product Images</div>
+        <div className="text-md font-semibold">Product-Related Supporting Documents</div>
         <div className="flex gap-2">
           {selectedRows.length > 0 && (
             <button
@@ -337,14 +329,14 @@ export default function ImageControlArea() {
               onClick={deleteSelectedFiles}
               disabled={bulkDeleteLoading}
             >
-              <Loading isLoading={bulkDeleteLoading} type="button" text="Deleting..." size="small" theme="dark">
+              <Loading isLoading={bulkDeleteLoading} type="button" text="Deleting..." size="small">
                 <FaTrash className="mr-2" /> Delete Selected ({selectedRows.length})
               </Loading>
             </button>
           )}
           <button
             className="px-3 py-1 hover:bg-gray-200 rounded text-sm flex items-center disabled:opacity-50"
-            onClick={() => fetchImageFileList(currentPage)}
+            onClick={() => fetchDocumentFileList(currentPage)}
             disabled={isLoadingList}
           >
             <Loading isLoading={isLoadingList} type="button" text="Refreshing..." size="small">
@@ -399,11 +391,11 @@ export default function ImageControlArea() {
             >
               Prev
             </button>
-            <span className="px-2">Page {currentPage} of {Math.max(1, Math.ceil(totalImages / pageSize))}</span>
+            <span className="px-2">Page {currentPage} of {Math.max(1, Math.ceil(totalDocuments / pageSize))}</span>
             <button
               className="px-2 py-1 border rounded disabled:opacity-50"
-              onClick={() => setCurrentPage((p) => Math.min(Math.ceil(totalImages / pageSize), p + 1))}
-              disabled={currentPage >= Math.ceil(totalImages / pageSize)}
+              onClick={() => setCurrentPage((p) => Math.min(Math.ceil(totalDocuments / pageSize), p + 1))}
+              disabled={currentPage >= Math.ceil(totalDocuments / pageSize)}
             >
               Next
             </button>
@@ -423,7 +415,7 @@ export default function ImageControlArea() {
             >
               &times;
             </button>
-            <h2 className="text-lg font-semibold mb-4">Upload Image File</h2>
+            <h2 className="text-lg font-semibold mb-4">Upload Document File</h2>
             {/* Upload mode toggle */}
             <div className="flex gap-2 mb-4">
               <button
@@ -433,12 +425,11 @@ export default function ImageControlArea() {
                   setUploadMode('file');
                   setPreviewUrl(null);
                   setFolderFiles([]);
-                  setFolderPreviewUrls([]);
                   if (fileInputRef.current) fileInputRef.current.value = "";
                 }}
                 disabled={uploading}
               >
-                Upload File
+                Upload Document
               </button>
               <button
                 type="button"
@@ -447,7 +438,6 @@ export default function ImageControlArea() {
                   setUploadMode('folder');
                   setPreviewUrl(null);
                   setFolderFiles([]);
-                  setFolderPreviewUrls([]);
                   if (fileInputRef.current) fileInputRef.current.value = "";
                 }}
                 disabled={uploading}
@@ -460,10 +450,14 @@ export default function ImageControlArea() {
                 {uploadMode === 'file' ? (
                   previewUrl ? (
                     <>
-                      <Image src={previewUrl} width={200} height={200} alt="Preview" className="max-h-48 object-contain rounded border mb-2" />
+                      <div className="flex flex-col items-center text-gray-600 bg-gray-50 p-4 rounded border w-full">
+                        <FaFile size={60} className="mb-2" />
+                        <div className="text-sm font-medium truncate w-full text-center">{fileInputRef.current?.files?.[0]?.name}</div>
+                        <div className="text-xs text-gray-500">{Math.round((fileInputRef.current?.files?.[0]?.size ?? 0) / 1024)} KB</div>
+                      </div>
                       <button
                         type="button"
-                        className="text-xs text-red-500 underline"
+                        className="text-xs text-red-500 underline mt-2"
                         onClick={() => {
                           setPreviewUrl(null);
                           if (fileInputRef.current) fileInputRef.current.value = "";
@@ -472,28 +466,27 @@ export default function ImageControlArea() {
                     </>
                   ) : (
                     <div className="flex flex-col items-center text-gray-400">
-                      <FaRegImage size={100} />
-                      <span className="text-sm">No image selected</span>
+                      <FaFile size={100} />
+                      <span className="text-sm">No document selected</span>
                     </div>
                   )
                 ) : (
-                  folderPreviewUrls.length > 0 ? (
+                  folderFiles.length > 0 ? (
                     <>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-2 max-h-64 overflow-y-auto">
-                        {folderPreviewUrls.map((url, idx) => (
-                          <div key={url} className="flex flex-col items-center border rounded p-2 bg-gray-50">
-                            <Image src={url} width={120} height={120} alt={`Preview ${idx + 1}`} className="object-contain rounded mb-2 max-h-28" />
-                            <div className="text-xs text-gray-700 truncate w-full text-center" title={folderFiles[idx]?.name}>{folderFiles[idx]?.name}</div>
-                            <div className="text-xs text-gray-500">{Math.round((folderFiles[idx]?.size ?? 0) / 1024)} KB</div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-2 max-h-64 overflow-y-auto w-full">
+                        {folderFiles.map((file, idx) => (
+                          <div key={file.name + idx} className="flex flex-col items-center border rounded p-2 bg-gray-50">
+                            <FaFile size={40} className="mb-2 text-gray-600" />
+                            <div className="text-xs text-gray-700 truncate w-full text-center" title={file.name}>{file.name}</div>
+                            <div className="text-xs text-gray-500">{Math.round((file.size ?? 0) / 1024)} KB</div>
                           </div>
                         ))}
                       </div>
-                      <div className="text-xs text-gray-600 mb-2">{folderFiles.length} image{folderFiles.length > 1 ? 's' : ''} selected</div>
+                      <div className="text-xs text-gray-600 mb-2">{folderFiles.length} document{folderFiles.length > 1 ? 's' : ''} selected</div>
                       <button
                         type="button"
                         className="text-xs text-red-500 underline"
                         onClick={() => {
-                          setFolderPreviewUrls([]);
                           setFolderFiles([]);
                           if (fileInputRef.current) fileInputRef.current.value = "";
                         }}
@@ -501,7 +494,7 @@ export default function ImageControlArea() {
                     </>
                   ) : (
                     <div className="flex flex-col items-center text-gray-400">
-                      <FaRegImage size={100} />
+                      <FaFile size={100} />
                       <span className="text-sm">No folder selected</span>
                     </div>
                   )
@@ -509,7 +502,7 @@ export default function ImageControlArea() {
               </div>
               <input
                 type="file"
-                accept="image/*"
+                accept="*"
                 ref={fileInputRef}
                 className="border rounded px-3 py-2"
                 disabled={uploading}

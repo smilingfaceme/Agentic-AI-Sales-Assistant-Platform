@@ -77,21 +77,21 @@ export const chatApi = {
     return res.json();
   },
 
-  createConversation: async ( conversationName: string, source: string) => {
+  createConversation: async (conversationName: string, source: string) => {
     const res = await apiRequest('/conversation/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         conversation_name: conversationName,
         source,
-        phone_number:""
+        phone_number: ""
       })
     });
     if (!res.ok) throw new Error('Failed to create conversation');
     return res.json();
   },
 
-  sendImageMessage: async (conversationId: string, file: File, senderType: string, content:string) => {
+  sendImageMessage: async (conversationId: string, file: File, senderType: string, content: string) => {
     const formData = new FormData();
     formData.append('conversation_id', conversationId);
     formData.append('file', file);
@@ -130,7 +130,7 @@ export const knowledgeApi = {
     return res.json();
   },
 
-  uploadKnowledgeFile: async (file: File, columns: string[], primary:string) => {
+  uploadKnowledgeFile: async (file: File, columns: string[], primary: string) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('columns', JSON.stringify(columns));
@@ -140,7 +140,7 @@ export const knowledgeApi = {
       body: formData
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(`Failed to upload file. ${data.message}`);    
+    if (!res.ok) throw new Error(`Failed to upload file. ${data.message}`);
     return data;
   },
 
@@ -172,23 +172,23 @@ export const knowledgeApi = {
 // Knowledge APIs
 export const imageApi = {
   getImageFiles: async (page_size: number, page_start: number) => {
-  const res = await apiRequest(
-    `/image/list?page_size=${encodeURIComponent(page_size)}&page_start=${encodeURIComponent(page_start)}`,
-    {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    }
-  );
+    const res = await apiRequest(
+      `/image/list?page_size=${encodeURIComponent(page_size)}&page_start=${encodeURIComponent(page_start)}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
 
-  if (!res.ok) throw new Error('Failed to fetch Image files');
-  return res.json();
-},
+    if (!res.ok) throw new Error('Failed to fetch Image files');
+    return res.json();
+  },
 
   uploadImageFile: async (file: File, match: string) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('match_field', match);
-    
+
     const res = await apiRequest(`/image/upload`, {
       method: 'POST',
       body: formData
@@ -223,6 +223,60 @@ export const imageApi = {
   }
 };
 
+// Document APIs
+export const documentApi = {
+  getDocumentFiles: async (page_size: number, page_start: number) => {
+    const res = await apiRequest(
+      `/document/list?page_size=${encodeURIComponent(page_size)}&page_start=${encodeURIComponent(page_start)}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+    if (!res.ok) throw new Error('Failed to fetch Document files');
+    return res.json();
+  },
+
+  uploadDocumentFile: async (file: File, match: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('match_field', match);
+
+    const res = await apiRequest(`/document/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Failed to upload file. ${data.message}`);
+    return data;
+  },
+
+  deleteDocumentFile: async (fileId: string) => {
+    const res = await apiRequest('/document/remove', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        file_id: fileId
+      })
+    });
+    if (!res.ok) throw new Error('Failed to delete Document file');
+    return res.json();
+  },
+
+  reprocessDocumentFile: async (fileId: string) => {
+    const res = await apiRequest('/document/reprocess', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        file_id: fileId
+      })
+    });
+    if (!res.ok) throw new Error('Failed to reprocess Document file');
+    return res.json();
+  }
+};
+
 // Chatbot APIs
 export const chatbotApi = {
   getUnansweredQuestions: async (projectId: string) => {
@@ -245,11 +299,11 @@ export const integrationApi = {
     if (!res.ok) throw new Error('Failed to connect to WhatsApp');
     return res.json();
   },
-  new: async (instanceName:string) => {
+  new: async (instanceName: string) => {
     const res = await apiRequest(`/integration/new`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({"instanceName":instanceName})
+      body: JSON.stringify({ "instanceName": instanceName })
     });
     if (!res.ok) throw new Error('Failed to connect to WhatsApp');
     return res.json();
@@ -258,7 +312,7 @@ export const integrationApi = {
     const res = await apiRequest(`/integration/active`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({"integrationId":integrationId})
+      body: JSON.stringify({ "integrationId": integrationId })
     });
     if (!res.ok) throw new Error('Failed to connect to WhatsApp');
     return res.json();
@@ -267,7 +321,7 @@ export const integrationApi = {
     const res = await apiRequest(`/integration/logout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({"integrationId":integrationId})
+      body: JSON.stringify({ "integrationId": integrationId })
     });
     if (!res.ok) throw new Error('Failed to connect to WhatsApp');
     return res.json();
@@ -300,7 +354,7 @@ export const userApi = {
     const res = await apiRequest('/user/password', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({'currentPassword':hashed_password, 'newPassword':passwordData.newPassword})
+      body: JSON.stringify({ 'currentPassword': hashed_password, 'newPassword': passwordData.newPassword })
     });
     if (!res.ok) throw new Error('Failed to update password');
     return res.json();
@@ -379,4 +433,25 @@ export const roleApi = {
     if (!res.ok) throw new Error('Failed to fetch invited users');
     return res.json();
   },
+};
+
+// Chatbot Personality Management APIs
+export const personalityAPI = {
+  getPersonality: async () => {
+    const res = await apiRequest(`/personality/status`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch chatbot personality');
+    return res.json();
+  },
+  updatePersonality: async (updateDate: object) => {
+    const res = await apiRequest(`/personality/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateDate)
+    });
+    if (!res.ok) throw new Error('Failed to fetch updating chatbot personality');
+    return res.json();
+  }
 };

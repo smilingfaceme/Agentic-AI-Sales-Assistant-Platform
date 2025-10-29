@@ -1,6 +1,6 @@
 "use client";
 import { useAppContext } from '@/contexts/AppContext';
-import { FaRobot, FaBook, FaRegComment, FaRegHandPointRight } from "react-icons/fa";
+import { FaRobot, FaBook, FaRegComment, FaRegHandPointRight, FaRegGrinStars  } from "react-icons/fa";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -34,7 +34,7 @@ export default function ChatbotPage({ children }: { children: React.ReactNode })
               <Link
                 href="/dashboard/chatbot/knowledge"
                 className={`flex items-center justify-between px-2 py-2 md:px-4 md:py-3 md:rounded-lg text-left md:transition-all md:duration-200 ${pathname.startsWith('/dashboard/chatbot/knowledge')
-                    ? 'font-semibold md:bg-blue-50 text-blue-700 border-b-2 md:border border-blue-300'
+                    ? 'font-semibold md:bg-blue-50 border-b-2 md:border border-blue-300'
                     : 'hover:bg-gray-50 text-gray-700 border border-transparent hover:border-gray-300'
                   }`}
               >
@@ -60,31 +60,53 @@ export default function ChatbotPage({ children }: { children: React.ReactNode })
                   <Link
                     href="/dashboard/chatbot/knowledge/product"
                     className={`text-sm py-1 px-2 rounded-md transition-all ${pathname === '/dashboard/chatbot/knowledge/product'
-                        ? 'text-blue-700 font-bold'
-                        : 'text-gray-600 hover:text-blue-700 hover:bg-gray-50'
+                        ? 'font-bold'
+                        : 'text-gray-600 hover:hover:bg-gray-50'
                       }`}
                   >
-                    Product Base
+                    Products Base
                   </Link>
 
                   <Link
                     href="/dashboard/chatbot/knowledge/image"
                     className={`text-sm py-1 px-2 rounded-md transition-all ${pathname === '/dashboard/chatbot/knowledge/image'
-                        ? 'text-blue-700 font-bold'
-                        : 'text-gray-600 hover:text-blue-700 hover:bg-gray-50'
+                        ? 'font-bold'
+                        : 'text-gray-600 hover:hover:bg-gray-50'
                       }`}
                   >
-                    Image Base
+                    Images Base
+                  </Link>
+
+                  <Link
+                    href="/dashboard/chatbot/knowledge/extra"
+                    className={`text-sm py-1 px-2 rounded-md transition-all ${pathname === '/dashboard/chatbot/knowledge/extra'
+                        ? 'font-bold'
+                        : 'text-gray-600 hover:hover:bg-gray-50'
+                      }`}
+                  >
+                    Extra Documents Base
                   </Link>
                 </div>
               )}
             </div>
           )}
 
+          {currentUser.permissions['knowledge'] === true && (
+            <Link
+              href="/dashboard/chatbot/personality"
+              className={`flex items-center px-2 py-2 md:px-4 md:py-3 md:rounded-lg text-left md:transition-all md:duration-200 ${pathname === '/dashboard/chatbot/personality'
+                ? 'font-semibold md:bg-blue-50 border-b-2 md:border border-blue-300'
+                : 'hover:bg-gray-50 text-gray-700 border border-transparent hover:border-gray-300'
+                }`}
+            >
+              <span className="pl-2 text-sm lg:text-base text-center flex items-center"><FaRegGrinStars className='mr-1' />Chatbot Personality</span>
+            </Link>
+          )}
+
           {currentUser.permissions['conversation'] == true && <Link
             href="/dashboard/chatbot/unanswered"
             className={`flex items-center px-2 py-2 md:px-4 md:py-3 md:rounded-lg text-left md:transition-all md:duration-200 ${pathname === '/dashboard/chatbot/unanswered'
-              ? 'font-semibold md:bg-blue-50 text-blue-700 border-b-2 md:border border-blue-300'
+              ? 'font-semibold md:bg-blue-50 border-b-2 md:border border-blue-300'
               : 'hover:bg-gray-50 text-gray-700 border border-transparent hover:border-gray-300'
               }`}
           >
@@ -93,7 +115,7 @@ export default function ChatbotPage({ children }: { children: React.ReactNode })
           {(currentUser.permissions['conversation'] == true || currentUser.permissions['knowledge'] == true) && <Link
             href="/dashboard/chatbot/test"
             className={`flex items-center px-2 py-2 md:px-4 md:py-3 md:rounded-lg text-left md:transition-all md:duration-200 ${pathname === '/dashboard/chatbot/test'
-              ? 'font-semibold md:bg-blue-50 text-blue-700 border-b-2 md:border border-blue-300'
+              ? 'font-semibold md:bg-blue-50 border-b-2 md:border border-blue-300'
               : 'hover:bg-gray-50 text-gray-700 border border-transparent hover:border-gray-300'
               }`}
           >

@@ -13,10 +13,11 @@ export interface TableProps {
   headers: string[];
   data: Array<Record<string, string | number | boolean | null | undefined | TableAction[]>>;
   actionColumnKey?: string[]; // The key in data that contains actions
+  onSelectedRowsChange?: (selectedRows: number[]) => void; // Callback when selected rows change
 }
 
 // Next.js + Tailwind only, idiomatic functional component
-const Table = ({ headers, data, actionColumnKey = ["Actions"] }: TableProps) => {
+const Table = ({ headers, data, actionColumnKey = ["Actions"], onSelectedRowsChange }: TableProps) => {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
@@ -25,18 +26,18 @@ const Table = ({ headers, data, actionColumnKey = ["Actions"] }: TableProps) => 
 
   // Select row handler
   const handleSelectRow = (idx: number) => {
-    setSelectedRows((prev) =>
-      prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx]
-    );
+    const newSelectedRows = selectedRows.includes(idx)
+      ? selectedRows.filter((i) => i !== idx)
+      : [...selectedRows, idx];
+    setSelectedRows(newSelectedRows);
+    onSelectedRowsChange?.(newSelectedRows);
   };
 
   // Select all handler
   const handleSelectAll = () => {
-    if (selectedRows.length === data.length) {
-      setSelectedRows([]);
-    } else {
-      setSelectedRows(data.map((_, idx) => idx));
-    }
+    const newSelectedRows = selectedRows.length === data.length ? [] : data.map((_, idx) => idx);
+    setSelectedRows(newSelectedRows);
+    onSelectedRowsChange?.(newSelectedRows);
   };
 
   // Sort handler

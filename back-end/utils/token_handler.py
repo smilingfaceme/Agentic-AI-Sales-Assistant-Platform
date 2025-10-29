@@ -4,6 +4,7 @@ from jose import jwt
 from datetime import datetime, timedelta
 import os, time
 import hashlib
+from uuid import UUID
 
 # Initialize password hashing context using bcrypt
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -30,14 +31,20 @@ def verify_password(plain_password: str, db_password: str) -> bool:
 def create_access_token(data: dict, period: int = 1):
     """
     Creates a JWT access token with user data.
-    
+
     Args:
         data (dict): User-related payload to encode into the token.
-    
+
     Returns:
         str: Encoded JWT token.
     """
     to_encode = data.copy()
+
+    # Convert any UUID objects to strings for JSON serialization
+    for key, value in to_encode.items():
+        if isinstance(value, UUID):
+            to_encode[key] = str(value)
+
     now = datetime.utcnow()
     expire = now + timedelta(hours=period)  # Token valid for 1 hour
     to_encode.update({

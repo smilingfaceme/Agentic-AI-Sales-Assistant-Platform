@@ -1,6 +1,10 @@
+"""
+SQLAlchemy database connection and session management for Bot Admin Panel
+"""
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,97 +16,53 @@ DB_NAME = os.getenv("POSTGRES_DB", "")
 DB_USER = os.getenv("POSTGRES_USER", "")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "")
 
-class PostgreSQLClient:
-    """PostgreSQL database client for Bot Admin Panel"""
+# Build database URL
+DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+# Create SQLAlchemy engine
+engine = create_engine(
+    DATABASE_URL,
+    echo=False,  # Set to True for SQL query logging
+    pool_pre_ping=True,  # Verify connections before using them
+    poolclass=NullPool  # Disable connection pooling for better control
+)
+
+# Create session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+class DatabaseClient:
+    """SQLAlchemy-based database client for Bot Admin Panel"""
 
     def __init__(self):
-        self.connection = None
-        self.connect()
+        self.engine = engine
+        self.SessionLocal = SessionLocal
 
-    def connect(self):
-        """Establish connection to PostgreSQL database"""
-        try:
-            self.connection = psycopg2.connect(
-                host=DB_HOST,
-                port=DB_PORT,
-                database=DB_NAME,
-                user=DB_USER,
-                password=DB_PASSWORD
-            )
-        except psycopg2.Error as e:
-            print(f"Error connecting to PostgreSQL: {e}")
-            raise
+    def get_session(self) -> Session:
+        """Get a new database session"""
+        return self.SessionLocal()
 
-    def execute_query(self, query, params=None):
-        """Execute a SELECT query and return results"""
-        try:
-            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-            cursor.close()
-            return results
-        except psycopg2.Error as e:
-            print(f"Error executing query: {e}")
-            return None
-
-    def execute_insert(self, query, params=None):
-        """Execute an INSERT query and return the inserted row"""
-        try:
-            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(query, params)
-            self.connection.commit()
-            result = cursor.fetchone()
-            cursor.close()
-            return result
-        except psycopg2.Error as e:
-            self.connection.rollback()
-            print(f"Error executing insert: {e}")
-            return None
-
-    def execute_update(self, query, params=None):
-        """Execute an UPDATE query and return the updated row"""
-        try:
-            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
-            cursor.execute(query, params)
-            self.connection.commit()
-            result = cursor.fetchone()
-            cursor.close()
-            return result
-        except psycopg2.Error as e:
-            self.connection.rollback()
-            print(f"Error executing update: {e}")
-            return None
-
-    def execute_delete(self, query, params=None):
-        """Execute a DELETE query"""
-        try:
-            cursor = self.connection.cursor()
-            cursor.execute(query, params)
-            self.connection.commit()
-            cursor.close()
-            return True
-        except psycopg2.Error as e:
-            self.connection.rollback()
-            print(f"Error executing delete: {e}")
-            return False
-
-    def execute_raw(self, query, params=None):
+    def execute_raw(self, query: str, params: dict = None):
         """Execute raw SQL query (for DDL statements like CREATE TABLE)"""
+        session = self.get_session()
         try:
-            cursor = self.connection.cursor()
-            cursor.execute(query, params)
-            self.connection.commit()
-            cursor.close()
+            if params:
+                session.execute(text(query), params)
+            else:
+                session.execute(text(query))
+            session.commit()
             return True
-        except psycopg2.Error as e:
-            self.connection.rollback()
+        except Exception as e:
+            session.rollback()
             print(f"Error executing raw query: {e}")
             return False
+        finally:
+            session.close()
 
     def close(self):
         """Close the database connection"""
-        if self.connection:
-            self.connection.close()
+        self.engine.dispose()
 
-# Initialize PostgreSQL client
-db = PostgreSQLClient()
+
+# Initialize database client
+db = DatabaseClient()

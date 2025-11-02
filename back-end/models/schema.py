@@ -69,3 +69,15 @@ COMPANY_KNOWLEDGE_TABLE = """create table {company_id}.knowledges (
   constraint knowledges_pkey primary key (id)
 ) TABLESPACE pg_default;
 """
+
+COMPANY_WORKFLOW_TABLE = """create table {company_id}.workflows (
+  id uuid not null default gen_random_uuid (),
+  name text not null,
+  nodes json not null,
+  edges json not null,
+  status text not null,
+  extra json null,
+  created_at timestamp with time zone not null default now(),
+  constraint workflows_pkey primary key (id)
+) TABLESPACE pg_default;
+"""

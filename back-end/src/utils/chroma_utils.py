@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Optional
 from src.service_client import chroma_client
 from src.utils.embedding_utills import generate_embeddings
+from db.company_table import get_all_knowledges
 from langchain_openai import ChatOpenAI
 import numpy as np
 import os, json
@@ -151,53 +152,42 @@ def search_vectors_by_embedding(index_name: str, company_id: str, query_embeddin
     Returns:
         List[Dict[str, Any]]: Search results containing metadata and similarity scores.
     """
-    try:
-        if query_embedding is None:
-            query_embedding = [0] * EMBEDDING_DIMENSION
+    # try:
+    if query_embedding is None:
+        query_embedding = [0] * EMBEDDING_DIMENSION
 
-        collection = chroma_client.get_or_create_collection(name=index_name)
+    collection = chroma_client.get_or_create_collection(name=index_name)
 
-        # Build filter dict
-        filter_dict = {}
-        if file_name:
-            filter_dict["pc_file_name"] = file_name
-        if extra_filter:
-            filter_dict = {**filter_dict, **extra_filter}
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=10000,
+        where=extra_filter,
+        include=["embeddings", "metadatas", "documents", "distances"],
+        # where_document=where_filter
+    )
 
-        print("HELLO -/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-/-")
-        print(filter_dict)
+    # Transform results to match Pinecone format
+    matches = []
+    if results["ids"] and len(results["ids"]) > 0:
+        for i, id_ in enumerate(results["ids"][0]):
+            # ChromaDB returns distances, convert to similarity scores
+            # For cosine distance: similarity = 1 - distance
+            distance = results["distances"][0][i]
+            similarity_score = 1 - distance
 
-        # Query ChromaDB
-        where_filter = filter_dict if filter_dict else None
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=100,
-            where=where_filter,
-            include=["embeddings", "metadatas", "documents", "distances"]
-        )
+            matches.append({
+                "id": id_,
+                "score": similarity_score,
+                "values": results["embeddings"][0][i] if results["embeddings"] else None,
+                "metadata": results["metadatas"][0][i],
+                "document": results["documents"][0][i]
+            })
 
-        # Transform results to match Pinecone format
-        matches = []
-        if results["ids"] and len(results["ids"]) > 0:
-            for i, id_ in enumerate(results["ids"][0]):
-                # ChromaDB returns distances, convert to similarity scores
-                # For cosine distance: similarity = 1 - distance
-                distance = results["distances"][0][i]
-                similarity_score = 1 - distance
+    return matches
 
-                matches.append({
-                    "id": id_,
-                    "score": similarity_score,
-                    "values": results["embeddings"][0][i] if results["embeddings"] else None,
-                    "metadata": results["metadatas"][0][i],
-                    "document": results["documents"][0][i]
-                })
-
-        return matches
-
-    except Exception as e:
-        print(f"Error searching vectors: {str(e)}")
-        return []
+    # except Exception as e:
+    #     print(f"Error searching vectors: {str(e)}")
+    #     return []
 
 
 def search_vectors(index_name: str, company_id: str, query_text: str = None, top_k: int = 100, file_name: Optional[str] = None, extra_filter: Optional[dict] = None) -> Dict[str, Any]:
@@ -376,11 +366,38 @@ def mmr(query_vec, doc_vecs, lambda_param=0.7, top_k=5):
     return selected
 
 
+def feature_matching_for_filter(user_query:str, company_id:str):
+    """Match user query to available features."""
+    knowledges = get_all_knowledges(company_id)
+    features = []
+    for knowledge in knowledges:
+        features.extend(knowledge["extra"])
+        
+    prompt = f"""
+    You are a product search assistant.
+    You are given a user query and a list of available features.
+    Your task is to match the user query to the most relevant features.
+    Return your output in JSON format, with keys as available feature names and values as their possible options.
+
+    User query:
+    {user_query}
+
+    Available features:
+    {list(set(features))}
+    """
+    response = llm_bot.invoke(prompt)
+    response.content = response.content.replace("```", "").replace("json\n{", "{")
+    try:
+        matching_features = json.loads(response.content)
+    except Exception:
+        matching_features = {}
+    return matching_features
+
 # -------------------------------------------------------------------
 # Product Search Pipeline
 # -------------------------------------------------------------------
 
-def search_vectors_product(index_name: str, query_text: str, company_id: str, conversationId: str, new_search: str, top_k: int = 5, file_name: Optional[str] = None):
+def search_vectors_product(index_name: str, query_text: str, company_id: str, company_schema: str, conversationId: str, top_k: int = 5, file_name: Optional[str] = None):
     """
     Perform product search using embeddings, MMR diversification, 
     and LLM-based feature differentiation.
@@ -390,7 +407,6 @@ def search_vectors_product(index_name: str, query_text: str, company_id: str, co
         query_text (str): User query text.
         company_id (str): Company ID filter.
         conversationId (str): Conversation ID for caching results.
-        new_search (str): Whether this is a new search.
         top_k (int): Number of diverse top results.
         file_name (Optional[str]): Optional file name filter.
     
@@ -399,33 +415,47 @@ def search_vectors_product(index_name: str, query_text: str, company_id: str, co
             - diverse_results: Selected diverse product records
             - differentiating_features: Extracted distinguishing features
     """
-    if new_search or vectors_for_each_conversation.get(conversationId, False) is False:
-        # Step 1: Generate query embedding
-        query_embedding = generate_embeddings([query_text])[0]
-
-        # Step 2: Retrieve top matches from ChromaDB
-        initial_results = search_vectors_by_embedding(index_name, company_id, query_embedding, file_name, {})
-        
-        if not initial_results:
-            vectors_for_each_conversation[conversationId] = []
-            return [], None
-        doc_vectors = [r['values'] for r in initial_results if r.get('values') is not None]
-        
-        for i in initial_results:
-            print(i.get('score', 'N/A'))
-        print("=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/")
-        
-        # Step 3: Apply MMR for diverse selection
-        if doc_vectors:
-            selected_indices = mmr(query_embedding, doc_vectors, lambda_param=0.7, top_k=min(top_k, len(initial_results)))
-            vectors_for_each_conversation[conversationId] = [initial_results[i] for i in selected_indices]
-        else:
-            vectors_for_each_conversation[conversationId] = initial_results[:top_k]
+    print(query_text)
+    # Step 1: Generate query embedding
+    query_embedding = generate_embeddings([query_text])[0]
+    
+    extra_filter = [i.strip() for i in query_text.split("|")]
+    filter_info = []
+    extra_filter_embedding = generate_embeddings(extra_filter)
+    for i in extra_filter_embedding:
+        result = search_vectors_by_embedding(f"{index_name}-columns", company_id, i, file_name, None)
+        if result:
+            sub_filter = {
+                "$or": [
+                    {result[0]['document'].split(":")[0].strip(): result[0]['document'].replace(f"{result[0]['document'].split(':')[0]}:", "").strip()},
+                    {result[1]['document'].split(":")[0].strip(): result[1]['document'].replace(f"{result[1]['document'].split(':')[0]}:", "").strip()}
+                ]
+            }
+            filter_info.append(sub_filter)
+    filter_info = {"$and": filter_info}
+    
+    print(filter_info)
+    # Step 2: Retrieve top matches from ChromaDB
+    initial_results = search_vectors_by_embedding(index_name, company_id, query_embedding, file_name, filter_info)
+    
+    if not initial_results:
+        vectors_for_each_conversation[conversationId] = []
+        return [], None
+    doc_vectors = [r['values'] for r in initial_results if r.get('values') is not None]
+    
+    print("=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/")
+    
+    # Step 3: Apply MMR for diverse selection
+    if doc_vectors:
+        selected_indices = mmr(query_embedding, doc_vectors, lambda_param=0.7, top_k=min(top_k, len(initial_results)))
+        vectors_for_each_conversation[conversationId] = [initial_results[i] for i in selected_indices]
+    else:
+        vectors_for_each_conversation[conversationId] = initial_results[:top_k]
     
     search_vector_result = vectors_for_each_conversation.get(conversationId, [])
     
     # Step 4: Extract differentiating features
-    differentiating_features = extract_differentiating_features(search_vector_result, query_text) if search_vector_result else None
-    
+    differentiating_features = extract_differentiating_features(initial_results, query_text) if initial_results else None
+    print(differentiating_features)
     return search_vector_result, differentiating_features
 

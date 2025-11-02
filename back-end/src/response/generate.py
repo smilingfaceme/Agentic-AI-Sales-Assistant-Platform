@@ -9,8 +9,8 @@ from langchain.agents import create_agent
 from pydantic import BaseModel, Field
 
 from src.utils.chroma_utils import search_vectors_product, search_vectors
-from db.company_table import get_all_messages, get_linked_images_from_table
-
+from db.company_table import get_all_messages, get_linked_images_from_table, get_all_knowledges
+from db.public_table import get_chatbot_personality
 import os
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -23,20 +23,6 @@ llm_bot = ChatOpenAI(
 )
 
 extra_info_conversations = {}
-
-# ---------------------------
-# Pydantic Input Schema
-# ---------------------------
-class RetrievalQueryInput(BaseModel):
-    query: str = Field(
-        ...,
-        description="""The full text query or key points describing the user's product need in feature and value. For example: "'Size': 1.5 | 'Conductor': Copper | 'Sub Category': Unarmoured Power Cables | 'Insulation': PVC | 'Standard': KS".""",
-    )
-    require_new_products: bool = Field(
-        ...,
-        description="""Whether to show new/different products (True) or refine previous ones (False)."""
-    )
-
 
 # ---------------------------
 # Conversation History
@@ -87,18 +73,17 @@ async def get_linked_info(retrieval_results: list[dict], company_schema: str, co
 # ---------------------------
 # Product Search Tool
 # ---------------------------
-def search_vectors_with_query(query: str, require_new_products: bool,
-                              company_id: str, conversation_id: str, company_schema: str):
+def search_vectors_with_query(query: str, company_id: str, conversation_id: str, company_schema: str):
     results, differentiating_features = search_vectors_product(
         index_name=company_id,
         query_text=query,
         company_id=company_id,
+        company_schema=company_schema,
         conversationId=conversation_id,
-        new_search=require_new_products,
         top_k=5
     )
-
-    if differentiating_features:
+    print(differentiating_features)
+    if differentiating_features and len(differentiating_features) > 3:
         extra_info_conversations[conversation_id] = {}
         return f"Need more details. Please clarify: {differentiating_features}"
 
@@ -118,6 +103,14 @@ def search_vectors_with_query(query: str, require_new_products: bool,
 
     return list(set(retrieval_results))
 
+# ---------------------------
+# Pydantic Input Schema
+# ---------------------------
+class RetrievalQueryInput(BaseModel):
+    query: str = Field(
+        ...,
+        description="""The full text query or key points describing the user's product need in feature and value. For example: "'Size': 1.5 | 'Conductor': Copper | 'Sub Category': Unarmoured Power Cables | 'Insulation': PVC | 'Standard': KS".""",
+    )
 
 # ---------------------------
 # Build Tool Wrapper
@@ -126,9 +119,8 @@ def make_search_tool(company_id: str, conversation_id: str, company_schema: str)
     return StructuredTool(
         name="search_vectors_with_query",
         description="Search the vector database to find the most relevant products based on the user’s natural language query or product requirements. The input query should include as many specific product details as possible to improve search accuracy and relevance.",
-        func=lambda query, require_new_products: search_vectors_with_query(
+        func=lambda query: search_vectors_with_query(
             query=query,
-            require_new_products=require_new_products,
             company_id=company_id,
             conversation_id=conversation_id,
             company_schema=company_schema,
@@ -137,24 +129,50 @@ def make_search_tool(company_id: str, conversation_id: str, company_schema: str)
     )
 
 
+def make_system_prompt(company_id: str):
+    chatbot_personality = get_chatbot_personality(company_id)
+    if not chatbot_personality:
+        return "You are an AI sales assistant helping customers. Generate short, natural, clear sales replies."
+    
+    system_prompt = ""
+    if chatbot_personality['bot_prompt']:
+        system_prompt = system_prompt + chatbot_personality['bot_prompt']
+    if chatbot_personality['bot_name']:
+        system_prompt = system_prompt + f"\n Your name is {chatbot_personality['bot_name']}"
+    if chatbot_personality["length_of_response"]:
+        system_prompt = system_prompt + f"\n Your response should be {chatbot_personality['length_of_response']}"
+    if chatbot_personality["chatbot_tone"]:
+        system_prompt = system_prompt + f"\n Your tone should be {chatbot_personality['chatbot_tone']}"
+    if chatbot_personality["prefered_lang"] != "None":
+        system_prompt = system_prompt + f"\n Your prefered language is {chatbot_personality['prefered_lang']}"
+        
+    if chatbot_personality["use_emojis"]:
+        system_prompt = system_prompt + "\n You can use emojis in your response"
+    else:
+        system_prompt = system_prompt + "\n You should not use emojis in your response"
+    if chatbot_personality["use_bullet_points"]:
+        system_prompt = system_prompt + "\n You can use bullet points in your response"
+    else:
+        system_prompt = system_prompt + "\n You should not use bullet points in your response"
+    
+    return system_prompt
+
 # ---------------------------
 # Generate Response (main)
 # ---------------------------
 async def generate_response_with_search(
     company_id: str, company_schema: str, conversation_id: str, query: str, top_k: int = 5
 ):
+    # Get chat history
     memory = await get_history(company_schema, conversation_id)
-    search_tool = make_search_tool(company_id, conversation_id, company_schema)
-
-    prompt_template = ChatPromptTemplate.from_messages([
-        ("system", "You are an AI sales assistant helping customers. Keep responses clear, short, and natural."),
-        MessagesPlaceholder("history"),
-        ("human", "{input}")
-    ])
-
+    # Make system prompt with chatbot personality
+    system_prompt = make_system_prompt(company_id)
     
+    # Make search tool
+    search_tool = make_search_tool(company_id, conversation_id, company_schema)
+ 
     # Create a tool-calling agent (function-calling mode)
-    agent = create_agent(model=llm_bot, tools=[search_tool], system_prompt="You are an AI sales assistant helping customers. Generate short, natural, clear sales replies.")
+    agent = create_agent(model=llm_bot, tools=[search_tool], system_prompt=system_prompt)
 
     with_history = RunnableWithMessageHistory(
         agent,

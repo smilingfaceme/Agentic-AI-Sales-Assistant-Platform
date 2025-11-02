@@ -34,6 +34,9 @@ def create_company_tables(company_id: str):
         # Create KNOWLEDGE table
         knowledge_query = COMPANY_KNOWLEDGE_TABLE.format(company_id=company_id)
         db.execute_raw(knowledge_query)
+        
+        workflow_query = COMPANY_WORKFLOW_TABLE.format(company_id=company_id)
+        db.execute_raw(workflow_query)
 
         return {"status": "success", "message": "Company tables created"}
     except Exception as e:
@@ -707,6 +710,103 @@ def delete_knowledge_by_id(company_id: str, knowledge_id: str):
     except Exception as e:
         session.rollback()
         print(f"Error deleting knowledge: {e}")
+        return False
+    finally:
+        session.close()
+
+# ==================== WORKFLOWS ====================
+def add_new_workflow(company_id: str, name: str, nodes: str, edges: str, status: str, extra: str = None):
+    """Add a new workflow"""
+    session = db.get_session()
+    try:
+        query = text(f"""
+            INSERT INTO {company_id}.workflows (name, nodes, edges,status, extra)
+            VALUES (:name, :nodes, :edges, :status, :extra)
+            RETURNING *
+        """)
+        result = session.execute(query, {
+            "name": name,
+            "nodes": nodes,
+            "edges": edges,
+            "status": status,
+            "extra": extra
+        }).fetchone()
+        session.commit()
+        if result:
+            return [dict(result._mapping)]
+        return []
+    except Exception as e:
+        session.rollback()
+        print(f"Error adding workflow: {e}")
+        return []
+    finally:
+        session.close()
+
+def get_all_workflows(company_id: str):
+    """Get all workflows"""
+    session = db.get_session()
+    try:
+        query = text(f"SELECT * FROM {company_id}.workflows")
+        results = session.execute(query).fetchall()
+        if results:
+            return [dict(row._mapping) for row in results]
+        return []
+    except Exception as e:
+        print(f"Error getting workflows: {e}")
+        return []
+    finally:
+        session.close() 
+
+def get_workflow_by_id(company_id: str, workflow_id: str):
+    """Get a specific workflow by ID"""
+    session = db.get_session()
+    try:
+        query = text(f"SELECT * FROM {company_id}.workflows WHERE id = :workflow_id")
+        result = session.execute(query, {"workflow_id": workflow_id}).fetchone()
+        if result:
+            return [dict(result._mapping)]
+        return []
+    except Exception as e:
+        print(f"Error getting workflow: {e}")
+        return []
+    finally:
+        session.close()
+
+def update_workflow_by_id(company_id: str, workflow_id: str, name: str, nodes: str, edges: str, status: str, extra: str = None):
+    """Update a workflow"""
+    session = db.get_session()
+    try:
+        query = text(f"UPDATE {company_id}.workflows SET name = :name, nodes = :nodes, edges = :edges, status = :status, extra = :extra WHERE id = :workflow_id RETURNING *")
+        result = session.execute(query, {
+            "name": name,
+            "nodes": nodes,
+            "edges": edges,
+            "status": status,
+            "extra": extra,
+            "workflow_id": workflow_id
+        }).fetchone()
+        session.commit()
+        if result:
+            return [dict(result._mapping)]
+        return []
+    except Exception as e:
+        session.rollback()
+        print(f"Error updating workflow: {e}")
+        return []
+    finally:
+        session.close() 
+
+def delete_workflow_by_id(company_id: str, workflow_id: str):
+    """Delete a workflow"""
+    session = db.get_session()
+    try:
+        query = text(f"DELETE FROM {company_id}.workflows WHERE id = :workflow_id")
+        session.execute(query, {"workflow_id": workflow_id})
+        session.commit()
+        return True
+    except Exception as e:
+        session.rollback()
+        print(f"Error deleting workflow: {e}")
         return False
     finally:
         session.close()

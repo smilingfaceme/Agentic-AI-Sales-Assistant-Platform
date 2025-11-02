@@ -101,6 +101,7 @@ async def upload_file(
         raise HTTPException(status_code=400, detail="Company not found")
 
     company_schema = company_info["schema_name"]
+    primary_column = primary_column.strip("'").replace(" ", "_").replace("-", "_").replace("/", "_").replace("(", "_").replace(")", "_").replace(".", "_").lower()
     selected_columns = json.loads(columns)
     # try:
     file_content = await file.read()
@@ -174,6 +175,7 @@ async def remove_file(
     file_hash = file[0]["file_hash"]
     try:
         delete_file_vectors(company_id, file_hash)
+        delete_file_vectors(f'{company_id}-columns', file_hash)
         delete_knowledge_by_id(company_schema, file_id)
         file_path = file[0]["full_path"]
         os.remove(file_path)
@@ -207,9 +209,9 @@ async def reprocess_file(
     if not file_info:
         raise HTTPException(status_code=404, detail="File not found")
 
-    file_name = file_info["file_name"]
-    full_path = file_info["full_path"]
-    primary_column = file_info["primary_column"]
+    file_name = file_info[0]["file_name"]
+    full_path = file_info[0]["full_path"]
+    primary_column = file_info[0]["primary_column"]
 
     # Download file from Supabase Storage (as bytes)
     try:

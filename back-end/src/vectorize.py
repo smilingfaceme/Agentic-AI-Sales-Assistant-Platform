@@ -75,9 +75,9 @@ def vectorize_file(file_content: io.BytesIO, file_name: str, index_name: str, pr
     # Validate file type and chunk the file
     file_extension = os.path.splitext(file_name)[1].lower()
     if file_extension in ['.xlsx', '.xls']:
-        chunks = load_xlsx_file(file_content, file_name, file_hash, primary_column)
+        chunks, column_chunks = load_xlsx_file(file_content, file_name, file_hash, primary_column)
     elif file_extension in ['.csv']:
-        chunks = load_csv_file(file_content, file_name, file_hash, primary_column)
+        chunks, column_chunks = load_csv_file(file_content, file_name, file_hash, primary_column)
     else:
         raise Exception(f"Unsupported file type: {file_extension}. Only CSV and Excel files are supported.")
     
@@ -94,6 +94,15 @@ def vectorize_file(file_content: io.BytesIO, file_name: str, index_name: str, pr
 
     # Split texts into batches under token limit
     batches_chuncks, batches = split_texts_into_batches(chunks)
+    column_batches_chuncks, column_batches = split_texts_into_batches(column_chunks)
+    print("-------> Start Generating Embeddings and stor: ", len(column_batches))
+    for i, batch in enumerate(column_batches):
+        for start in range(0, len(batch), 2000):
+            end = start + 2000
+            batch_slice = batch[start:end]
+            print("-------> Generating Embeddings: ", i, start, end)
+            embeddings = generate_embeddings(batch_slice)  # your function calling OpenAI
+            store_vectors_in_chroma(f'{index_name}-columns', column_batches_chuncks[i][start:end], embeddings)    
     
     print("-------> Start Generating Embeddings and stor: ", len(batches))
     all_embeddings = []
@@ -102,6 +111,8 @@ def vectorize_file(file_content: io.BytesIO, file_name: str, index_name: str, pr
         embeddings = generate_embeddings(batch)  # your function calling OpenAI
         store_vectors_in_chroma(index_name, batches_chuncks[i], embeddings)
         all_embeddings.extend(embeddings)
+    
+    
     # Add company_id to metadata
     # for chunk in chunks:
     #     chunk["metadata"]["company_id"] = company_id

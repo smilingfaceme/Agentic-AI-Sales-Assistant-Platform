@@ -61,7 +61,7 @@ def create_companies(name: str, description: str):
         }
 
         # Create company schema and tables
-        add_chatbot_personality(str(new_company.id), "You are a helpful assistant")
+        add_chatbot_personality(str(new_company.id), "You are an AI sales assistant helping customers. Generate short, natural, clear sales replies.")
         create_company_tables(company_schema_name)
 
         return company_dict

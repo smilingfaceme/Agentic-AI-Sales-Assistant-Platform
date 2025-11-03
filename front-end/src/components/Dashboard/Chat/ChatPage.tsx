@@ -86,7 +86,7 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-screen w-full bg-[#fafbfc]">
       {/* Header */}
-      <header className="px-4 md:px-6 py-4 md:pt-5 border-b border-gray-300 bg-white text-lg font-semibold flex items-center justify-between">
+      <header className="px-4 md:px-6 py-4 border-b border-gray-300 bg-white text-lg font-semibold flex items-center justify-between">
         <div className="flex items-center gap-2">
           {/* Sidebar toggle only on mobile */}
           <button

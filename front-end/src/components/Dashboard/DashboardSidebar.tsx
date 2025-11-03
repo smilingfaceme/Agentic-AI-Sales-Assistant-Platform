@@ -2,7 +2,7 @@
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { FaBuilding, FaCogs, FaComments, FaBroadcastTower, FaRobot, FaSignOutAlt, FaHeart } from "react-icons/fa";
+import { FaBuilding, FaCogs, FaComments, FaBroadcastTower, FaRobot, FaSignOutAlt, FaHeart, FaProjectDiagram } from "react-icons/fa";
 import { useAppContext, User } from '@/contexts/AppContext';
 import { getCookie, logout } from "@/utils";
 
@@ -32,7 +32,7 @@ export default function DashboardSidebar() {
   }, [currentUser, setCurrentUser, router]);
 
   return (
-    <div className="w-full md:w-auto md:mt-1 absolute md:relative" onClick={() => setSidebarHidden(true)}>
+    <div className="w-full md:w-auto absolute md:relative" onClick={() => setSidebarHidden(true)}>
       <aside
         className={`flex flex-col h-screen ${sidebarHidden ? "w-0 md:w-16" : "w-55"} bg-gray-100 border-r border-gray-300 shadow-lg pt-3 p-0 relative text-gray-900 transition-all duration-300
       ${sidebarHidden ? "overflow-hidden" : ""}
@@ -88,6 +88,18 @@ export default function DashboardSidebar() {
           >
             <span className={sidebarHidden ? "text-xl" : "mr-3 text-lg"}><FaBroadcastTower /></span>
             {!sidebarHidden && 'Go live'}
+          </Link>}
+          {currentUser.permissions['workflow'] == true && <Link
+            key="/dashboard/workflow"
+            href="/dashboard/workflow"
+            className={
+              sidebarHidden
+                ? `flex items-center justify-center w-10 h-10 mb-2 rounded-lg transition-colors text-gray-900 ${pathname.startsWith("/dashboard/workflow") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
+                : `flex items-center w-full px-3 py-2 mb-2 rounded transition-colors text-left text-gray-900 ${pathname.startsWith("/dashboard/workflow") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
+            }
+          >
+            <span className={sidebarHidden ? "text-xl" : "mr-3 text-lg"}><FaProjectDiagram /></span>
+            {!sidebarHidden && 'Workflow'}
           </Link>}
         </nav>
         {/* Utility Items */}

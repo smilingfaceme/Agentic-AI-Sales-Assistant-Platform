@@ -1,31 +1,31 @@
 "use client";
 import Link from 'next/link';
-import { FaBroadcastTower } from "react-icons/fa";
+import { FaProjectDiagram } from "react-icons/fa";
 import { useAppContext } from '@/contexts/AppContext';
 
-export default function GoLivePage({ children }: { children: React.ReactNode }) {
+export default function WorkflowPage({ children }: { children: React.ReactNode }) {
   const { sidebarHidden, setSidebarHidden } = useAppContext();
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-white">
+    <div className="flex flex-col min-h-screen h-full w-full bg-white">
       {/* Header */}
       <header className="px-4 md:px-6 py-4 border-b border-gray-300 bg-white text-lg flex items-center justify-between">
-        <div className="flex items-center gap-2 font-semibold ">
+        <div className="flex items-center gap-2 font-semibold">
           {/* Sidebar toggle only on mobile */}
           <button
             className="md:hidden bg-white border border-gray-300 rounded-full p-2 shadow-lg mr-2"
             onClick={() => setSidebarHidden(!sidebarHidden)}
             aria-label={sidebarHidden ? "Show sidebar" : "Hide sidebar"}
           >
-            <FaBroadcastTower />
+            <FaProjectDiagram />
           </button>
-          <span>Go live</span>
+          <span>Workflow</span>
         </div>
         <Link
-          href="/dashboard/go-live/new-connection"
+          href="/dashboard/workflow/edit?workflow_id=new"
           className="py-0.5 px-2 bg-black hover:bg-gray-700 text-white rounded text-sm"
         >
-          + New
+          + New Workflow
         </Link>
       </header>
       {/* Main content */}
@@ -35,3 +35,4 @@ export default function GoLivePage({ children }: { children: React.ReactNode }) 
     </div>
   );
 }
+

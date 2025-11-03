@@ -455,3 +455,93 @@ export const personalityAPI = {
     return res.json();
   }
 };
+
+// Workflow APIs
+export const workflowApi = {
+  getWorkflows: async () => {
+    const res = await apiRequest('/workflow/list', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch workflows');
+    return res.json();
+  },
+
+  getWorkflow: async (workflowId: string) => {
+    const res = await apiRequest(`/workflow/get?workflow_id=${workflowId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch workflow');
+    return res.json();
+  },
+
+  createWorkflow: async (workflowData: {
+    name: string;
+    nodes: unknown[];
+    edges: unknown[];
+  }) => {
+    const res = await apiRequest('/workflow/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(workflowData)
+    });
+    if (!res.ok) throw new Error('Failed to create workflow');
+    return res.json();
+  },
+
+  updateWorkflow: async (workflowId: string, workflowData: {
+    name: string;
+    nodes: unknown[];
+    edges: unknown[];
+  }) => {
+    const res = await apiRequest('/workflow/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workflow_id: workflowId,
+        ...workflowData
+      })
+    });
+    
+    if (!res.ok) throw new Error( 'Failed to update workflow');
+    return res.json();
+  },
+
+  deleteWorkflow: async (workflowId: string) => {
+    const res = await apiRequest('/workflow/delete', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workflow_id: workflowId
+      })
+    });
+    if (!res.ok) throw new Error('Failed to delete workflow');
+    return res.json();
+  },
+
+  toggleEnable: async (workflowId: string) => {
+    const res = await apiRequest('/workflow/toggle-enable', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workflow_id: workflowId
+      })
+    });
+    if (!res.ok) throw new Error('Failed to toggle AI reply');
+    return res.json();
+  },
+
+  exceptCaseChange: async (workflowId: string, except_case: string) => {
+    const res = await apiRequest('/workflow/except-case', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workflow_id: workflowId,
+        except_case: except_case
+      })
+    });
+    if (!res.ok) throw new Error('Failed to toggle AI reply');
+    return res.json();
+  }
+};

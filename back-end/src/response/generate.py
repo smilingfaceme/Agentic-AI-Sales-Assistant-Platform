@@ -1,20 +1,18 @@
-from typing import List, Dict
+from db.company_table import get_all_workflows, get_all_messages, get_linked_images_from_table, add_new_message
+from db.public_table import get_chatbot_personality, get_integration_by_instance_name
+from src.utils.chroma_utils import search_vectors_product
+from src.workflow.create import trigger_workflow_function, condition_workflow_function, action_workflow_function, delay_workflow_function
+from src.response.ai_response import ai_response_with_search, ai_response_with_image_search
+from utils.whatsapp import send_message_whatsapp
+from src.image_vectorize import search_similar_images
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import StructuredTool
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import RunnableSequence, RunnableMap
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain.agents import create_agent
 from pydantic import BaseModel, Field
-
-from src.utils.chroma_utils import search_vectors_product, search_vectors
-from db.company_table import get_all_messages, get_linked_images_from_table, get_all_knowledges
-from db.public_table import get_chatbot_personality
-import os
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
-
+import os, asyncio, json, io
 
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 llm_bot = ChatOpenAI(
@@ -23,14 +21,14 @@ llm_bot = ChatOpenAI(
 )
 
 extra_info_conversations = {}
+def get_workflows(company_schema: str):
+    workflows = get_all_workflows(company_schema)
+    if len(workflows) == 0:
+        return None
+    active_worflows = [workflow for workflow in workflows if workflow["status"] == "Active" and workflow["is_active"] == True]
+    return active_worflows
 
-# ---------------------------
-# Conversation History
-# ---------------------------
-async def get_history(company_schema: str, conversation_id: str):
-    print("Fetching chat history for", company_schema, conversation_id)
-    messages = get_all_messages(company_schema, conversation_id)
-
+async def get_history(messages):
     memory = InMemoryChatMessageHistory()
     if messages:
         for m in messages:
@@ -40,205 +38,150 @@ async def get_history(company_schema: str, conversation_id: str):
                 memory.add_ai_message(m["content"])
     return memory
 
-
-# ---------------------------
-# Linked Images Retrieval
-# ---------------------------
-async def get_linked_info(retrieval_results: list[dict], company_schema: str, conversation_id: str):
-    global extra_info_conversations
-    extra_info = {"images": []}
-    seen = set()
-
-    for r in retrieval_results:
-        pc_text = r["metadata"]["pc_text"]
-        if pc_text in seen:
-            continue
-        seen.add(pc_text)
-        primary_col = r["metadata"]["pc_primary_column"]
-
-        image_linked = get_linked_images_from_table(
-            company_id=company_schema,
-            product_id=r["metadata"][primary_col],
-        )
-        try:
-            if image_linked:
-                extra_info["images"].append(image_linked[0]["full_path"])
-        except Exception:
-            pass
-
-    extra_info["images"] = list(set(extra_info["images"]))
-    extra_info_conversations[conversation_id] = extra_info
-
-
-# ---------------------------
-# Product Search Tool
-# ---------------------------
-def search_vectors_with_query(query: str, company_id: str, conversation_id: str, company_schema: str):
-    results, differentiating_features = search_vectors_product(
-        index_name=company_id,
-        query_text=query,
-        company_id=company_id,
-        company_schema=company_schema,
-        conversationId=conversation_id,
-        top_k=5
-    )
-    print(differentiating_features)
-    if differentiating_features and len(differentiating_features) > 3:
-        extra_info_conversations[conversation_id] = {}
-        return f"Need more details. Please clarify: {differentiating_features}"
-
-    retrieval_results = [r["metadata"]["pc_text"] for r in results]
-
-    # Async image linking
-    def run_async():
-        new_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(new_loop)
-        try:
-            new_loop.run_until_complete(get_linked_info(results, company_schema, conversation_id))
-        finally:
-            new_loop.close()
-
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        executor.submit(run_async).result()
-
-    return list(set(retrieval_results))
-
-# ---------------------------
-# Pydantic Input Schema
-# ---------------------------
-class RetrievalQueryInput(BaseModel):
-    query: str = Field(
-        ...,
-        description="""The full text query or key points describing the user's product need in feature and value. For example: "'Size': 1.5 | 'Conductor': Copper | 'Sub Category': Unarmoured Power Cables | 'Insulation': PVC | 'Standard': KS".""",
-    )
-
-# ---------------------------
-# Build Tool Wrapper
-# ---------------------------
-def make_search_tool(company_id: str, conversation_id: str, company_schema: str):
-    return StructuredTool(
-        name="search_vectors_with_query",
-        description="Search the vector database to find the most relevant products based on the user’s natural language query or product requirements. The input query should include as many specific product details as possible to improve search accuracy and relevance.",
-        func=lambda query: search_vectors_with_query(
-            query=query,
-            company_id=company_id,
-            conversation_id=conversation_id,
-            company_schema=company_schema,
-        ),
-        args_schema=RetrievalQueryInput,
-    )
-
-
-def make_system_prompt(company_id: str):
-    chatbot_personality = get_chatbot_personality(company_id)
-    if not chatbot_personality:
-        return "You are an AI sales assistant helping customers. Generate short, natural, clear sales replies."
-    
-    system_prompt = ""
-    if chatbot_personality['bot_prompt']:
-        system_prompt = system_prompt + chatbot_personality['bot_prompt']
-    if chatbot_personality['bot_name']:
-        system_prompt = system_prompt + f"\n Your name is {chatbot_personality['bot_name']}"
-    if chatbot_personality["length_of_response"]:
-        system_prompt = system_prompt + f"\n Your response should be {chatbot_personality['length_of_response']}"
-    if chatbot_personality["chatbot_tone"]:
-        system_prompt = system_prompt + f"\n Your tone should be {chatbot_personality['chatbot_tone']}"
-    if chatbot_personality["prefered_lang"] != "None":
-        system_prompt = system_prompt + f"\n Your prefered language is {chatbot_personality['prefered_lang']}"
-        
-    if chatbot_personality["use_emojis"]:
-        system_prompt = system_prompt + "\n You can use emojis in your response"
-    else:
-        system_prompt = system_prompt + "\n You should not use emojis in your response"
-    if chatbot_personality["use_bullet_points"]:
-        system_prompt = system_prompt + "\n You can use bullet points in your response"
-    else:
-        system_prompt = system_prompt + "\n You should not use bullet points in your response"
-    
-    return system_prompt
-
-# ---------------------------
-# Generate Response (main)
-# ---------------------------
 async def generate_response_with_search(
-    company_id: str, company_schema: str, conversation_id: str, query: str, top_k: int = 5
+    company_id: str, company_schema: str, conversation_id: str, query: str, from_phone_number: str, instance_name: str, message_type:str, platform:str
 ):
-    # Get chat history
-    memory = await get_history(company_schema, conversation_id)
-    # Make system prompt with chatbot personality
-    system_prompt = make_system_prompt(company_id)
+    source_phone_number = get_integration_by_instance_name(instance_name).get("phone_number", None)
+    active_workflows = get_workflows(company_schema)
     
-    # Make search tool
-    search_tool = make_search_tool(company_id, conversation_id, company_schema)
- 
-    # Create a tool-calling agent (function-calling mode)
-    agent = create_agent(model=llm_bot, tools=[search_tool], system_prompt=system_prompt)
-
-    with_history = RunnableWithMessageHistory(
-        agent,
-        lambda session_id: memory,
-        input_messages_key="messages",
-        history_messages_key="messages",
-    )
-
-    result = with_history.invoke({"messages": query}, config={"configurable": {"session_id": conversation_id}})
-    return result["messages"][-1].content, extra_info_conversations.get(conversation_id, {})
-
-
-# ---------------------------
-# Image Search Variant
-# ---------------------------
-def generate_response_with_image(image_search: list[dict], memory, company_id: str,
-                                 conversation_id: str, query: str):
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an AI sales assistant helping customers."),
-        MessagesPlaceholder("history"),
-        ("human", "{input}")
-    ])
-
-    images_info = []
-    extra_info = {"images": []}
-
-    for image in image_search:
-        file_name = image["metadata"]["pc_file_name"].split("/")[-1]
-        file_extension = image["metadata"]["pc_file_extension"]
-        file_id = file_name.replace(file_extension, "")
-        match_field = image["metadata"]["match_field"].upper()
-
-        items = search_vectors(
-            index_name=company_id,
-            company_id=company_id,
-            extra_filter={match_field: file_id}
-        )
-        print(items)
-        for i in items['data']:
-            extra_info["images"].append(image["metadata"]["full_path"])
-            images_info.append(i["metadata"]["pc_text"])
-
+    except_case = []
+    if active_workflows:
+        final_response = []
+        print("Pass Workflow Processing")
+        for workflow in active_workflows:
+            worflow_process_flag = True
+            messages = []
+            memory = await get_history(messages)
+            for node in workflow["nodes"]:
+                print("Pass each nodes Processing")
+                if node["type"] == "trigger":
+                    print("Pass trigger nodes Processing")
+                    result = trigger_workflow_function(node["config"]["blocks"], company_schema, conversation_id, query, message_type)
+                    if not result or len(messages) > 0:
+                        worflow_process_flag = False
+                        break
+                    messages = result
+                    memory = await get_history(messages)
+                if node["type"] == "condition":
+                    print("Pass condition nodes Processing")
+                    result = condition_workflow_function(node["config"]["blocks"], from_phone_number, source_phone_number, messages, query, message_type, platform)
+                    if not result:
+                        worflow_process_flag = False
+                        break
+                if node["type"] == "action":
+                    print("Pass action nodes Processing")
+                    workflow_response = await action_workflow_function(node["config"]["blocks"],company_id, company_schema, conversation_id, memory, from_phone_number, instance_name, query, message_type, platform, [])
+                    if workflow_response:
+                        final_response.extend(workflow_response)
+                if node["type"] == "delay":
+                    print("Pass delay nodes Processing")
+                    result = delay_workflow_function(node["config"]["blocks"])
+            if not worflow_process_flag:
+                except_case.append(workflow["except_case"])
+        if not final_response:
+            return final_response
+    else:
+        except_case.append("sample")
+    except_case = list(set(except_case))
+    except_response = []
+    for i in except_case:
+        if i == "sample":
+            messages = get_all_messages(company_schema, conversation_id)
+            memory = await get_history(messages)
             
-    chain = RunnableSequence(
-            {"input": lambda x: x["query"], "history": lambda x: x["history"]},
-            prompt | llm_bot,
-        )
+            final_response, extra_info = await ai_response_with_search(company_id, company_schema, conversation_id, query, memory)
+            if platform == "WhatsApp":
+                sending_result = await send_message_whatsapp(instance_name, from_phone_number, final_response, extra_info)
+                if not sending_result.get("success", False):
+                    return False
+            
+            # Insert new message into database        
+            add_response = add_new_message(
+                company_id=company_schema, 
+                conversation_id=conversation_id, 
+                sender_email="",
+                sender_type="bot", 
+                content=final_response,
+                extra=json.dumps(extra_info)
+            )
+            
+            if add_response:
+                except_response.append(add_response[0])
+        elif i == "move":
+            pass
+        elif i == "ignore":
+            pass
     
-
-    with_history = RunnableWithMessageHistory(
-        chain,
-        lambda session_id: memory,
-        input_messages_key="query",
-        history_messages_key="history",
-    )
-
-    result = with_history.invoke(
-        {"query": f"{query}\n\nSimilar Products Info: {images_info}"},
-        config={"configurable": {"session_id": conversation_id}},
-    )
-    return result.content, extra_info
-
+    return except_response
 
 async def generate_response_with_image_search(
-    company_id: str, company_schema: str, conversation_id: str, query: str, image_search: list[dict]
+    company_id: str, company_schema: str, conversation_id: str, query: str, from_phone_number: str, instance_name: str, message_type:str, platform:str, sample_image: io.BytesIO
 ):
-    memory = await get_history(company_schema, conversation_id)
-    response, extra_info = generate_response_with_image(image_search, memory, company_id, conversation_id, query)
-    return response, extra_info
+    matches = search_similar_images(query_image_bytes=sample_image, index_name=f'{company_id}-image')
+    source_phone_number = get_integration_by_instance_name(instance_name).get("phone_number", None)
+    active_workflows = get_workflows(company_schema)
+    
+    except_case = []
+    if active_workflows:
+        final_response = []
+        for workflow in active_workflows:
+            worflow_process_flag = True
+            messages = []
+            memory = await get_history(messages)
+            for node in workflow["nodes"]:
+                if node["type"] == "trigger":
+                    result = trigger_workflow_function(node["config"]["blocks"], company_schema, conversation_id, query, message_type)
+                    if not result or len(messages) > 0:
+                        worflow_process_flag = False
+                        break
+                    messages = result
+                    memory = await get_history(messages)
+                if node["type"] == "condition":
+                    result = condition_workflow_function(node["config"]["blocks"], from_phone_number, source_phone_number, messages, query, message_type, platform)
+                    if not result:
+                        worflow_process_flag = False
+                        break
+                if node["type"] == "action":
+                    workflow_response = await action_workflow_function(node["config"]["blocks"],company_id, company_schema, conversation_id, memory, from_phone_number, instance_name, query, message_type, platform, matches)
+                    if workflow_response:
+                        final_response.extend(workflow_response)
+                if node["type"] == "delay":
+                    result = delay_workflow_function(node["config"]["blocks"])
+            if not worflow_process_flag:
+                except_case.append(workflow["except_case"])
+        if not final_response:
+            return final_response
+    else:
+        except_case.append("sample")
+    except_case = list(set(except_case))
+    except_response = []
+    for i in except_case:
+        if i == "sample":
+            # Get chat history
+            messages = get_all_messages(company_schema, conversation_id)
+            memory = await get_history(messages)
+            
+            final_response, extra_info = await ai_response_with_image_search(company_id, company_schema, conversation_id, query, memory, matches)
+            if platform == "WhatsApp":
+                sending_result = await send_message_whatsapp(instance_name, from_phone_number, final_response, extra_info)
+                if not sending_result.get("success", False):
+                    return False
+            
+            # Insert new message into database        
+            add_response = add_new_message(
+                company_id=company_schema, 
+                conversation_id=conversation_id, 
+                sender_email="",
+                sender_type="bot", 
+                content=final_response,
+                extra=json.dumps(extra_info)
+            )
+            
+            if add_response:
+                except_response.append(add_response[0])
+        elif i == "move":
+            pass
+        elif i == "ignore":
+            pass
+    
+    return except_response

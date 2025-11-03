@@ -160,6 +160,7 @@ def get_conversatin_by_phone_integration(company_id: str, phone_number: str, ins
 # ==================== MESSAGES ====================
 
 def add_new_message(company_id: str, conversation_id: str, sender_type: str, sender_email: str, content: str, extra: str):
+    extra_info = f'{extra}'.replace('\'', '\"')
     """Add a new message to a conversation"""
     session = db.get_session()
     try:
@@ -173,7 +174,7 @@ def add_new_message(company_id: str, conversation_id: str, sender_type: str, sen
             "sender_type": sender_type,
             "sender_email": sender_email,
             "content": content,
-            "extra": extra
+            "extra": extra_info
         }).fetchone()
         session.commit()
         if result:
@@ -720,8 +721,8 @@ def add_new_workflow(company_id: str, name: str, nodes: str, edges: str, status:
     session = db.get_session()
     try:
         query = text(f"""
-            INSERT INTO {company_id}.workflows (name, nodes, edges,status, extra)
-            VALUES (:name, :nodes, :edges, :status, :extra)
+            INSERT INTO {company_id}.workflows (name, nodes, edges,status, extra, enable_workflow, except_case)
+            VALUES (:name, :nodes, :edges, :status, :extra, :enable_workflow, :except_case)
             RETURNING *
         """)
         result = session.execute(query, {
@@ -729,7 +730,9 @@ def add_new_workflow(company_id: str, name: str, nodes: str, edges: str, status:
             "nodes": nodes,
             "edges": edges,
             "status": status,
-            "extra": extra
+            "extra": extra,
+            "enable_workflow": True,
+            "except_case": "sample"
         }).fetchone()
         session.commit()
         if result:
@@ -794,7 +797,29 @@ def update_workflow_by_id(company_id: str, workflow_id: str, name: str, nodes: s
         print(f"Error updating workflow: {e}")
         return []
     finally:
-        session.close() 
+        session.close()
+
+def update_workflow_for_enable_except_by_id(company_id: str, workflow_id: str, enable_workflow:bool, except_case:str):
+    """Update a workflow"""
+    session = db.get_session()
+    try:
+        query = text(f"UPDATE {company_id}.workflows SET enable_workflow = :enable_workflow, except_case = :except_case WHERE id = :workflow_id RETURNING *")
+        result = session.execute(query, {
+            "enable_workflow": enable_workflow,
+            "except_case": except_case,
+            "workflow_id": workflow_id
+        }).fetchone()
+        session.commit()
+        if result:
+            return [dict(result._mapping)]
+        return []
+    except Exception as e:
+        session.rollback()
+        print(f"Error updating workflow: {e}")
+        return []
+    finally:
+        session.close()
+    
 
 def delete_workflow_by_id(company_id: str, workflow_id: str):
     """Delete a workflow"""

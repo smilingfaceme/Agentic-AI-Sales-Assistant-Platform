@@ -583,3 +583,27 @@ def update_integration_by_id(id: str, data: dict):
         return None
     finally:
         session.close()
+
+def get_integration_by_instance_name(instance_name: str):
+    """Get an integration by instance name"""
+    session = db.get_session()
+    try:
+        integration = session.query(Integration).filter_by(instance_name=instance_name).first()
+        if integration:
+            return {
+                'id': str(integration.id),
+                'company_id': str(integration.company_id),
+                'type': integration.type,
+                'is_active': integration.is_active,
+                'phone_number': integration.phone_number,
+                'instance_name': integration.instance_name,
+                'created_by': str(integration.created_by),
+                'delete': integration.delete,
+                'created_at': integration.created_at.isoformat() if integration.created_at else None
+            }
+        return {}
+    except Exception as e:
+        print(f"Error getting integration: {e}")
+        return {}
+    finally:
+        session.close() 

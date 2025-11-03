@@ -93,26 +93,22 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
                     add_query[0]
                 ]
             }
-        
-        response, extra_info = await generate_response_with_search(user["company_id"], company_schema, conversation_id, content)
-        extra_info = f'{extra_info}'.replace('\'', '\"')
-        
-        # Insert new message into database        
-        add_response = add_new_message(
-            company_id=company_schema, 
-            conversation_id=conversation_id, 
-            sender_email="",
-            sender_type="bot", 
-            content=response,
-            extra=extra_info
+        result = await generate_response_with_search(
+            company_id=user["company_id"],
+            company_schema=company_schema,
+            conversation_id=conversation_id,
+            query=content,
+            from_phone_number="",
+            instance_name="",
+            message_type="Text",
+            platform=current_conversation['source']
         )
     
-        if add_response:
+        if result:
+            final_messages = add_query + result
             return {
                 "status": 'success',
-                "messages": [
-                    add_query[0], 
-                    add_response[0]]
+                "messages": final_messages
             }
         else:
             return {
@@ -220,25 +216,23 @@ async def send_image_message(
             }
             
         file_io = io.BytesIO(file_content)
-        matches = search_similar_images(query_image_bytes=file_io, index_name=f'{user["company_id"]}-image')
-        response, extra_info = await generate_response_with_image_search(user["company_id"], company_schema, conversation_id, content, matches)
-        extra_info = f'{extra_info}'.replace('\'', '\"')
-        # Insert new message into database        
-        add_response = add_new_message(
-            company_id=company_schema, 
-            conversation_id=conversation_id, 
-            sender_email="",
-            sender_type="bot", 
-            content=response,
-            extra=extra_info
+        result = await generate_response_with_image_search(
+            company_id=user["company_id"],
+            company_schema=company_schema,
+            conversation_id=conversation_id,
+            query=content,
+            from_phone_number="",
+            instance_name="",
+            message_type="Image",
+            platform=current_conversation['source'],
+            sample_image=file_io
         )
-    
-        if add_response:
+        
+        if result:
+            final_messages = add_query + result
             return {
                 "status": 'success',
-                "messages": [
-                    add_query[0], 
-                    add_response[0]]
+                "messages": final_messages
             }
         else:
             return {
@@ -289,64 +283,48 @@ async def get_chats(conversation_id: str = Query(...), user = Depends(verify_tok
         "messages": messages
     }
 
-async def response_in_background(conversation_id: str, company_id: str, company_schema: str, query: str, instance_name:str, phone_number:str):
+async def response_in_background(conversation_id: str, company_id: str, company_schema: str, query: str, instance_name:str, phone_number:str, message_type:str, platform:str):
     try:
-        response, extra_info = await generate_response_with_search(
-            company_id=company_id,
-            company_schema=company_schema,
-            conversation_id=conversation_id,
-            query=query
-        )
-        
-        extra_info_db = f'{extra_info}'.replace('\'', '\"')
-        # Insert new message into database        
-        add_response = add_new_message(
-            company_id=company_schema, 
-            conversation_id=conversation_id, 
-            sender_email="",
-            sender_type="bot", 
-            content=response,
-            extra=extra_info_db
-        )
-        await send_message_whatsapp(instance_name, phone_number, response, extra_info)
-        return response
-    except Exception as e:
-        print(e)
-        return None
-
-def run_response_in_thread(conversation_id, company_id, company_schema, query, instance_name, phone_number):
-    asyncio.run(response_in_background(conversation_id, company_id, company_schema, query, instance_name, phone_number))
-
-
-async def response_for_image_in_background(conversation_id: str, company_id: str, company_schema: str, query: str, instance_name:str, phone_number:str, file_io:io.BytesIO):
-    try:
-        matches = search_similar_images(query_image_bytes=file_io, index_name=f'{company_id}-image')
-        response, extra_info = await generate_response_with_image_search(
+        result = await generate_response_with_search(
             company_id=company_id,
             company_schema=company_schema,
             conversation_id=conversation_id,
             query=query,
-            image_search=matches
+            from_phone_number=phone_number,
+            instance_name=instance_name,
+            message_type=message_type,
+            platform=platform
         )
-        extra_info_db = f'{extra_info}'.replace('\'', '\"')
-        # Insert new message into database        
-        add_response = add_new_message(
-            company_id=company_schema, 
-            conversation_id=conversation_id, 
-            sender_email="",
-            sender_type="bot",
-            content=response,
-            extra=extra_info_db
-        )
-    
-        await send_message_whatsapp(instance_name, phone_number, response, extra_info)
-        return response
+        
+        return result
     except Exception as e:
         print(e)
         return None
 
-def run_response_for_image_in_thread(conversation_id, company_id, company_schema, query, instance_name, phone_number, file_io):
-    asyncio.run(response_for_image_in_background(conversation_id, company_id, company_schema, query, instance_name, phone_number, file_io))
+def run_response_in_thread(conversation_id, company_id, company_schema, query, instance_name, phone_number, message_type, platform):
+    asyncio.run(response_in_background(conversation_id, company_id, company_schema, query, instance_name, phone_number, message_type, platform))
+
+
+async def response_for_image_in_background(conversation_id: str, company_id: str, company_schema: str, query: str, instance_name:str, phone_number:str, platform:str, file_io:io.BytesIO):
+    try:
+        result = await generate_response_with_image_search(
+            company_id=company_id,
+            company_schema=company_schema,
+            conversation_id=conversation_id,
+            query=query,
+            from_phone_number=phone_number,
+            instance_name=instance_name,
+            message_type="Image",
+            platform=platform,
+            sample_image=file_io
+        )
+        return result
+    except Exception as e:
+        print(e)
+        return None
+
+def run_response_for_image_in_thread(conversation_id, company_id, company_schema, query, instance_name, phone_number, platform, file_io):
+    asyncio.run(response_for_image_in_background(conversation_id, company_id, company_schema, query, instance_name, phone_number, platform, file_io))
 
 
 @router.post("/reply")
@@ -392,7 +370,7 @@ async def reply_to_message(data = Body(...)):
             # Start vectorization in background thread
             thread = threading.Thread(
                 target=run_response_in_thread,
-                args=(conversation_id, company_id, company_schema,message['message']['conversation'], instanceName, phone_number)
+                args=(conversation_id, company_id, company_schema,message['message']['conversation'], instanceName, phone_number, "Text", "WhatsApp")
             )
             thread.daemon = True
             thread.start()
@@ -457,7 +435,7 @@ async def reply_to_voice_message(
             # Start vectorization in background thread
             thread = threading.Thread(
                 target=run_response_in_thread,
-                args=(conversation_id, company_id, company_schema,message_content, instanceName, phone_number)
+                args=(conversation_id, company_id, company_schema,message_content, instanceName, phone_number, "Voice", "WhatsApp")
             )
             thread.daemon = True
             thread.start()
@@ -533,7 +511,7 @@ async def reply_to_image_message(
             # Start vectorization in background thread
             thread = threading.Thread(
                 target=run_response_for_image_in_thread,
-                args=(conversation_id, company_id, company_schema,content, instanceName, phone_number, file_io)
+                args=(conversation_id, company_id, company_schema,content, instanceName, phone_number, "WhatsApp", file_io)
             )
             thread.daemon = True
             thread.start()

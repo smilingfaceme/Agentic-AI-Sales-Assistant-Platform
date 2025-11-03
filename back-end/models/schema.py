@@ -76,6 +76,8 @@ COMPANY_WORKFLOW_TABLE = """create table {company_id}.workflows (
   nodes json not null,
   edges json not null,
   status text not null,
+  enable_workflow boolean not null,
+  except_case text not null,
   extra json null,
   created_at timestamp with time zone not null default now(),
   constraint workflows_pkey primary key (id)

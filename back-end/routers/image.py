@@ -133,9 +133,9 @@ async def upload_file(
 
     try:
         file_content = await file.read()
-        file_name = file.filename.split("/")[-1]
+        file_name = file.filename.split("/")[-1].lower()
         file_hash = generate_file_hash(file_content)
-
+        match_field = match_field.strip("'").replace(" ", "_").replace("-", "_").replace("/", "_").replace("(", "_").replace(")", "_").replace(".", "_").lower()
         existing_file = get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
 
         if existing_file:

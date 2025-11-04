@@ -25,7 +25,7 @@ def get_workflows(company_schema: str):
     workflows = get_all_workflows(company_schema)
     if len(workflows) == 0:
         return None
-    active_worflows = [workflow for workflow in workflows if workflow["status"] == "Active" and workflow["is_active"] == True]
+    active_worflows = [workflow for workflow in workflows if workflow["status"] == "Success" and workflow["enable_workflow"] == True]
     return active_worflows
 
 async def get_history(messages):
@@ -57,7 +57,7 @@ async def generate_response_with_search(
                 if node["type"] == "trigger":
                     print("Pass trigger nodes Processing")
                     result = trigger_workflow_function(node["config"]["blocks"], company_schema, conversation_id, query, message_type)
-                    if not result or len(messages) > 0:
+                    if not result or len(result) == 0:
                         worflow_process_flag = False
                         break
                     messages = result
@@ -70,7 +70,7 @@ async def generate_response_with_search(
                         break
                 if node["type"] == "action":
                     print("Pass action nodes Processing")
-                    workflow_response = await action_workflow_function(node["config"]["blocks"],company_id, company_schema, conversation_id, memory, from_phone_number, instance_name, query, message_type, platform, [])
+                    workflow_response = await action_workflow_function(node["config"]["blocks"],company_id, company_schema, conversation_id, memory, from_phone_number, instance_name, query, message_type, platform, workflow["id"], [])
                     if workflow_response:
                         final_response.extend(workflow_response)
                 if node["type"] == "delay":
@@ -78,7 +78,7 @@ async def generate_response_with_search(
                     result = delay_workflow_function(node["config"]["blocks"])
             if not worflow_process_flag:
                 except_case.append(workflow["except_case"])
-        if not final_response:
+        if final_response:
             return final_response
     else:
         except_case.append("sample")
@@ -142,14 +142,14 @@ async def generate_response_with_image_search(
                         worflow_process_flag = False
                         break
                 if node["type"] == "action":
-                    workflow_response = await action_workflow_function(node["config"]["blocks"],company_id, company_schema, conversation_id, memory, from_phone_number, instance_name, query, message_type, platform, matches)
+                    workflow_response = await action_workflow_function(node["config"]["blocks"],company_id, company_schema, conversation_id, memory, from_phone_number, instance_name, query, message_type, platform, workflow["id"], matches)
                     if workflow_response:
                         final_response.extend(workflow_response)
                 if node["type"] == "delay":
                     result = delay_workflow_function(node["config"]["blocks"])
             if not worflow_process_flag:
                 except_case.append(workflow["except_case"])
-        if not final_response:
+        if final_response:
             return final_response
     else:
         except_case.append("sample")

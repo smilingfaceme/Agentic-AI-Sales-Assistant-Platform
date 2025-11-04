@@ -9,7 +9,7 @@ from langchain.agents import create_agent
 from pydantic import BaseModel, Field
 
 from src.utils.chroma_utils import search_vectors_product, search_vectors
-from db.company_table import get_linked_images_from_table, get_all_knowledges
+from db.company_table import get_linked_images_from_table, get_linked_extra_from_table
 from db.public_table import get_chatbot_personality
 import os
 import asyncio
@@ -26,7 +26,7 @@ extra_info_conversations = {}
 
 async def get_linked_info(retrieval_results: list[dict], company_schema: str, conversation_id: str):
     global extra_info_conversations
-    extra_info = {"images": []}
+    extra_info = {"images": [], "extra": []}
     seen = set()
 
     for r in retrieval_results:
@@ -40,9 +40,15 @@ async def get_linked_info(retrieval_results: list[dict], company_schema: str, co
             company_id=company_schema,
             product_id=r["metadata"][primary_col],
         )
+        document_linked = get_linked_extra_from_table(
+            company_id=company_schema,
+            product_id=r["metadata"][primary_col],
+        )
         try:
             if image_linked:
                 extra_info["images"].append(image_linked[0]["full_path"])
+            if document_linked:
+                extra_info["extra"].append(document_linked[0]["full_path"])
         except Exception:
             pass
 
@@ -130,6 +136,7 @@ def make_system_prompt(company_id: str):
 async def ai_response_with_search(
     company_id: str, company_schema: str, conversation_id: str, query: str, memory: InMemoryChatMessageHistory
 ):
+    extra_info_conversations[conversation_id] = {"images": [], "extra": []}
     # Make system prompt with chatbot personality
     system_prompt = make_system_prompt(company_id)
     
@@ -162,22 +169,25 @@ async def ai_response_with_image_search(
     ])
     
     images_info = []
-    extra_info = {"images": []}
+    extra_info = {"images": [], "extra": []}
     
     for image in image_search_result:
         file_name = image["metadata"]["pc_file_name"].split("/")[-1]
         file_extension = image["metadata"]["pc_file_extension"]
         file_id = file_name.replace(file_extension, "")
-        match_field = image["metadata"]["match_field"].upper()
+        match_field = image["metadata"]["match_field"]
 
         items = search_vectors(
             index_name=company_id,
             company_id=company_id,
             extra_filter={match_field: file_id}
         )
-        print(items)
+        
         for i in items['data']:
             extra_info["images"].append(image["metadata"]["full_path"])
+            extra_documents = get_linked_extra_from_table(company_schema, file_id)
+            if extra_documents:
+                extra_info["extra"].append(extra_documents[0]["full_path"])
             images_info.append(i["metadata"]["pc_text"])
             
     chain = RunnableSequence(

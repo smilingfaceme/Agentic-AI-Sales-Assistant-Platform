@@ -2,8 +2,30 @@ from db.company_table import get_workflow_by_id
 from db.company_table import get_all_messages, add_new_message
 from src.response.ai_response import ai_response_with_search, ai_response_with_image_search
 from utils.whatsapp import send_message_whatsapp
+from utils.send_email_without_smtp import send_email_with_customize_content
 from langchain_core.runnables.history import RunnableWithMessageHistory
-import datetime, json, time
+import datetime, json, time, os
+
+image_extensions = {'xbm', 'tif', 'jfif', 'pjp', 'apng', 'jpeg', 'heif', 'ico', 'tiff', 'webp', 'svgz', 'jpg', 'heic', 'gif', 'svg', 'png', 'bmp', 'pjpeg', 'avif'}
+
+def get_workflow_attachment(extra_attachment:str, company_id: str, workflow_id: str):
+    attachments_files = {"images": [], "extra": []}
+    if not extra_attachment:
+        return None
+    save_dir = os.path.join("files", "workflows", str(company_id), str(workflow_id))
+    attachments = extra_attachment.split(",")
+    # Build full path for the file
+    for file in attachments:
+        file_name = file.strip()
+        file_extension = file_name.split(".")[-1]
+        full_path = os.path.join(save_dir, file_name)
+        if os.path.exists(full_path):
+           if file_extension.lower() in image_extensions:
+                attachments_files["images"].append(full_path)
+           else:
+                attachments_files["extra"].append(full_path)
+        
+    return attachments_files
 
 def trigger_workflow_function(blocks: list[dict], company_schema: str, conversation_id: str, query: str, message_type: str):
     messages = get_all_messages(company_schema, conversation_id)
@@ -16,27 +38,10 @@ def trigger_workflow_function(blocks: list[dict], company_schema: str, conversat
                 flag = False
         elif block["key"] == "incoming_Message" and flag == False:
             flag = True
-        elif block["key"] == "message_filter.text":
-            if block["settings"]["operator"] == "contains":
-                if not block["settings"]["value"] in query:
-                    return None
-            elif block["settings"]["operator"] == "is":
-                if block["settings"]["value"] != query:
-                    return None
-            elif block["settings"]["operator"] == "is_not":
-                if block["settings"]["value"] == query:
-                    return None
-        elif block["key"] == "message_filter.type":
-            if block["settings"]["operator"] == "is":
-                if block["settings"]["value"] != message_type:
-                    return None
-            elif block["settings"]["operator"] == "is_not":
-                if block["settings"]["value"] == message_type:
-                    return None
     if flag:
         return messages
     else:
-        return None
+        return False
 
 def condition_workflow_function(blocks: list[dict], from_phone_number: str, source_phone_number: str, messages: list[dict], query: str, message_type: str, platform:str):
     for block in blocks:
@@ -124,6 +129,7 @@ async def action_workflow_function(
     query: str,
     message_type:str,
     platform:str,
+    workflow_id:str,
     image_search_result:list[dict]
 ):
     final_response = []
@@ -152,21 +158,31 @@ async def action_workflow_function(
             final_response.append(add_response[0])
             
         elif block["key"] == "send_message":
+            content = block["settings"]["value_0"]
+            extra_attachment = block["settings"]["value_1"]
+            extra_files = get_workflow_attachment(extra_attachment, company_id, workflow_id)
             if platform == "WhatsApp":
-                result = await send_message_whatsapp(instance_name, from_phone_number, block["settings"]["value"], {'images': []})
+                result = await send_message_whatsapp(instance_name, from_phone_number, content, {'images': []})
                 if not result.get("success", False):
                     return False
-            # Insert new message into database        
+            # Insert new message into database
             add_response = add_new_message(
                 company_id=company_schema, 
                 conversation_id=conversation_id, 
                 sender_email="",
                 sender_type="bot", 
-                content=block["settings"]["value"],
-                extra=json.dumps({"images": []})
+                content=content,
+                extra=json.dumps(extra_files)
             )
             
             if not add_response:
                 return False
             final_response.append(add_response[0])
+        elif block["key"] == "send_email":
+            receiver_email = block["settings"]["value_0"]
+            content = block["settings"]["value_1"]
+            extra_attachment = block["settings"]["value_2"]
+            extra_files = get_workflow_attachment(extra_attachment, company_id, workflow_id)
+            if not send_email_with_customize_content(receiver_email, content, extra_files):
+                return False
     return final_response

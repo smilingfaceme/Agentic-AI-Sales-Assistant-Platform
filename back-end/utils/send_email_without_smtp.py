@@ -183,4 +183,71 @@ def send_reset_password_email(receiver_email:str, token:str):
         print("❌ Error sending email:", e)
         return False
      
-   
+
+def send_email_with_customize_content(receiver_email: str, content: str, extra_attachment: str):
+    try:
+        service = get_gmail_service()
+        sender_email = "me"   # 'me' means the authenticated Gmail user 
+
+        # --- Email content ---
+        subject = "Customized Email from DoshiAI"
+        body = f"""
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tbody>
+    <tr>
+      <td align="center" style="padding:40px 0">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+          <tbody>
+            <!-- Header -->
+            <tr>
+              <td style="padding:40px 30px;text-align:center;background:#0f172a;color:#ffffff">
+                <h1 style="margin:0;font-size:24px">DoshiAI Admin Panel</h1>
+                <p style="margin:8px 0 0;font-size:14px;opacity:0.85">Manage your WhatsApp Assistant Bot</p>
+              </td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+              <td style="padding:30px;text-align:left;color:#333333">
+                <h2 style="margin-top:0;font-size:20px;color:#0f172a">Customized Email</h2>
+                <p style="font-size:15px;line-height:1.6;margin:16px 0">
+                  {content}
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="padding:20px 30px;text-align:center;background:#f9fafb;font-size:12px;color:#777777">
+                <p style="margin:0">DoshiAI • AI-Powered WhatsApp Automation</p>
+                <p style="margin:4px 0 0">Need help? Contact us at 
+                  <a href="mailto:support@doshi.ai" style="color:#2563eb;text-decoration:none" target="_blank">support@doshi.ai</a>
+                </p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+"""
+
+        # --- Build MIME message ---
+        message = MIMEMultipart()
+        message["To"] = receiver_email
+        message["Subject"] = subject
+        message.attach(MIMEText(body, "html"))
+
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        send_body = {"raw": raw}
+
+        sent_message = (
+            service.users().messages().send(userId=sender_email, body=send_body).execute()
+        )
+        print(f"✅ Email sent! Message ID: {sent_message['id']}")
+        return True
+
+    except Exception as e:
+        print("❌ Error sending email:", e)
+        return False

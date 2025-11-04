@@ -408,6 +408,25 @@ def update_image_status_on_table_by_hash(company_id: str, file_hash: str, status
     finally:
         session.close()
 
+
+def get_linked_images_from_table(company_id: str, product_id: str):
+    """Get linked images for a product"""
+    session = db.get_session()
+    try:
+        query = text(f"""
+            SELECT * FROM {company_id}.images
+            WHERE file_name LIKE :product_id
+            LIMIT 1
+        """)
+        results = session.execute(query, {"product_id": f"%{product_id}.%"}).fetchall()
+        if results:
+            return [dict(row._mapping) for row in results]
+        return []
+    except Exception as e:
+        print(f"Error getting linked images: {e}")
+        return []
+    finally:
+        session.close()
 # ==================== DOCUMENTS ====================
 
 def add_new_document(company_id: str, file_name: str, file_type: str, file_hash: str, full_path: str, status: str, match_field: str):
@@ -583,12 +602,12 @@ def update_documents_status_on_table_by_hash(company_id: str, file_hash: str, st
         session.close()
 
 
-def get_linked_images_from_table(company_id: str, product_id: str):
+def get_linked_extra_from_table(company_id: str, product_id: str):
     """Get linked images for a product"""
     session = db.get_session()
     try:
         query = text(f"""
-            SELECT * FROM {company_id}.images
+            SELECT * FROM {company_id}.documents
             WHERE file_name LIKE :product_id
             LIMIT 1
         """)
@@ -601,7 +620,6 @@ def get_linked_images_from_table(company_id: str, product_id: str):
         return []
     finally:
         session.close()
-
 # ==================== KNOWLEDGES ====================
 
 def add_new_knowledge(company_id: str, file_name: str, file_type: str, file_hash: str, full_path: str, status: str, primary_column: str, extra: str):
@@ -745,6 +763,7 @@ def add_new_workflow(company_id: str, name: str, nodes: str, edges: str, status:
     finally:
         session.close()
 
+
 def get_all_workflows(company_id: str):
     """Get all workflows"""
     session = db.get_session()
@@ -760,6 +779,7 @@ def get_all_workflows(company_id: str):
     finally:
         session.close() 
 
+
 def get_workflow_by_id(company_id: str, workflow_id: str):
     """Get a specific workflow by ID"""
     session = db.get_session()
@@ -774,6 +794,7 @@ def get_workflow_by_id(company_id: str, workflow_id: str):
         return []
     finally:
         session.close()
+
 
 def update_workflow_by_id(company_id: str, workflow_id: str, name: str, nodes: str, edges: str, status: str, extra: str = None):
     """Update a workflow"""
@@ -798,6 +819,7 @@ def update_workflow_by_id(company_id: str, workflow_id: str, name: str, nodes: s
         return []
     finally:
         session.close()
+
 
 def update_workflow_for_enable_except_by_id(company_id: str, workflow_id: str, enable_workflow:bool, except_case:str):
     """Update a workflow"""

@@ -86,7 +86,12 @@ def confirm_workflows(workflow: dict):
                     pass
                 # Send Message
                 if i["key"] == "send_message":
-                    if i.get("settings", {}).get("value", "") == "":
+                    if i.get("settings", {}).get("value_0", "") == "":
+                        return False, "Send Message cannot be empty"
+                if i["key"] == "send_email":
+                    if i.get("settings", {}).get("value_0", "") == "":
+                        return False, "Send Email cannot be empty"
+                    if i.get("settings", {}).get("value_1", "") == "":
                         return False, "Send Message cannot be empty"
         # Delay
         if node["type"] == "delay":

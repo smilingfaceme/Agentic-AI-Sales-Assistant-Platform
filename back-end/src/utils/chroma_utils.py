@@ -432,8 +432,12 @@ def search_vectors_product(index_name: str, query_text: str, company_id: str, co
                 ]
             }
             filter_info.append(sub_filter)
-    filter_info = {"$and": filter_info}
-    
+    if len(filter_info) > 1:
+        filter_info = {"$and": filter_info}
+    elif len(filter_info) == 1:
+        filter_info = filter_info[0]
+    else:
+        filter_info = {}
     print(filter_info)
     # Step 2: Retrieve top matches from ChromaDB
     initial_results = search_vectors_by_embedding(index_name, company_id, query_embedding, file_name, filter_info)

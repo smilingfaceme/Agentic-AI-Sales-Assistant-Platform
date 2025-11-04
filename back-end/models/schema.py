@@ -15,7 +15,7 @@ COMPANY_MESSAGE_TABLE = """create table {company_id}.messages (
   conversation_id uuid not null,
   sender_type text not null,
   sender_email text null,
-  content text not null,
+  content text null,
   created_at timestamp without time zone null default CURRENT_TIMESTAMP,
   extra json null,
   constraint messages_pkey primary key (message_id),

@@ -10,6 +10,7 @@ from src.image_vectorize import search_similar_images
 from utils.stt import speech_to_text
 import threading
 import asyncio
+from typing import Optional, List
 
 router = APIRouter()
 
@@ -122,7 +123,8 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
 
 @router.post("/send-image")
 async def send_image_message(
-    file: UploadFile = File(...), 
+    file: Optional[UploadFile] = File(None),
+    files: Optional[List[UploadFile]] = File(None),
     conversation_id:str = Form(...),
     content:str = Form(...),
     sender_type:str = Form(...),
@@ -147,8 +149,10 @@ async def send_image_message(
     """
    
     # Validate required parameters
-    if not conversation_id or not content or not sender_type:
+    if not conversation_id or not sender_type:
         raise HTTPException(status_code=400, detail="Missing conversation_id, content or sender_type parameter")
+    if not content and not file and not files:
+        raise HTTPException(status_code=400, detail="Missing content or file parameter")
     
     # Fetch company info using user’s company_id
     company_info = get_companies("id", user["company_id"])
@@ -175,20 +179,43 @@ async def send_image_message(
     if sender_type == "agent":
         email = user["email"]
     
-    file_content = await file.read()
-    file_name = file.filename
-    # Define local save path
-    save_dir = os.path.join("files", "messages-extra")
-    os.makedirs(save_dir, exist_ok=True)
+    extra_data = {"images":[], "extra":[]}
+    if file:
+        file_content = await file.read()
+        file_name = file.filename
+        # Define local save path
+        save_dir = os.path.join("files", "messages-extra")
+        os.makedirs(save_dir, exist_ok=True)
 
-    # Build full path for the file
-    full_path = os.path.join(save_dir, file_name)
+        # Build full path for the file
+        full_path = os.path.join(save_dir, file_name)
 
-    # Save the file locally
-    with open(full_path, "wb") as f:
-        f.write(file_content)
-    # Insert new message into database
-    extra_data = {"images":[full_path]}
+        # Save the file locally
+        with open(full_path, "wb") as f:
+            f.write(file_content)
+        # Insert new message into database
+        extra_data = {"images":[full_path]}
+    elif files:
+        extra_data = {"images":[], "extra":[]}
+        image_extensions = {'xbm', 'tif', 'jfif', 'pjp', 'apng', 'jpeg', 'heif', 'ico', 'tiff', 'webp', 'svgz', 'jpg', 'heic', 'gif', 'svg', 'png', 'bmp', 'pjpeg', 'avif'}
+        for each_file in files:
+            file_content = await each_file.read()
+            file_name = each_file.filename
+            file_extension = file_name.split(".")[-1].lower()
+            # Define local save path
+            save_dir = os.path.join("files", "messages-extra")
+            os.makedirs(save_dir, exist_ok=True)
+
+            # Build full path for the file
+            full_path = os.path.join(save_dir, file_name)
+
+            # Save the file locally
+            with open(full_path, "wb") as f:
+                f.write(file_content)
+            if file_extension in image_extensions:
+                extra_data["images"].append(full_path)
+            else:
+                extra_data["extra"].append(full_path)
     
     # If conversation source is WhatsApp, send message via WhatsApp Bot
     if current_conversation['source'] == 'WhatsApp' and sender_type == "agent":

@@ -63,8 +63,17 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
   const [addBlockInitialValue, setAddBlockInitialValue] = useState<SettingsValue>(null);
   const [addBlockOperator, setAddBlockOperator] = useState<string | null>(null);
   const [addBlockCandidates, setAddBlockCandidates] = useState<string[]>([]);
+  // For multiple values/operators (when format.length > 1)
+  const [addBlockMultipleValues, setAddBlockMultipleValues] = useState<Record<number, SettingsValue>>({});
+  const [addBlockMultipleOperators, setAddBlockMultipleOperators] = useState<Record<number, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Store file objects for workflow blocks
+  // Structure: { nodeId: { blockIndex: { fieldKey: File[] } } }
+  const [workflowFiles, setWorkflowFiles] = useState<Record<string, Record<number, Record<string, File[]>>>>({});
+  // Temporary files for the add block dialog
+  const [addBlockFiles, setAddBlockFiles] = useState<Record<number, File[]>>({});
 
   // Load workflow data if editing existing workflow
   useEffect(() => {
@@ -100,27 +109,66 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
     }
 
     const selected = block_data[addBlockKey];
-    let target: BlockDataItem | undefined = selected;
-    if (addBlockSubKey && selected && selected.value && typeof selected.value === 'object') {
-      target = (selected.value as Record<string, BlockDataItem>)[addBlockSubKey] || target;
+    const target: BlockDataItem | undefined = selected;
+
+    // Check if this is a nested field (like message_filter)
+    if (addBlockSubKey && selected && selected.value && typeof selected.value === 'object' && !Array.isArray(selected.value)) {
+      const nestedValue = selected.value as Record<string, NestedFieldItem>;
+      const nestedField = nestedValue[addBlockSubKey];
+      if (nestedField) {
+        // For nested fields, we need to check their format
+        let mounted = true;
+        const fetchCandidates = async () => {
+          if (nestedField.format === 'calling_api' && nestedField.source) {
+            try {
+              const res = await apiRequest(nestedField.source, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+              if (res && res.ok) {
+                const json = await res.json();
+                if (mounted) setAddBlockCandidates(json.values || json || []);
+                return;
+              }
+            } catch {
+              // ignore
+            }
+            if (mounted) setAddBlockCandidates([]);
+          } else if (nestedField.format === 'static' && Array.isArray(nestedField.value)) {
+            if (mounted) setAddBlockCandidates(nestedField.value);
+          } else {
+            if (mounted) setAddBlockCandidates([]);
+          }
+        };
+        fetchCandidates();
+        return () => { mounted = false };
+      }
     }
 
+    // For non-nested fields with new array structure
     let mounted = true;
     const fetchCandidates = async () => {
-      if (target && target.format === 'calling_api' && target.source) {
-        try {
-          const res = await apiRequest(target.source, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-          if (res && res.ok) {
-            const json = await res.json();
-            if (mounted) setAddBlockCandidates(json.values || json || []);
-            return;
+      if (target && target.format && target.format.length > 0) {
+        const firstFormat = target.format[0];
+        if (firstFormat === 'calling_api' && target.source) {
+          try {
+            const res = await apiRequest(target.source, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+            if (res && res.ok) {
+              const json = await res.json();
+              if (mounted) setAddBlockCandidates(json.values || json || []);
+              return;
+            }
+          } catch {
+            // ignore
           }
-        } catch {
-          // ignore
+          if (mounted) setAddBlockCandidates([]);
+        } else if (firstFormat === 'static' && Array.isArray(target.value) && target.value.length > 0) {
+          const firstValue = target.value[0];
+          if (firstValue && firstValue.options && Array.isArray(firstValue.options)) {
+            if (mounted) setAddBlockCandidates(firstValue.options);
+          } else {
+            if (mounted) setAddBlockCandidates([]);
+          }
+        } else {
+          if (mounted) setAddBlockCandidates([]);
         }
-        if (mounted) setAddBlockCandidates([]);
-      } else if (target && target.format === 'static' && Array.isArray(target.value)) {
-        if (mounted) setAddBlockCandidates(target.value);
       } else {
         if (mounted) setAddBlockCandidates([]);
       }
@@ -289,14 +337,12 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
       ctx.font = 'bold 15px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(nodeConfig.icon, node.x - 40, node.y - 10);
-
       // Draw Type
       ctx.fillStyle = nodeConfig.color;
       ctx.font = 'bold 15px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(nodeConfig.label, node.x, node.y - 10);
+      ctx.fillText(nodeConfig.icon + "  " + nodeConfig.label, node.x, node.y - 10);
 
       // Draw description
       if (node.description) {
@@ -314,7 +360,6 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    console.log(x, y)
     // Check if clicked on a node
     let clickedNode = null;
     for (const node of nodes) {
@@ -322,7 +367,6 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
       const dy = Math.abs(y - node.y);
       if (dx < nodeWidth / 2 + 10 && dy < nodeHeight / 2 + 10) {
         clickedNode = node.id;
-        console.log("Node Position", node.x, node.y)
         break;
       }
     }
@@ -464,10 +508,29 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
 
   const deleteNode = () => {
     if (selectedNode) {
-      setNodes((prevNodes) => prevNodes.filter((n) => n.id !== selectedNode));
-      setEdges((prevEdges) =>
-        prevEdges.filter((e) => e.from !== selectedNode && e.to !== selectedNode)
-      );
+      // Helper function to find all downstream nodes recursively
+      const findAllDownstreamNodes = (nodeId: string, visited = new Set<string>()): Set<string> => {
+        if (visited.has(nodeId)) return visited;
+        visited.add(nodeId);
+
+        // Find all nodes that this node connects to
+        const outgoingEdges = edges.filter((e) => e.from === nodeId);
+        outgoingEdges.forEach((edge) => {
+          findAllDownstreamNodes(edge.to, visited);
+        });
+
+        return visited;
+      };
+
+      // Find all downstream nodes (including the selected node itself)
+      const nodesToDelete = findAllDownstreamNodes(selectedNode);
+
+      // Remove all downstream nodes and their edges
+      setNodes((prevNodes) => prevNodes.filter((n) => !nodesToDelete.has(n.id)));
+      setEdges((prevEdges) => prevEdges.filter((e) =>
+        !nodesToDelete.has(e.from) && !nodesToDelete.has(e.to)
+      ));
+
       setSelectedNode(null);
       setAddStep(false)
       setSetStep(false)
@@ -476,6 +539,21 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
 
   const deleteEdge = (edgeId: string) => {
     setEdges((prevEdges) => prevEdges.filter((e) => e.id !== edgeId));
+  };
+
+  // Helper function to collect all files from workflow blocks
+  const collectWorkflowFiles = (): File[] => {
+    const allFiles: File[] = [];
+
+    Object.entries(workflowFiles).forEach(([, nodeBlocks]) => {
+      Object.entries(nodeBlocks).forEach(([, blockFields]) => {
+        Object.entries(blockFields).forEach(([, files]) => {
+          allFiles.push(...files);
+        });
+      });
+    });
+
+    return allFiles;
   };
 
   const saveWorkflow = async () => {
@@ -488,13 +566,15 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
         edges: edges
       };
 
+      // Collect all files from workflow blocks
+      const files = collectWorkflowFiles();
+
       if (workflowId && workflowId !== 'new') {
         // Update existing workflow
         const result = await executeSavingAsync(async () => {
-          return await workflowApi.updateWorkflow(workflowId, workflowData);
+          return await workflowApi.updateWorkflow(workflowId, workflowData, files);
         });
-        console.log(result)
-        if (result?.workflow) {
+        if (result?.workflow && result.status == "success") {
           showNotification(`Workflow ${result.workflow.name} updated successfully!`, 'success', true)
         } else {
           showNotification(result.message || `Failed to update a new workflow. Please check your workflow.`, 'error', true)
@@ -502,13 +582,13 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
       } else {
         // Create new workflow
         const result = await executeSavingAsync(async () => {
-          return await workflowApi.createWorkflow(workflowData);
+          return await workflowApi.createWorkflow(workflowData, files);
         });
-        console.log(result)
-        if (result?.workflow) {
+        if (result?.workflow && result.status == "success") {
           setWorkflowId(result.workflow.id);
           showNotification(`Workflow ${result.workflow.name} created successfully!`, 'success', true)
         } else {
+          setWorkflowId(result.workflow.id);
           showNotification(result?.message || `Failed to create a new workflow. Please check your workflow.`, 'error', true)
         }
       }
@@ -519,13 +599,64 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
       setIsSaving(false);
     }
   };
+  
+  const testWorkflow = async () => {
+    setIsSaving(true);
 
+    try {
+      const workflowData = {
+        name: workflowName,
+        nodes: nodes,
+        edges: edges
+      };
+
+      // Collect all files from workflow blocks
+      const files = collectWorkflowFiles();
+
+      if (workflowId && workflowId !== 'new') {
+        // Update existing workflow
+        const result = await executeSavingAsync(async () => {
+          return await workflowApi.updateWorkflow(workflowId, workflowData, files);
+        });
+        if (result?.workflow && result.status == "success") {
+          showNotification(`Workflow ${result.workflow.name} updated successfully!`, 'success', true)
+        } else {
+          showNotification(result.message || `Failed to update a new workflow. Please check your workflow.`, 'error', true)
+        }
+      } else {
+        // Create new workflow
+        const result = await executeSavingAsync(async () => {
+          return await workflowApi.createWorkflow(workflowData, files);
+        });
+        if (result?.workflow && result.status == "success") {
+          setWorkflowId(result.workflow.id);
+          showNotification(`Workflow ${result.workflow.name} created successfully!`, 'success', true)
+        } else {
+          setWorkflowId(result.workflow.id);
+          showNotification(result?.message || `Failed to create a new workflow. Please check your workflow.`, 'error', true)
+        }
+      }
+    } catch (error) {
+      console.error('Error saving workflow:', error);
+      showNotification(error instanceof Error ? error.message : `Failed to save a workflow. Please check your workflow.`, 'error', true)
+    } finally {
+      setIsSaving(false);
+    }
+  };
   // Helper: get possible blocks for a node type
   const getPossibleBlocks = (node_type: string) =>
     Object.entries(block_data).filter(([, item]) => item.enable.includes(node_type));
 
   // Add a block instance to the currently selected node
-  const handleAddBlock = (key: string, subKey?: string | null, initialValue?: SettingsValue, operator?: string | null) => {
+  const handleAddBlock = (
+    key: string,
+    subKey?: string | null,
+    initialValue?: SettingsValue,
+    operator?: string | null,
+    multipleValues?: Record<number, SettingsValue>,
+    multipleOperators?: Record<number, string>,
+    files?: Record<number, File[]>
+  ) => {
     if (!selectedNode || !key) return;
 
     setNodes((prev) =>
@@ -560,33 +691,39 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
 
         let itemToUse: BlockDataItem = { ...baseBlock }; // Clone to avoid mutations
         let blockKey = key;
+
+        // Get first format and operator for function_info (for backward compatibility)
+        const firstFormat = baseBlock.format && baseBlock.format.length > 0 ? baseBlock.format[0] : 'input';
+        const firstOperator = baseBlock.operator && baseBlock.operator.length > 0 ? baseBlock.operator[0] : null;
+
         const function_info: BlockFunctionInfo = {
           key: key,
-          type: baseBlock.format || 'input',
-          operator: baseBlock.operator || null,
+          type: firstFormat,
+          operator: firstOperator,
           subKey: subKey || null,
         };
 
         const newSettings: Record<string, SettingsValue | BlockFunctionInfo> = {};
 
+        // Handle nested fields (like message_filter)
         if (subKey && baseBlock.value && typeof baseBlock.value === 'object' && !Array.isArray(baseBlock.value)) {
           const child = (baseBlock.value as Record<string, NestedFieldItem>)[subKey];
           if (child) {
             itemToUse = {
               label: child.label || `${baseBlock.label} - ${subKey}`,
               enable: baseBlock.enable || [],
-              operator: child.operator || null,
-              value: child.value ?? null,
-              format: child.format || 'input',
-              type: child.type || 'text',
-              source: undefined
+              operator: [[...child.operator]],  // Wrap in array for new structure
+              value: [{}],  // Wrap in array for new structure
+              format: [child.format || 'input'],
+              type: [child.type || 'text'],
+              source: child.source
             };
             blockKey = `${key}.${subKey}`;
             function_info.subKey = subKey;
 
             // Store value for nested field
             if (initialValue !== undefined && initialValue !== null && initialValue !== '') {
-              newSettings["value"] = normalize(itemToUse.format, itemToUse.type, initialValue);
+              newSettings["value"] = normalize(child.format, child.type, initialValue);
             }
             // Store operator for nested field
             if (operator && child.operator && child.operator.length > 0) {
@@ -594,20 +731,47 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
             }
           }
         } else {
-          // Top-level block settings
-          // Store value
-          if (initialValue !== undefined && initialValue !== null && initialValue !== '') {
-            if (baseBlock.format === 'input') {
-              newSettings.value = normalize(baseBlock.format, baseBlock.type, initialValue);
-            } else if ((baseBlock.format === 'static' || baseBlock.format === 'calling_api') && baseBlock.type === 'select') {
-              newSettings.value = initialValue;
-            } else {
-              newSettings.value = initialValue;
+          // Top-level block settings with new array structure
+          const formatCount = baseBlock.format?.length || 1;
+
+          // Check if we have multiple format pairs
+          if (formatCount > 1 && multipleValues && multipleOperators) {
+            // Store multiple values and operators
+            for (let idx = 0; idx < formatCount; idx++) {
+              const pairFormat = baseBlock.format?.[idx] || 'input';
+              const pairType = baseBlock.type?.[idx] || 'text';
+              const value = multipleValues[idx];
+              const op = multipleOperators[idx];
+
+              // Store value for this pair
+              if (value !== undefined && value !== null && value !== '') {
+                newSettings[`value_${idx}`] = normalize(pairFormat, pairType, value);
+              }
+
+              // Store operator for this pair
+              if (op && baseBlock.operator?.[idx] && baseBlock.operator[idx].length > 0) {
+                newSettings[`operator_${idx}`] = op;
+              }
             }
-          }
-          // Store operator for top-level field
-          if (operator && baseBlock.operator && baseBlock.operator.length > 0) {
-            newSettings.operator = operator;
+          } else {
+            // Single pair - use legacy approach
+            const pairFormat = baseBlock.format && baseBlock.format.length > 0 ? baseBlock.format[0] : 'input';
+            const pairType = baseBlock.type && baseBlock.type.length > 0 ? baseBlock.type[0] : 'text';
+
+            // Store value
+            if (initialValue !== undefined && initialValue !== null && initialValue !== '') {
+              if (pairFormat === 'input') {
+                newSettings.value = normalize(pairFormat, pairType, initialValue);
+              } else if ((pairFormat === 'static' || pairFormat === 'calling_api') && pairType === 'select') {
+                newSettings.value = initialValue;
+              } else {
+                newSettings.value = initialValue;
+              }
+            }
+            // Store operator for top-level field
+            if (operator && baseBlock.operator && baseBlock.operator.length > 0 && baseBlock.operator[0].length > 0) {
+              newSettings.operator = operator;
+            }
           }
         }
 
@@ -629,16 +793,70 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
         };
       })
     );
+
+    // Store file objects if any were uploaded
+    if (files && Object.keys(files).length > 0 && selectedNode) {
+      setWorkflowFiles((prev) => {
+        const nodeFiles = prev[selectedNode] || {};
+        const existingBlocks = nodes.find(n => n.id === selectedNode)?.config?.blocks as BlockInstance[] || [];
+        const newBlockIndex = existingBlocks.length; // Index of the block we just added
+
+        // Convert files object to field-keyed structure
+        const blockFiles: Record<string, File[]> = {};
+        Object.entries(files).forEach(([idx, fileList]) => {
+          const fieldKey = `value_${idx}`;
+          blockFiles[fieldKey] = fileList;
+        });
+
+        return {
+          ...prev,
+          [selectedNode]: {
+            ...nodeFiles,
+            [newBlockIndex]: blockFiles
+          }
+        };
+      });
+    }
+
     setShowAddBlockSelector(false);
     setAddBlockKey(null);
     setAddBlockSubKey(null);
     setAddBlockInitialValue(null);
     setAddBlockOperator(null);
+    setAddBlockMultipleValues({});
+    setAddBlockMultipleOperators({});
+    setAddBlockFiles({});
   };
 
   // Remove a block instance from the selected node
   const handleRemoveBlock = (index: number) => {
     if (!selectedNode) return;
+
+    // Remove associated files
+    setWorkflowFiles((prev) => {
+      const nodeFiles = prev[selectedNode];
+      if (!nodeFiles) return prev;
+
+      const updatedNodeFiles = { ...nodeFiles };
+      delete updatedNodeFiles[index];
+
+      // Re-index remaining blocks (shift indices down)
+      const reindexedFiles: Record<number, Record<string, File[]>> = {};
+      Object.entries(updatedNodeFiles).forEach(([blockIdx, files]) => {
+        const idx = parseInt(blockIdx);
+        if (idx > index) {
+          reindexedFiles[idx - 1] = files;
+        } else {
+          reindexedFiles[idx] = files;
+        }
+      });
+
+      return {
+        ...prev,
+        [selectedNode]: reindexedFiles
+      };
+    });
+
     setNodes((prev) =>
       prev.map((n) => {
         if (n.id !== selectedNode) return n;
@@ -702,7 +920,7 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
           </div>
           <div className="flex gap-3">
             <button
-              onClick={() => console.log('Test workflow')}
+              onClick={testWorkflow}
               className="flex items-center gap-2 px-2 md:px-4 md:py-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 md:rounded-lg rounded transition-colors font-medium text-sm"
             >
               <FaPlay size={10} />
@@ -812,7 +1030,7 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                   </div>
                 </div>
 
-                {/* End Section */}
+                {/* End Section
                 <div>
                   <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 px-2">End</h4>
                   <button
@@ -827,7 +1045,7 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                       </div>
                     </div>
                   </button>
-                </div>
+                </div> */}
               </div>
             </div>
           )}
@@ -921,7 +1139,7 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                             <div className="space-y-2 w-full">
                               <div className="space-y-4">
                                 <div className="space-y-2">
-                                  <label className="text-sm text-gray-600">Select Filter Type</label>
+                                  <label className="text-sm text-gray-600">Select {config.label} Type</label>
                                   <select
                                     className="w-full py-2 px-3 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     value={addBlockKey ?? ''}
@@ -932,11 +1150,28 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                       setAddBlockInitialValue(null);
                                       // Set default operator when filter type changes
                                       const newBlock = block_data[newKey];
-                                      setAddBlockOperator(newBlock?.operator?.[0] || null);
+                                      const formatCount = newBlock?.format?.length || 1;
+
+                                      if (formatCount > 1) {
+                                        // Initialize multiple operators with defaults
+                                        const initialOperators: Record<number, string> = {};
+                                        for (let i = 0; i < formatCount; i++) {
+                                          const defaultOp = newBlock?.operator?.[i]?.[0] || '';
+                                          if (defaultOp) initialOperators[i] = defaultOp;
+                                        }
+                                        setAddBlockMultipleOperators(initialOperators);
+                                        setAddBlockMultipleValues({});
+                                      } else {
+                                        // Get first operator from first pair
+                                        const firstOperator = newBlock?.operator?.[0]?.[0] || null;
+                                        setAddBlockOperator(firstOperator);
+                                        setAddBlockMultipleOperators({});
+                                        setAddBlockMultipleValues({});
+                                      }
                                     }}
                                     required
                                   >
-                                    <option value="">Select a filter...</option>
+                                    <option value="">Select the {config.label.toLowerCase()}...</option>
                                     {getPossibleBlocks(node.type).map(([key, item]) => (
                                       <option key={key} value={key}>{item.label}</option>
                                     ))}
@@ -945,7 +1180,17 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => {
-                                      if (addBlockKey) handleAddBlock(addBlockKey, addBlockSubKey, addBlockInitialValue, addBlockOperator);
+                                      if (addBlockKey) {
+                                        const selected = block_data[addBlockKey];
+                                        const formatCount = selected?.format?.length || 1;
+
+                                        // If multiple formats, pass the multiple values/operators
+                                        if (formatCount > 1) {
+                                          handleAddBlock(addBlockKey, addBlockSubKey, addBlockInitialValue, addBlockOperator, addBlockMultipleValues, addBlockMultipleOperators, addBlockFiles);
+                                        } else {
+                                          handleAddBlock(addBlockKey, addBlockSubKey, addBlockInitialValue, addBlockOperator);
+                                        }
+                                      }
                                     }}
                                     disabled={!addBlockKey}
                                     className="flex-1 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -953,7 +1198,16 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                     Add Filter
                                   </button>
                                   <button
-                                    onClick={() => { setShowAddBlockSelector(false); setAddBlockKey(null); setAddBlockSubKey(null); setAddBlockInitialValue(null); setAddBlockOperator(null); }}
+                                    onClick={() => {
+                                      setShowAddBlockSelector(false);
+                                      setAddBlockKey(null);
+                                      setAddBlockSubKey(null);
+                                      setAddBlockInitialValue(null);
+                                      setAddBlockOperator(null);
+                                      setAddBlockMultipleValues({});
+                                      setAddBlockMultipleOperators({});
+                                      setAddBlockFiles({});
+                                    }}
                                     className="py-2 px-4 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
                                   >
                                     Cancel
@@ -993,15 +1247,17 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                         {child && child.operator && child.operator.length > 0 && (
                                           <div>
                                             <label className="text-sm text-gray-600">Operator</label>
-                                            <select
-                                              className="w-full py-1 px-2 border rounded"
-                                              value={addBlockOperator ?? child.operator[0]}
-                                              onChange={(e) => setAddBlockOperator(e.target.value)}
-                                            >
-                                              {child.operator.map((op) => (
-                                                <option key={op} value={op}>{op}</option>
-                                              ))}
-                                            </select>
+                                            {child.operator && child.operator.length > 1 && (
+                                              <select
+                                                className="w-full py-1 px-2 border rounded"
+                                                value={addBlockOperator ?? child.operator[0]}
+                                                onChange={(e) => setAddBlockOperator(e.target.value)}
+                                              >
+                                                {child.operator.map((op) => (
+                                                  <option key={op} value={op}>{op}</option>
+                                                ))}
+                                              </select>
+                                            )}
                                           </div>
                                         )}
 
@@ -1041,76 +1297,202 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                   )
                                 }
 
-                                // top-level selected block handling
-                                if (selected && selected.format === 'input') {
-                                  return (
-                                    <div className="space-y-2">
-                                      {/* Operator select for top-level input field */}
-                                      {selected.operator && selected.operator.length > 0 && (
+                                // top-level selected block handling with new array structure
+                                // Get first pair's format, type, and operators
+                                if (selected.format?.length == 1) {
+                                  const firstFormat = selected?.format?.[0];
+                                  const firstType = selected?.type?.[0];
+                                  const firstOperators = selected?.operator?.[0];
+
+                                  if (selected && firstFormat === 'input') {
+                                    return (
+                                      <div className="space-y-2">
+                                        {/* Operator select for top-level input field */}
+                                        {firstOperators && firstOperators.length > 1 && (
+                                          <div>
+                                            <label className="text-sm text-gray-600">Operator</label>
+                                            <select
+                                              className="w-full py-1 px-2 border rounded"
+                                              value={addBlockOperator ?? firstOperators[0]}
+                                              onChange={(e) => setAddBlockOperator(e.target.value)}
+                                            >
+                                              {firstOperators.map((op) => (
+                                                <option key={op} value={op}>{op}</option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                        )}
                                         <div>
-                                          <label className="text-sm text-gray-600">Operator</label>
+                                          <label className="text-sm text-gray-600">Value</label>
+                                          <input
+                                            className="w-full py-1 px-2 border rounded"
+                                            type={firstType || 'text'}
+                                            placeholder={`Enter ${selected.label}...`}
+                                            value={addBlockInitialValue ?? ''}
+                                            onChange={(e) => setAddBlockInitialValue(e.target.value)}
+                                            required
+                                          />
+                                        </div>
+                                      </div>
+                                    )
+                                  }
+
+                                  if (selected && (firstFormat === 'static' || firstFormat === 'calling_api') && firstType === 'select') {
+                                    return (
+                                      <div className="space-y-2">
+                                        {/* Operator select for top-level select field */}
+                                        {firstOperators && firstOperators.length > 0 && (
+                                          <div>
+                                            <label className="text-sm text-gray-600">Operator</label>
+                                            <select
+                                              className="w-full py-1 px-2 border rounded"
+                                              value={addBlockOperator ?? firstOperators[0]}
+                                              onChange={(e) => setAddBlockOperator(e.target.value)}
+                                            >
+                                              {firstOperators.map((op) => (
+                                                <option key={op} value={op}>{op}</option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                        )}
+                                        <div>
+                                          <label className="text-sm text-gray-600">Value</label>
                                           <select
                                             className="w-full py-1 px-2 border rounded"
-                                            value={addBlockOperator ?? selected.operator[0]}
-                                            onChange={(e) => setAddBlockOperator(e.target.value)}
+                                            value={addBlockInitialValue ?? ''}
+                                            onChange={(e) => setAddBlockInitialValue(e.target.value)}
+                                            required
                                           >
-                                            {selected.operator.map((op) => (
-                                              <option key={op} value={op}>{op}</option>
+                                            <option value="">Select {selected.label}...</option>
+                                            {(firstFormat === 'calling_api' ? addBlockCandidates : []).map((opt) => (
+                                              <option key={opt} value={opt}>{String(opt)}</option>
                                             ))}
                                           </select>
                                         </div>
-                                      )}
-                                      <div>
-                                        <label className="text-sm text-gray-600">Value</label>
-                                        <input
-                                          className="w-full py-1 px-2 border rounded"
-                                          type={selected.type || 'text'}
-                                          placeholder={`Enter ${selected.label}...`}
-                                          value={addBlockInitialValue ?? ''}
-                                          onChange={(e) => setAddBlockInitialValue(e.target.value)}
-                                          required
-                                        />
                                       </div>
-                                    </div>
-                                  )
+                                    )
+                                  }
                                 }
+                                else {
+                                  const several_format = selected.format?.map((format: string, idx: number) => {
+                                    const oneformat = format;
+                                    const onetype = selected?.type?.[idx];
+                                    const oneoperator = selected?.operator?.[idx];
+                                    const sublabel = selected?.sublabels?.[idx];
 
-                                if (selected && (selected.format === 'static' || selected.format === 'calling_api') && selected.type === 'select') {
-                                  return (
-                                    <div className="space-y-2">
-                                      {/* Operator select for top-level select field */}
-                                      {selected.operator && selected.operator.length > 0 && (
-                                        <div>
-                                          <label className="text-sm text-gray-600">Operator</label>
-                                          <select
-                                            className="w-full py-1 px-2 border rounded"
-                                            value={addBlockOperator ?? selected.operator[0]}
-                                            onChange={(e) => setAddBlockOperator(e.target.value)}
-                                          >
-                                            {selected.operator.map((op) => (
-                                              <option key={op} value={op}>{op}</option>
-                                            ))}
-                                          </select>
+                                    if (selected && oneformat === 'input') {
+                                      return (
+                                        <div key={idx} className="space-y-2">
+                                          {/* Operator select for top-level input field */}
+                                          {oneoperator && oneoperator.length > 1 && (
+                                            <div>
+                                              <label className="text-sm text-gray-600">Operator</label>
+                                              <select
+                                                className="w-full py-1 px-2 border rounded"
+                                                value={addBlockMultipleOperators[idx] ?? oneoperator[0]}
+                                                onChange={(e) => setAddBlockMultipleOperators(prev => ({ ...prev, [idx]: e.target.value }))}
+                                              >
+                                                {oneoperator.map((op: string) => (
+                                                  <option key={op} value={op}>{op}</option>
+                                                ))}
+                                              </select>
+                                            </div>
+                                          )}
+                                          <div>
+                                            <label className="text-sm text-gray-600">{sublabel || 'Value'}</label>
+                                            {onetype === "textarea" ? (
+                                              <textarea
+                                                className="w-full py-1 px-2 border rounded"
+                                                placeholder={`Enter ${sublabel || selected.label}...`}
+                                                value={addBlockMultipleValues[idx] ?? ""}
+                                                onChange={(e) =>
+                                                  setAddBlockMultipleValues((prev) => ({
+                                                    ...prev,
+                                                    [idx]: e.target.value,
+                                                  }))
+                                                }
+                                                required
+                                              />
+                                            ) : onetype === "multifile" ? (
+                                              <input
+                                                className="w-full py-1 px-2 border rounded"
+                                                type="file"
+                                                multiple
+                                                onChange={(e) => {
+                                                  const files = e.target.files ? Array.from(e.target.files) : [];
+                                                  // Store file names for display
+                                                  setAddBlockMultipleValues((prev) => ({
+                                                    ...prev,
+                                                    [idx]: files.map((file) => file.name).join(', '),
+                                                  }));
+                                                  // Store actual File objects
+                                                  setAddBlockFiles((prev) => ({
+                                                    ...prev,
+                                                    [idx]: files,
+                                                  }));
+                                                }}
+                                                required
+                                              />
+                                            ) : (
+                                              <input
+                                                className="w-full py-1 px-2 border rounded"
+                                                type={onetype || "text"}
+                                                placeholder={`Enter ${sublabel || selected.label}...`}
+                                                value={addBlockMultipleValues[idx] ?? ""}
+                                                onChange={(e) =>
+                                                  setAddBlockMultipleValues((prev) => ({
+                                                    ...prev,
+                                                    [idx]: e.target.value,
+                                                  }))
+                                                }
+                                                required
+                                              />
+                                            )}
+                                          </div>
                                         </div>
-                                      )}
-                                      <div>
-                                        <label className="text-sm text-gray-600">Value</label>
-                                        <select
-                                          className="w-full py-1 px-2 border rounded"
-                                          value={addBlockInitialValue ?? ''}
-                                          onChange={(e) => setAddBlockInitialValue(e.target.value)}
-                                          required
-                                        >
-                                          <option value="">Select {selected.label}...</option>
-                                          {(selected.format === 'calling_api' ? addBlockCandidates : (Array.isArray(selected.value) ? selected.value : [])).map((opt) => (
-                                            <option key={opt} value={opt}>{String(opt)}</option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                    </div>
-                                  )
-                                }
+                                      )
+                                    }
 
+                                    if (selected && (oneformat === 'static' || oneformat === 'calling_api') && onetype === 'select') {
+                                      return (
+                                        <div key={idx} className="space-y-2">
+                                          {/* Operator select for top-level select field */}
+                                          {oneoperator && oneoperator.length > 0 && (
+                                            <div>
+                                              <label className="text-sm text-gray-600">Operator</label>
+                                              <select
+                                                className="w-full py-1 px-2 border rounded"
+                                                value={addBlockMultipleOperators[idx] ?? oneoperator[0]}
+                                                onChange={(e) => setAddBlockMultipleOperators(prev => ({ ...prev, [idx]: e.target.value }))}
+                                              >
+                                                {oneoperator.map((op: string) => (
+                                                  <option key={op} value={op}>{op}</option>
+                                                ))}
+                                              </select>
+                                            </div>
+                                          )}
+                                          <div>
+                                            <label className="text-sm text-gray-600">{sublabel || 'Value'}</label>
+                                            <select
+                                              className="w-full py-1 px-2 border rounded"
+                                              value={addBlockMultipleValues[idx] ?? ''}
+                                              onChange={(e) => setAddBlockMultipleValues(prev => ({ ...prev, [idx]: e.target.value }))}
+                                              required
+                                            >
+                                              <option value="">Select {sublabel || selected.label}...</option>
+                                              {(oneformat === 'calling_api' ? addBlockCandidates : []).map((opt: string) => (
+                                                <option key={opt} value={opt}>{String(opt)}</option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                        </div>
+                                      )
+                                    }
+
+                                    return null;
+                                  })
+                                  return several_format;
+                                }
                                 return null;
                               })()}
                             </div>
@@ -1125,8 +1507,25 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                   setAddBlockKey(firstKey);
                                   setAddBlockSubKey(null);
                                   setAddBlockInitialValue(null);
-                                  // Set default operator for the first block
-                                  setAddBlockOperator(firstBlock.operator?.[0] || null);
+
+                                  const formatCount = firstBlock?.format?.length || 1;
+
+                                  if (formatCount > 1) {
+                                    // Initialize multiple operators with defaults
+                                    const initialOperators: Record<number, string> = {};
+                                    for (let i = 0; i < formatCount; i++) {
+                                      const defaultOp = firstBlock?.operator?.[i]?.[0] || '';
+                                      if (defaultOp) initialOperators[i] = defaultOp;
+                                    }
+                                    setAddBlockMultipleOperators(initialOperators);
+                                    setAddBlockMultipleValues({});
+                                  } else {
+                                    // Set default operator for the first block (get first operator from first pair)
+                                    const firstOperator = firstBlock.operator?.[0]?.[0] || null;
+                                    setAddBlockOperator(firstOperator);
+                                    setAddBlockMultipleOperators({});
+                                    setAddBlockMultipleValues({});
+                                  }
                                 }
                               }}
                               className="px-3 py-2 border rounded text-sm bg-blue-500 text-white hover:bg-blue-600 transition-colors w-full"

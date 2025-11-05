@@ -9,7 +9,7 @@ import { useChatAreaContext } from '@/contexts/ChatAreaContext';
 
 export default function ChatArea() {
   const { activeChatHistory, setActiveChatHistory, chatMessages, setChatMessages, agentMessage, setAgentMessage } = useChatAreaContext();
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Use the API call hook for managing loading states and preventing duplicate requests
@@ -28,13 +28,13 @@ export default function ChatArea() {
     }
   }, [activeChatHistory?.conversation_id, execute, setChatMessages]);
 
-  const sendNewMessage = async (message: string, sender_type: string, image?: File | null) => {
-    if (!activeChatHistory?.conversation_id || (!message.trim() && !image)) return;
+  const sendNewMessage = async (message: string, sender_type: string, files?: File[]) => {
+    if (!activeChatHistory?.conversation_id || (!message.trim() && (!files || files.length === 0))) return;
     setAgentMessage("");
 
-    if (image) {
-      // For image message, use sendImageMessage API
-      const data = await chatApi.sendImageMessage(activeChatHistory.conversation_id, image, sender_type, message);
+    if (files && files.length > 0) {
+      // For message with files, use sendFilesMessage API
+      const data = await chatApi.sendFilesMessage(activeChatHistory.conversation_id, files, sender_type, message);
       if (data.messages) {
         setChatMessages([...chatMessages, ...data.messages]);
       }
@@ -103,46 +103,65 @@ export default function ChatArea() {
 
       {/* Message Input Area */}
       <footer className="flex flex-col gap-2 border-t border-gray-200 bg-white px-4 md:px-6 py-4">
-        {/* Image preview above input */}
-        {imageFile && (
-          <div className="flex items-center gap-2 mb-2">
-            <Image
-              width={200}
-              height={200}
-              src={URL.createObjectURL(imageFile)}
-              alt="preview"
-              className="w-16 h-16 object-cover rounded-lg border"
-            />
-            <button
-              className="text-xs px-2 py-1 bg-red-100 text-red-600 rounded"
-              onClick={() => {
-                setImageFile(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}
-            >Remove</button>
+        {/* Files preview above input */}
+        {attachedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {attachedFiles.map((file, index) => (
+              <div key={index} className="flex items-center gap-2 bg-gray-100 rounded-lg p-2 border">
+                {file.type.startsWith('image/') ? (
+                  <Image
+                    width={48}
+                    height={48}
+                    src={URL.createObjectURL(file)}
+                    alt="preview"
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                ) : (
+                  <div className="w-12 h-12 flex items-center justify-center bg-gray-200 rounded">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">{file.name}</p>
+                  <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                </div>
+                <button
+                  className="text-xs px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200"
+                  onClick={() => {
+                    setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
+                    if (attachedFiles.length === 1 && fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
+                  }}
+                >×</button>
+              </div>
+            ))}
           </div>
         )}
         <div className="flex items-center gap-2 w-full">
-          {/* Image upload button */}
+          {/* File upload button */}
           <button
             className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500"
-            aria-label="Attach image"
+            aria-label="Attach files"
             onClick={() => fileInputRef.current?.click()}
           >
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M4 17V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-2l4-4 4 4 4-4" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
             </svg>
           </button>
           <input
             type="file"
-            accept="image/*"
             ref={fileInputRef}
             style={{ display: "none" }}
             onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                setImageFile(e.target.files[0]);
+              if (e.target.files && e.target.files.length > 0) {
+                const newFiles = Array.from(e.target.files);
+                setAttachedFiles([...attachedFiles, ...newFiles]);
               }
             }}
+            multiple
           />
           <input
             className="flex-1 px-4 py-2 rounded-full border bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
@@ -151,11 +170,11 @@ export default function ChatArea() {
             value={agentMessage}
             onChange={(e) => setAgentMessage(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (agentMessage.trim() || imageFile)) {
+              if (e.key === "Enter" && (agentMessage.trim() || attachedFiles.length > 0)) {
                 e.preventDefault();
-                if (imageFile) {
-                  sendNewMessage(agentMessage, "agent", imageFile);
-                  setImageFile(null);
+                if (attachedFiles.length > 0) {
+                  sendNewMessage(agentMessage, "agent", attachedFiles);
+                  setAttachedFiles([]);
                   setAgentMessage("");
                   if (fileInputRef.current) fileInputRef.current.value = "";
                 } else if (agentMessage.trim()) {
@@ -165,15 +184,15 @@ export default function ChatArea() {
               }
             }}
           />
-          {/* Single send button for text or image */}
+          {/* Single send button for text or files */}
           <button
             className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
             aria-label="Send"
-            disabled={!(agentMessage.trim() || imageFile)}
+            disabled={!(agentMessage.trim() || attachedFiles.length > 0)}
             onClick={() => {
-              if (imageFile) {
-                sendNewMessage(agentMessage, "agent", imageFile);
-                setImageFile(null);
+              if (attachedFiles.length > 0) {
+                sendNewMessage(agentMessage, "agent", attachedFiles);
+                setAttachedFiles([]);
                 setAgentMessage("");
                 if (fileInputRef.current) fileInputRef.current.value = "";
               } else if (agentMessage.trim()) {

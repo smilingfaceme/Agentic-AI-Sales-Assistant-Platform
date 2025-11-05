@@ -77,18 +77,6 @@ export default function DashboardSidebar() {
             <span className={sidebarHidden ? "text-xl" : "mr-3 text-lg"}><FaRobot /></span>
             {!sidebarHidden && 'Chatbot'}
           </Link>}
-          {currentUser.permissions['integration'] == true && <Link
-            key="/dashboard/go-live"
-            href="/dashboard/go-live"
-            className={
-              sidebarHidden
-                ? `flex items-center justify-center w-10 h-10 mb-2 rounded-lg transition-colors text-gray-900 ${pathname.startsWith("/dashboard/go-live") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
-                : `flex items-center w-full px-3 py-2 mb-2 rounded transition-colors text-left text-gray-900 ${pathname.startsWith("/dashboard/go-live") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
-            }
-          >
-            <span className={sidebarHidden ? "text-xl" : "mr-3 text-lg"}><FaBroadcastTower /></span>
-            {!sidebarHidden && 'Go live'}
-          </Link>}
           {currentUser.permissions['workflow'] == true && <Link
             key="/dashboard/workflow"
             href="/dashboard/workflow"
@@ -100,6 +88,18 @@ export default function DashboardSidebar() {
           >
             <span className={sidebarHidden ? "text-xl" : "mr-3 text-lg"}><FaProjectDiagram /></span>
             {!sidebarHidden && 'Workflow'}
+          </Link>}
+          {currentUser.permissions['integration'] == true && <Link
+            key="/dashboard/go-live"
+            href="/dashboard/go-live"
+            className={
+              sidebarHidden
+                ? `flex items-center justify-center w-10 h-10 mb-2 rounded-lg transition-colors text-gray-900 ${pathname.startsWith("/dashboard/go-live") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
+                : `flex items-center w-full px-3 py-2 mb-2 rounded transition-colors text-left text-gray-900 ${pathname.startsWith("/dashboard/go-live") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
+            }
+          >
+            <span className={sidebarHidden ? "text-xl" : "mr-3 text-lg"}><FaBroadcastTower /></span>
+            {!sidebarHidden && 'Go live'}
           </Link>}
         </nav>
         {/* Utility Items */}

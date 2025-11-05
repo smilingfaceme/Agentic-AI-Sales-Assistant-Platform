@@ -1,7 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import { API_BASE } from "@/utils";
-import { FaRobot } from "react-icons/fa";
+import { FaRobot, FaFile } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 export type ChatMessage = {
   message_id: number;
@@ -13,6 +13,7 @@ export type ChatMessage = {
   created_at?: string;
   extra: {
     images?: string[];
+    extra?: string[];
     [key: string]: unknown;
   };
 };
@@ -69,6 +70,17 @@ export default function TestChatBotPanel({ chatMessages }: TestChatPanelProps) {
                                 unoptimized
                                 className="max-h-32 rounded shadow border border-gray-300"
                               />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {Array.isArray(msg.extra.extra) && msg.extra.extra.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {msg.extra.extra?.map((docUrl: string) => (
+                            <div key={docUrl} className="rounded overflow-hidden">
+                              <a href={`${API_BASE}/${docUrl}`} target="_blank" rel="noopener noreferrer">
+                                <FaFile size={60} className="mb-2" />{docUrl.split('\\').pop()}
+                              </a>
                             </div>
                           ))}
                         </div>

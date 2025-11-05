@@ -1,7 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import { API_BASE } from "@/utils";
-import { FaRobot } from "react-icons/fa";
+import { FaRobot, FaFile } from "react-icons/fa";
 import { ChatMessage } from '@/contexts/ChatAreaContext'
 import ReactMarkdown from "react-markdown";
 
@@ -57,6 +57,23 @@ export default function ChatArea({ chatMessages }: ChatHistoryPageProps) {
                                 unoptimized
                                 className="max-h-32 rounded shadow border border-gray-300"
                               />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {Array.isArray(msg.extra?.extra) && msg.extra.extra.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {msg.extra.extra?.map((docUrl: string, docIdx: number) => (
+                            <div key={docIdx} className="rounded overflow-hidden p-2">
+                              <a
+                                href={`${API_BASE}/${docUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 hover:opacity-80"
+                              >
+                                <FaFile size={24} />
+                                <span className="text-sm max-w-[150px] truncate">{docUrl.split(/[/\\]/).pop()}</span>
+                              </a>
                             </div>
                           ))}
                         </div>

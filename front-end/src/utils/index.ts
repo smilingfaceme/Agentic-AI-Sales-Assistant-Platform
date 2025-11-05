@@ -6,7 +6,6 @@ export function hashPassword(password:string) {
 }
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
-export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 // Cookie utility functions with JSON support
 export function setCookie(name: string, value: unknown, days: number = 7) {

@@ -105,6 +105,22 @@ export const chatApi = {
     return res.json();
   },
 
+  sendFilesMessage: async (conversationId: string, files: File[], senderType: string, content: string) => {
+    const formData = new FormData();
+    formData.append('conversation_id', conversationId);
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+    formData.append('content', content);
+    formData.append('sender_type', senderType);
+    const res = await apiRequest('/chat/send-image', {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) throw new Error('Failed to send files message');
+    return res.json();
+  },
+
   toggleAIReply: async (conversationId: string) => {
     const res = await apiRequest('/conversation/toggle-ai-reply', {
       method: 'POST',
@@ -480,11 +496,22 @@ export const workflowApi = {
     name: string;
     nodes: unknown[];
     edges: unknown[];
-  }) => {
+  }, files?: File[]) => {
+    // If files are provided, use FormData, otherwise use JSON
+    const formData = new FormData();
+    formData.append('name', workflowData.name);
+    formData.append('nodes', JSON.stringify(workflowData.nodes));
+    formData.append('edges', JSON.stringify(workflowData.edges));
+    if (files && files.length > 0) {
+      // Append all files
+      files.forEach((file) => {
+        formData.append(`files`, file);
+      });
+
+    }
     const res = await apiRequest('/workflow/create', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(workflowData)
+      body: formData
     });
     if (!res.ok) throw new Error('Failed to create workflow');
     return res.json();
@@ -494,17 +521,26 @@ export const workflowApi = {
     name: string;
     nodes: unknown[];
     edges: unknown[];
-  }) => {
+  }, files?: File[]) => {
+    // If files are provided, use FormData, otherwise use JSON
+    const formData = new FormData();
+    formData.append('workflow_id', workflowId);
+    formData.append('name', workflowData.name);
+    formData.append('nodes', JSON.stringify(workflowData.nodes));
+    formData.append('edges', JSON.stringify(workflowData.edges));
+    if (files && files.length > 0) {
+
+      // Append all files
+      files.forEach((file) => {
+        formData.append(`files`, file);
+      });
+
+    }
     const res = await apiRequest('/workflow/update', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        workflow_id: workflowId,
-        ...workflowData
-      })
+      body: formData
     });
-    
-    if (!res.ok) throw new Error( 'Failed to update workflow');
+    if (!res.ok) throw new Error('Failed to update workflow');
     return res.json();
   },
 

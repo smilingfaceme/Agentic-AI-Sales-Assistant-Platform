@@ -10,6 +10,7 @@ export type ChatMessage = {
   created_at?: string;
   extra: {
     images?: string[];
+    extra?: string[];
     [key: string]: unknown;
   };
 };

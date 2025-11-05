@@ -17,6 +17,15 @@ export type NestedFieldItem = {
   source?: string;
 };
 
+// Single pair of operator/value/format/type
+export type BlockDataPair = {
+  operator: string[];
+  value: Record<string, unknown> | string[] | null;
+  format: string;
+  type: string;
+  source?: string;
+};
+
 // Value types that can be used in block data
 export type BlockValue = string | number | string[] | null | Record<string, NestedFieldItem>;
 
@@ -37,11 +46,12 @@ export type BlockInstance = {
 export type BlockDataItem = {
   label: string;
   enable: string[];
-  operator: string[] | null;
-  value: BlockValue;
-  format?: string;
-  type?: string;
+  operator: string[][] | null;
+  value: Record<string, unknown>[] | Record<string, NestedFieldItem> | null;
+  format?: string[];
+  type?: string[];
   source?: string;
+  sublabels?: string[];
 };
 
 export const NODE_TYPES = {
@@ -53,11 +63,21 @@ export const NODE_TYPES = {
 };
 
 export const block_data: Record<string, BlockDataItem> = {
-  "first_message": { label: 'First Message', enable: ['trigger'], operator: null, value: null },
-  "incoming_Message": { label: 'Incoming Message', enable: ['trigger'], operator: null, value: null },
+  "first_message": {
+    label: 'First Message',
+    enable: ['trigger'],
+    operator: null,
+    value: null
+  },
+  "incoming_Message": {
+    label: 'Incoming Message',
+    enable: ['trigger'],
+    operator: null,
+    value: null
+  },
   "message_filter": {
     label: 'Message Filter',
-    enable: ['trigger', 'condition'],
+    enable: ['condition'],
     operator: null,
     value: {
       text: { label: 'Text', operator: ['is', 'is not', 'contains'], value: null, format: 'input', type: 'text' },
@@ -67,74 +87,90 @@ export const block_data: Record<string, BlockDataItem> = {
   "message_count": {
     label: 'Message Count',
     enable: ['condition'],
-    operator: ['is', 'is gte', 'is lte'],
-    value: null,
-    format: 'input',
-    type: 'number',
+    // Example with multiple pairs: first pair for count, second pair for time range
+    operator: [
+      ['is', 'is gte', 'is lte'],  // operators for first pair
+      ['within', 'before', 'after']  // operators for second pair
+    ],
+    value: [
+      {},  // value for first pair (count)
+      {}   // value for second pair (time range)
+    ],
+    format: ['input', 'input'],  // both are input fields
+    type: ['number', 'date'],    // first is number, second is date
   },
   "conversation_started": {
     label: 'Conversation Started',
     enable: ['condition'],
-    operator: ['is', 'is gte', 'is lte'],
-    value: null,
-    format: 'input',
-    type: 'date',
+    operator: [['is', 'is gte', 'is lte']],
+    value: [{}],
+    format: ['input'],
+    type: ['date'],
   },
   "platform": {
     label: 'Platform',
     enable: ['condition'],
-    operator: ['is', 'is not'],
-    value: ['WhatsApp'],
-    format: 'static',
-    type: 'select',
+    // Example with multiple pairs: platform type and version
+    operator: [
+      ['is', 'is not'],           // operators for platform type
+      ['equals', 'greater than']  // operators for version
+    ],
+    value: [
+      { options: ['WhatsApp', 'Telegram', 'SMS'] },  // options for platform
+      {}                                              // value for version
+    ],
+    format: ['static', 'input'],  // first is static select, second is input
+    type: ['select', 'text'],     // first is select, second is text
   },
   "integrated_phone_number": {
     label: 'Integrated Phone Number',
     enable: ['condition'],
-    operator: ['is', 'is not'],
-    value: null,
-    format: 'calling_api',
-    type: 'select',
-    source: 'workflow/condition/integrated_phone_number',
+    operator: [['is', 'is not']],
+    value: [{}],
+    format: ['calling_api'],
+    type: ['select'],
+    source: '/workflow/integrated-phones',
   },
   "customer_phone_number": {
     label: 'Customer Phone Number',
     enable: ['condition'],
-    operator: ['is', 'is not'],
-    value: null,
-    format: 'input',
-    type: 'text',
+    operator: [['is', 'is not']],
+    value: [{}],
+    format: ['input'],
+    type: ['text'],
   },
   "send_message": {
     label: 'Send Message',
     enable: ['action'],
-    operator: ['is'],
-    value: null,
-    format: 'input',
-    type: 'textarea',
+    operator: [['is'], ['is']],
+    value: [{}],
+    format: ['input', 'input'],
+    type: ['textarea', 'multifile'],
+    sublabels: ['Message', 'Attachment']
   },
   "ai_reply": {
     label: 'AI Auto Reply',
     enable: ['action'],
-    operator: ['is'],
-    value: null,
-    format: 'auto',
-    type: '',
+    operator: [['is']],
+    value: [{}],
+    format: ['auto'],
+    type: [''],
   },
   "send_email": {
     label: 'Send Email',
     enable: ['action'],
-    operator: ['is'],
-    value: null,
-    format: 'input',
-    type: 'text',
+    operator: [['is'], ['is'], ['is']],
+    value: [{}],
+    format: ['input','input', 'input'],
+    type: ['text','textarea', 'multifile'],
+    sublabels: ['To','Message', 'Attachment']
   },
   "delay": {
     label: 'Delay',
     enable: ['delay'],
-    operator: ['is'],
-    value: null,
-    format: 'input',
-    type: 'number',
+    operator: [['is']],
+    value: [{}],
+    format: ['input'],
+    type: ['number'],
   },
 };

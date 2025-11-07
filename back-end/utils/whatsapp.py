@@ -36,25 +36,21 @@ async def logout_whatsapp(instance_name:str):
     return response.json()
 
 async def send_message_whatsapp(instance_name:str, to:str, message:str, extra_info:dict):
-    image_urls = []
-    extra_urls = []
+    attachmentUrls = []
     for i in extra_info.get('images', []):
-        url_i = f'{BACKEND_URL}/{i}'
-        image_urls.append(url_i)
+        url_i = f'{BACKEND_URL}/api/{i}'
+        attachmentUrls.append({"url":url_i, "type":'image'})
     for i in extra_info.get("extra", []):
-        url_i = f'{BACKEND_URL}/{i}'
-        extra_urls.append(url_i)
-    async with httpx.AsyncClient() as client:
+        url_i = f'{BACKEND_URL}/api/{i}'
+        attachmentUrls.append({"url":url_i, "type":'document'})
+    async with httpx.AsyncClient(timeout=httpx.Timeout(max([5*len(attachmentUrls), 10]))) as client:
         response = await client.post(
             f"{WhatsApp_Bot_URL}/send",
             json={
                 "project_id": instance_name,
-                'to': to,
-                'message': message,
-                'image_urls': image_urls,
-                'extra_urls': extra_urls
+                "to": to,
+                "message": message,
+                "attachmentUrls": attachmentUrls
             }
         )
-        if response.status_code > 300:
-            return False
         return response.json()

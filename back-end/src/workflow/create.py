@@ -159,10 +159,10 @@ async def action_workflow_function(
             
         elif block["key"] == "send_message":
             content = block["settings"]["value_0"]
-            extra_attachment = block["settings"]["value_1"]
+            extra_attachment = block["settings"].get("value_1", "")
             extra_files = get_workflow_attachment(extra_attachment, company_id, workflow_id)
             if platform == "WhatsApp":
-                result = await send_message_whatsapp(instance_name, from_phone_number, content, {'images': []})
+                result = await send_message_whatsapp(instance_name, from_phone_number, content, extra_files)
                 if not result.get("success", False):
                     return False
             # Insert new message into database
@@ -181,7 +181,7 @@ async def action_workflow_function(
         elif block["key"] == "send_email":
             receiver_email = block["settings"]["value_0"]
             content = block["settings"]["value_1"]
-            extra_attachment = block["settings"]["value_2"]
+            extra_attachment = block["settings"].get("value_2", "")
             extra_files = get_workflow_attachment(extra_attachment, company_id, workflow_id)
             if not send_email_with_customize_content(receiver_email, content, extra_files):
                 return False

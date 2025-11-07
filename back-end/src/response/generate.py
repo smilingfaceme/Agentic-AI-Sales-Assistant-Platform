@@ -93,7 +93,7 @@ async def generate_response_with_search(
             if platform == "WhatsApp":
                 sending_result = await send_message_whatsapp(instance_name, from_phone_number, final_response, extra_info)
                 if not sending_result.get("success", False):
-                    return False
+                    break
             
             # Insert new message into database        
             add_response = add_new_message(
@@ -165,7 +165,7 @@ async def generate_response_with_image_search(
             if platform == "WhatsApp":
                 sending_result = await send_message_whatsapp(instance_name, from_phone_number, final_response, extra_info)
                 if not sending_result.get("success", False):
-                    return False
+                    break
             
             # Insert new message into database        
             add_response = add_new_message(

@@ -360,6 +360,7 @@ async def reply_to_message(data = Body(...)):
     company_id = data['company_id']
     message = data['message']
     print(message)
+    user_message = message['message'].get('conversation', "") or message['message'].get('extendedTextMessage', {}).get('text', "")
     if not instanceName or not company_id or not message:
         raise HTTPException(status_code=400, detail="Missing instanceName, company_id or message parameter")
     
@@ -371,33 +372,34 @@ async def reply_to_message(data = Body(...)):
     company_schema = company_info["schema_name"]
     
     conversation = get_conversatin_by_phone_integration(company_schema, phone_number, instanceName)
-    conversation = conversation.get('rows', [])    
     if not conversation:
         whatsapp_name = message['pushName']
         new_conversation = add_new_conversation(company_schema, whatsapp_name, "WhatsApp", phone_number, instanceName)
         if new_conversation:
             conversation_id = new_conversation[0]['conversation_id']
+            conversation_ai_reply = new_conversation[0]['ai_reply']
         else:
             raise HTTPException(status_code=500, detail="Failed to create conversation")
     else:
         conversation_id = conversation[0]['conversation_id']
-    
+        conversation_ai_reply = conversation[0]['ai_reply']
+    print(message)
     messages = add_new_message(
         company_id=company_schema, 
         conversation_id=conversation_id, 
         sender_email="", 
         sender_type="customer", 
-        content=message['message']['conversation'],
+        content=user_message,
         extra='[]'
     )
     
     # Return success response with new message details
     if messages:
-        if conversation[0]['ai_reply'] == True:
+        if conversation_ai_reply == True:
             # Start vectorization in background thread
             thread = threading.Thread(
                 target=run_response_in_thread,
-                args=(conversation_id, company_id, company_schema,message['message']['conversation'], instanceName, phone_number, "Text", "WhatsApp")
+                args=(conversation_id, company_id, company_schema, user_message, instanceName, phone_number, "Text", "WhatsApp")
             )
             thread.daemon = True
             thread.start()
@@ -442,10 +444,12 @@ async def reply_to_voice_message(
         new_conversation = add_new_conversation(company_schema, whatsapp_name, "WhatsApp", phone_number, instanceName)
         if new_conversation:
             conversation_id = new_conversation[0]['conversation_id']
+            conversation_ai_reply = new_conversation[0]['ai_reply']
         else:
             raise HTTPException(status_code=500, detail=new_conversation['message'])
     else:
         conversation_id = conversation[0]['conversation_id']
+        conversation_ai_reply = conversation[0]['ai_reply']
     
     messages = add_new_message(
         company_id=company_schema, 
@@ -458,7 +462,7 @@ async def reply_to_voice_message(
     
     # Return success response with new message details
     if messages:
-        if conversation[0]['ai_reply'] == True:
+        if conversation_ai_reply == True:
             # Start vectorization in background thread
             thread = threading.Thread(
                 target=run_response_in_thread,
@@ -501,10 +505,12 @@ async def reply_to_image_message(
         new_conversation = add_new_conversation(company_schema, whatsapp_name, "WhatsApp", phone_number, instanceName)
         if new_conversation:
             conversation_id = new_conversation[0]['conversation_id']
+            conversation_ai_reply = new_conversation[0]['ai_reply']
         else:
             raise HTTPException(status_code=500, detail=new_conversation['message'])
     else:
         conversation_id = conversation[0]['conversation_id']
+        conversation_ai_reply = conversation[0]['ai_reply']
     
     # Extra file upload in storage
     file_content = await image.read()
@@ -533,7 +539,7 @@ async def reply_to_image_message(
     
     # Return success response with new message details
     if messages:
-        if conversation[0]['ai_reply'] == True:
+        if conversation_ai_reply == True:
             file_io = io.BytesIO(file_content)
             # Start vectorization in background thread
             thread = threading.Thread(

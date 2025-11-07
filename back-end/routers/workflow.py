@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Body, Query, Form, File, UploadFile
 from middleware.auth import verify_token
 from db.company_table import add_new_workflow, get_all_workflows, get_workflow_by_id, update_workflow_by_id, delete_workflow_by_id, update_workflow_for_enable_except_by_id
-from db.public_table import get_companies
+from db.public_table import get_companies, get_integrations
 from src.workflow.confirm import confirm_workflows
 import json, os
 from typing import Optional, List
@@ -217,3 +217,17 @@ async def update_workflow(data = Body(...), user = Depends(verify_token)):
             "workflow": updated_workflow[0]
         }
     raise HTTPException(status_code=500, detail="Failed to update workflow")
+
+@router.get("/integrated-phones")
+async def get_all_integrations(user = Depends(verify_token)):
+    if not user['permission'].get("integration", False):
+        raise HTTPException(status_code=400, detail="You are not authorized to perform this action")
+    integrations = get_integrations({"company_id": user["company_id"], 'delete': False})
+    if not integrations:
+        return {
+            "integrations":[]
+        }
+    phone_numbers = [i["phone_number"] for i in integrations]
+    return {
+        "values":phone_numbers
+    }

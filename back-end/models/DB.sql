@@ -142,6 +142,6 @@ create table if not exists public.bot_personality (
   constraint bot_personality_company_id_fkey foreign KEY (company_id) references companies (id)
 ) TABLESPACE pg_default;
 
-INSERT INTO roles (name, permissions) VALUES ('admin', '{"chat": true, "knowledge": true, "invite": true, "company": true, "integration": true, "conversation": true}'::jsonb) RETURNING id, name, permissions;
-INSERT INTO roles (name, permissions) VALUES ('knowledge_manager', '{"chat": false, "knowledge": true, "invite": false, "company": false, "integration": false, "conversation": false}'::jsonb) RETURNING id, name, permissions;
-INSERT INTO roles (name, permissions) VALUES ('agent', '{"chat": true, "knowledge": false, "invite": false, "company": false, "integration": true, "conversation": true}'::jsonb) RETURNING id, name, permissions;
+INSERT INTO roles (name, permissions) VALUES ('admin', '{"chat": true, "knowledge": true, "invite": true, "company": true, "integration": true, "conversation": true, "workflow": true}'::jsonb) RETURNING id, name, permissions;
+INSERT INTO roles (name, permissions) VALUES ('knowledge_manager', '{"chat": false, "knowledge": true, "invite": false, "company": false, "integration": false, "conversation": false, "workflow": true}'::jsonb) RETURNING id, name, permissions;
+INSERT INTO roles (name, permissions) VALUES ('agent', '{"chat": true, "knowledge": false, "invite": false, "company": false, "integration": true, "conversation": true, "workflow": false}'::jsonb) RETURNING id, name, permissions;

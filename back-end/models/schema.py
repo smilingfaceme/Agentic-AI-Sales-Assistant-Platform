@@ -65,6 +65,8 @@ COMPANY_KNOWLEDGE_TABLE = """create table {company_id}.knowledges (
   status text not null,
   primary_column text not null,
   extra json null,
+  energy double precision null,
+  carbon double precision null,
   created_at timestamp with time zone not null default now(),
   constraint knowledges_pkey primary key (id)
 ) TABLESPACE pg_default;

@@ -1,10 +1,11 @@
-from db.company_table import get_all_workflows, get_all_messages, get_linked_images_from_table, add_new_message
+from db.company_table import get_all_workflows, get_all_messages, get_linked_images_from_table, add_new_message, update_message_energy
 from db.public_table import get_chatbot_personality, get_integration_by_instance_name
 from src.utils.chroma_utils import search_vectors_product
 from src.workflow.create import trigger_workflow_function, condition_workflow_function, action_workflow_function, delay_workflow_function
 from src.response.ai_response import ai_response_with_search, ai_response_with_image_search
 from utils.whatsapp import send_message_whatsapp
 from src.image_vectorize import search_similar_images
+from utils.track_carbon import tracker
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import StructuredTool
 from langchain_core.chat_history import InMemoryChatMessageHistory
@@ -41,12 +42,13 @@ async def get_history(messages):
 async def generate_response_with_search(
     company_id: str, company_schema: str, conversation_id: str, query: str, from_phone_number: str, instance_name: str, message_type:str, platform:str
 ):
+    tracker.start()
     source_phone_number = get_integration_by_instance_name(instance_name).get("phone_number", None)
     active_workflows = get_workflows(company_schema)
     
     except_case = []
+    active_workflows_response = []
     if active_workflows:
-        final_response = []
         print("Pass Workflow Processing")
         for workflow in active_workflows:
             worflow_process_flag = True
@@ -72,14 +74,12 @@ async def generate_response_with_search(
                     print("Pass action nodes Processing")
                     workflow_response = await action_workflow_function(node["config"]["blocks"],company_id, company_schema, conversation_id, memory, from_phone_number, instance_name, query, message_type, platform, workflow["id"], [])
                     if workflow_response:
-                        final_response.extend(workflow_response)
+                        active_workflows_response.extend(workflow_response)
                 if node["type"] == "delay":
                     print("Pass delay nodes Processing")
                     result = delay_workflow_function(node["config"]["blocks"])
             if not worflow_process_flag:
                 except_case.append(workflow["except_case"])
-        if final_response:
-            return final_response
     else:
         except_case.append("sample")
     except_case = list(set(except_case))
@@ -111,19 +111,23 @@ async def generate_response_with_search(
             pass
         elif i == "ignore":
             pass
-    
-    return except_response
+    emissions_kg = tracker.stop()
+    energy_kwh = tracker.final_emissions_data.energy_consumed
+    update_message_energy(company_schema, conversation_id, energy_kwh, emissions_kg)
+    active_workflows_response.extend(except_response)
+    return active_workflows_response
 
 async def generate_response_with_image_search(
     company_id: str, company_schema: str, conversation_id: str, query: str, from_phone_number: str, instance_name: str, message_type:str, platform:str, sample_image: io.BytesIO
 ):
+    tracker.start()
     matches = search_similar_images(query_image_bytes=sample_image, index_name=f'{company_id}-image')
     source_phone_number = get_integration_by_instance_name(instance_name).get("phone_number", None)
     active_workflows = get_workflows(company_schema)
     
     except_case = []
+    active_workflows_response = []
     if active_workflows:
-        final_response = []
         for workflow in active_workflows:
             worflow_process_flag = True
             messages = []
@@ -144,13 +148,11 @@ async def generate_response_with_image_search(
                 if node["type"] == "action":
                     workflow_response = await action_workflow_function(node["config"]["blocks"],company_id, company_schema, conversation_id, memory, from_phone_number, instance_name, query, message_type, platform, workflow["id"], matches)
                     if workflow_response:
-                        final_response.extend(workflow_response)
+                        active_workflows_response.extend(workflow_response)
                 if node["type"] == "delay":
                     result = delay_workflow_function(node["config"]["blocks"])
             if not worflow_process_flag:
                 except_case.append(workflow["except_case"])
-        if final_response:
-            return final_response
     else:
         except_case.append("sample")
     except_case = list(set(except_case))
@@ -183,5 +185,8 @@ async def generate_response_with_image_search(
             pass
         elif i == "ignore":
             pass
-    
+    emissions_kg = tracker.stop()
+    energy_kwh = tracker.final_emissions_data.energy_consumed
+    update_message_energy(company_schema, conversation_id, energy_kwh, emissions_kg)
+    active_workflows_response.extend(except_response)
     return except_response

@@ -249,6 +249,23 @@ def get_all_messages(company_id: str, conversation_id: str):
     finally:
         session.close()
 
+def update_message_energy(company_id: str, conversation_id: str, energy: float, carbon: float):
+    """Update message energy and carbon"""
+    session = db.get_session()
+    try:
+        query = text(f"UPDATE {company_id}.messages SET energy = :energy, carbon = :carbon WHERE message_id = ( SELECT message_id FROM {company_id}.messages WHERE conversation_id = :conversation_id ORDER BY created_at DESC LIMIT 1 ) RETURNING *;")
+        result = session.execute(query, {"energy": energy, "carbon": carbon, "conversation_id": conversation_id}).fetchone()
+        session.commit()
+        if result:
+            return [dict(result._mapping)]
+        return []
+    except Exception as e:
+        session.rollback()
+        print(f"Error updating message energy: {e}")
+        return []
+    finally:
+        session.close()
+
 # ==================== IMAGES ====================
 
 def add_new_image(company_id: str, file_name: str, file_type: str, file_hash: str, full_path: str, status: str, match_field: str):
@@ -855,5 +872,30 @@ def delete_workflow_by_id(company_id: str, workflow_id: str):
         session.rollback()
         print(f"Error deleting workflow: {e}")
         return False
+    finally:
+        session.close()
+        
+# ===================================
+
+def get_carbon_energy_from_messages(company_id: str, timespace: str, period: str):
+    """Get carbon and energy from messages"""
+    session = db.get_session()
+    try:
+        query = text(f"""SELECT
+            DATE_TRUNC(:timespace, created_at) AS date,
+            AVG(energy) AS chatbot_energy,
+            AVG(carbon) AS chatbot_carbon
+            FROM {company_id}.messages
+            WHERE created_at >= NOW() - INTERVAL :period
+            GROUP BY 1
+            ORDER BY 1;
+        """)
+        results = session.execute(query, {"timespace":timespace,'period':period}).fetchall()
+        if results:
+            return [dict(row._mapping) for row in results]
+        return []
+    except Exception as e:
+        print(f"Error getting carbon and energy: {e}")
+        return []
     finally:
         session.close()

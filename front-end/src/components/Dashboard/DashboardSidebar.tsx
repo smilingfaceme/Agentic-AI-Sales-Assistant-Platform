@@ -2,7 +2,7 @@
 import React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { FaBuilding, FaCogs, FaComments, FaBroadcastTower, FaRobot, FaSignOutAlt, FaHeart, FaProjectDiagram } from "react-icons/fa";
+import { FaBuilding, FaCogs, FaComments, FaBroadcastTower, FaRobot, FaSignOutAlt, FaHeart, FaProjectDiagram, FaLeaf } from "react-icons/fa";
 import { useAppContext, User } from '@/contexts/AppContext';
 import { getCookie, logout } from "@/utils";
 
@@ -101,6 +101,18 @@ export default function DashboardSidebar() {
             <span className={sidebarHidden ? "text-xl" : "mr-3 text-lg"}><FaBroadcastTower /></span>
             {!sidebarHidden && 'Go live'}
           </Link>}
+          <Link
+            key="/dashboard/sustainability"
+            href="/dashboard/sustainability"
+            className={
+              sidebarHidden
+                ? `flex items-center justify-center w-10 h-10 mb-2 rounded-lg transition-colors text-gray-900 ${pathname.startsWith("/dashboard/sustainability") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
+                : `flex items-center w-full px-3 py-2 mb-2 rounded transition-colors text-left text-gray-900 ${pathname.startsWith("/dashboard/sustainability") ? "bg-blue-100 text-blue-700 font-semibold" : "hover:bg-gray-100"}`
+            }
+          >
+            <span className={sidebarHidden ? "text-xl" : "mr-3 text-lg"}><FaLeaf /></span>
+            {!sidebarHidden && 'Sustainability'}
+          </Link>
         </nav>
         {/* Utility Items */}
         <div className={`pb-4 ${sidebarHidden ? "flex flex-col items-center" : "ml-5"}`}>

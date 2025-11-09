@@ -581,3 +581,60 @@ export const workflowApi = {
     return res.json();
   }
 };
+
+// Sustainability KPI APIs
+export const sustainabilityApi = {
+  getKPIData: async (dateRange: string) => {
+    const res = await apiRequest(`/sustainability/kpi?timeperiod=${encodeURIComponent(dateRange)}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch KPI data');
+    return res.json();
+  },
+
+  getKPITrends: async (dateRange: string) => {
+    const res = await apiRequest(`/sustainability/trends?range=${encodeURIComponent(dateRange)}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch KPI trends');
+    return res.json();
+  },
+
+  getEnergyBreakdown: async () => {
+    const res = await apiRequest('/sustainability/energy-breakdown', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch energy breakdown');
+    return res.json();
+  },
+
+  getEmissionsBreakdown: async () => {
+    const res = await apiRequest('/sustainability/emissions-breakdown', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch emissions breakdown');
+    return res.json();
+  },
+
+  getAlerts: async () => {
+    const res = await apiRequest('/sustainability/alerts', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch sustainability alerts');
+    return res.json();
+  },
+
+  exportKPIData: async (dateRange: string, format: 'csv' | 'json' | 'xlsx') => {
+    const res = await apiRequest(`/sustainability/export?range=${encodeURIComponent(dateRange)}&format=${format}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to export KPI data');
+    return res.blob();
+  }
+};

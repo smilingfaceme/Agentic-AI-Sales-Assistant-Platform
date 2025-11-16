@@ -117,6 +117,7 @@ class Integration(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     phone_number = Column(String, nullable=False, unique=True)
     instance_name = Column(String, nullable=False, unique=True)
+    phone_number_id = Column(String, nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("public.users.id"), nullable=False)
     delete = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)

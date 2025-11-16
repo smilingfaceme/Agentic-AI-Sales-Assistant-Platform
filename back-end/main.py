@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import routes
-from routers import auth, user, company, invite, knowledge, conversation, chat, integration, image, chatbot_setting, extra, workflow, sustain_kpi
+from routers import auth, user, company, invite, knowledge, conversation, chat, integration, image, chatbot_setting, extra, workflow, sustain_kpi, waca
 from middleware.error_handler import add_exception_handlers
 from utils.validate_env import validate_env
 
@@ -22,10 +22,10 @@ app = FastAPI(
 # Validate environment variables
 validate_env()
 
-# CORS configuration
+# CORS configuration - Allow all origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,6 +46,7 @@ app.include_router(chatbot_setting.router, prefix="/api/personality", tags=["per
 app.include_router(extra.router, prefix="/api/document", tags=["document"])
 app.include_router(workflow.router, prefix="/api/workflow", tags=["workflow"])
 app.include_router(sustain_kpi.router, prefix="/api/sustainability", tags=["sustainability"])
+app.include_router(waca.router, prefix="/api/waca", tags=["waca"])
 
 # Add exception handlers
 add_exception_handlers(app)

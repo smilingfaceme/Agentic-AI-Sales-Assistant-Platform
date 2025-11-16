@@ -515,7 +515,7 @@ def get_integrations(filters: dict):
         session.close()
 
 
-def add_new_integration(company_id: str, created_by: str, instance_name: str, phone_number: str, type: str = "whatsapp_web"):
+def add_new_integration(company_id: str, created_by: str, instance_name: str, phone_number: str, type: str = "whatsapp_web", phone_number_id:str = None):
     """Add a new integration"""
     session = db.get_session()
     try:
@@ -526,7 +526,8 @@ def add_new_integration(company_id: str, created_by: str, instance_name: str, ph
             phone_number=phone_number,
             type=type,
             is_active=True,
-            delete=False
+            delete=False,
+            phone_number_id = phone_number_id
         )
         session.add(new_integration)
         session.commit()
@@ -541,6 +542,7 @@ def add_new_integration(company_id: str, created_by: str, instance_name: str, ph
             'instance_name': new_integration.instance_name,
             'created_by': str(new_integration.created_by),
             'delete': new_integration.delete,
+            'phone_number_id': new_integration.phone_number_id,
             'created_at': new_integration.created_at.isoformat() if new_integration.created_at else None
         }
     except Exception as e:
@@ -599,6 +601,7 @@ def get_integration_by_instance_name(instance_name: str):
                 'instance_name': integration.instance_name,
                 'created_by': str(integration.created_by),
                 'delete': integration.delete,
+                'phone_number_id': integration.phone_number_id,
                 'created_at': integration.created_at.isoformat() if integration.created_at else None
             }
         return {}
@@ -606,4 +609,30 @@ def get_integration_by_instance_name(instance_name: str):
         print(f"Error getting integration: {e}")
         return {}
     finally:
-        session.close() 
+        session.close()
+
+
+def get_integration_by_phone_number_id(phone_number_id: str):
+    """Get an integration by phone_number_id"""
+    session = db.get_session()
+    try:
+        integration = session.query(Integration).filter_by(phone_number_id=phone_number_id, delete=False).first()
+        if integration:
+            return {
+                'id': str(integration.id),
+                'company_id': str(integration.company_id),
+                'type': integration.type,
+                'is_active': integration.is_active,
+                'phone_number': integration.phone_number,
+                'instance_name': integration.instance_name,
+                'created_by': str(integration.created_by),
+                'delete': integration.delete,
+                'phone_number_id': integration.phone_number_id,
+                'created_at': integration.created_at.isoformat() if integration.created_at else None
+            }
+        return {}
+    except Exception as e:
+        print(f"Error getting integration by phone_number_id: {e}")
+        return {}
+    finally:
+        session.close()

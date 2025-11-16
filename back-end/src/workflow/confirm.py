@@ -88,6 +88,9 @@ def confirm_workflows(workflow: dict):
                 if i["key"] == "send_message":
                     if i.get("settings", {}).get("value_0", "") == "":
                         return False, "Send Message cannot be empty"
+                if i["key"] == "book_meeting":
+                    if i.get("settings", {}).get("value", "") == "":
+                        return False, "Calendar Link cannot be empty"
                 if i["key"] == "send_email":
                     if i.get("settings", {}).get("value_0", "") == "":
                         return False, "Send Email cannot be empty"

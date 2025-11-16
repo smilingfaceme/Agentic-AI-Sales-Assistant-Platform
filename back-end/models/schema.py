@@ -18,6 +18,8 @@ COMPANY_MESSAGE_TABLE = """create table {company_id}.messages (
   content text null,
   created_at timestamp without time zone null default CURRENT_TIMESTAMP,
   extra json null,
+  energy double precision null,
+  carbon double precision null,
   constraint messages_pkey primary key (message_id),
   constraint messages_conversation_id_fkey foreign KEY (conversation_id) references {company_id}.conversations (conversation_id),
   constraint messages_sender_type_check check (
@@ -65,8 +67,6 @@ COMPANY_KNOWLEDGE_TABLE = """create table {company_id}.knowledges (
   status text not null,
   primary_column text not null,
   extra json null,
-  energy double precision null,
-  carbon double precision null,
   created_at timestamp with time zone not null default now(),
   constraint knowledges_pkey primary key (id)
 ) TABLESPACE pg_default;

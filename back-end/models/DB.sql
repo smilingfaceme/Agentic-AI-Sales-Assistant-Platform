@@ -62,6 +62,7 @@ create table if not exists public.integrations (
   phone_number text not null,
   created_at timestamp with time zone not null default now(),
   instance_name text not null,
+  phone_number_id text null,
   created_by uuid not null,
   delete boolean not null default false,
   constraint integrations_pkey primary key (id),

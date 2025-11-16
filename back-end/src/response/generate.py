@@ -1,9 +1,10 @@
 from db.company_table import get_all_workflows, get_all_messages, get_linked_images_from_table, add_new_message, update_message_energy
-from db.public_table import get_chatbot_personality, get_integration_by_instance_name
+from db.public_table import get_chatbot_personality, get_integration_by_instance_name, get_integration_by_phone_number_id
 from src.utils.chroma_utils import search_vectors_product
 from src.workflow.create import trigger_workflow_function, condition_workflow_function, action_workflow_function, delay_workflow_function
 from src.response.ai_response import ai_response_with_search, ai_response_with_image_search
 from utils.whatsapp import send_message_whatsapp
+from utils.waca import send_text_message_by_waca, send_image_message_by_waca
 from src.image_vectorize import search_similar_images
 from utils.track_carbon import tracker
 from langchain_openai import ChatOpenAI
@@ -43,7 +44,18 @@ async def generate_response_with_search(
     company_id: str, company_schema: str, conversation_id: str, query: str, from_phone_number: str, instance_name: str, message_type:str, platform:str
 ):
     tracker.start()
-    source_phone_number = get_integration_by_instance_name(instance_name).get("phone_number", None)
+
+    # Get integration details based on platform
+    if platform == "WACA":
+        integration = get_integration_by_phone_number_id(instance_name)
+        source_phone_number = integration.get("phone_number", None)
+        api_key = integration.get("instance_name", None)
+        phone_number_id = instance_name
+    else:
+        integration = get_integration_by_instance_name(instance_name)
+        source_phone_number = integration.get("phone_number", None)
+        api_key = None
+        phone_number_id = None
     active_workflows = get_workflows(company_schema)
     
     except_case = []
@@ -94,6 +106,14 @@ async def generate_response_with_search(
                 sending_result = await send_message_whatsapp(instance_name, from_phone_number, final_response, extra_info)
                 if not sending_result.get("success", False):
                     break
+            elif platform == "WACA":
+                # Send message via WhatsApp Business API
+                if extra_info.get("images") or extra_info.get("extra"):
+                    sending_result = send_image_message_by_waca(api_key, phone_number_id, from_phone_number, final_response, extra_info)
+                else:
+                    sending_result = send_text_message_by_waca(api_key, phone_number_id, from_phone_number, final_response)
+                if not sending_result.get("success", False):
+                    break
             
             # Insert new message into database        
             add_response = add_new_message(
@@ -122,7 +142,18 @@ async def generate_response_with_image_search(
 ):
     tracker.start()
     matches = search_similar_images(query_image_bytes=sample_image, index_name=f'{company_id}-image')
-    source_phone_number = get_integration_by_instance_name(instance_name).get("phone_number", None)
+
+    # Get integration details based on platform
+    if platform == "WACA":
+        integration = get_integration_by_phone_number_id(instance_name)
+        source_phone_number = integration.get("phone_number", None)
+        api_key = integration.get("instance_name", None)
+        phone_number_id = instance_name
+    else:
+        integration = get_integration_by_instance_name(instance_name)
+        source_phone_number = integration.get("phone_number", None)
+        api_key = None
+        phone_number_id = None
     active_workflows = get_workflows(company_schema)
     
     except_case = []
@@ -166,6 +197,14 @@ async def generate_response_with_image_search(
             final_response, extra_info = await ai_response_with_image_search(company_id, company_schema, conversation_id, query, memory, matches)
             if platform == "WhatsApp":
                 sending_result = await send_message_whatsapp(instance_name, from_phone_number, final_response, extra_info)
+                if not sending_result.get("success", False):
+                    break
+            elif platform == "WACA":
+                # Send message via WhatsApp Business API
+                if extra_info.get("images") or extra_info.get("extra"):
+                    sending_result = send_image_message_by_waca(api_key, phone_number_id, from_phone_number, final_response, extra_info)
+                else:
+                    sending_result = send_text_message_by_waca(api_key, phone_number_id, from_phone_number, final_response)
                 if not sending_result.get("success", False):
                     break
             

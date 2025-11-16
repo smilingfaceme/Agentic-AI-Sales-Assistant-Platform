@@ -41,7 +41,8 @@ def generate_kpi_data(company_schema: str, timespace: str, period: str):
         c for c in conversations
         if (c["chatbot_energy"] not in [None, 0]) and (c["chatbot_carbon"] not in [None, 0])
     ]
-
+    if len(conversations) == 0:
+        return None, None, None, None
     # --- Extract core values ---
     energy_values = [c["chatbot_energy"] for c in conversations]
     carbon_values = [c["chatbot_carbon"] for c in conversations]

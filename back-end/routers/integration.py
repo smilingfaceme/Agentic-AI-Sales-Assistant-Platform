@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, Body
 from db.public_table import *
 from utils.whatsapp import start_whatsapp, combine_uuids, logout_whatsapp
 from middleware.auth import verify_token
+from utils.waca import confirm_phone_number_id
 
 # Initialize FastAPI router
 router = APIRouter()
@@ -16,8 +17,12 @@ async def get_all_integrations(user = Depends(verify_token)):
         return {
             "integrations":[]
         }
+    
     for i in integrations:
-        await start_whatsapp(i["company_id"], i["created_by"], i["instance_name"])
+        try:
+            await start_whatsapp(i["company_id"], i["created_by"], i["instance_name"])
+        except:
+            pass
     return {
         "integrations":integrations
     }
@@ -98,3 +103,45 @@ async def new_integrations(data = Body(...), user = Depends(verify_token)):
     return {
         "response": "success"
     }
+
+@router.post("/new-waca")
+async def new_integrations_waca(data = Body(...), user = Depends(verify_token)):
+    if not user['permission'].get("integration", False):
+        raise HTTPException(status_code=400, detail="You are not authorized to perform this action")
+    
+    phone_number_id = data["phoneNumberId"]
+    api_key = data["apiKey"]
+    
+    if not phone_number_id or not api_key:
+        raise HTTPException(status_code=400, detail="phoneNumberId and apiKey are required")
+    
+    company_id = user["company_id"]
+    request_id = user["id"]
+    integrations = get_integrations({"phone_number_id": phone_number_id, 'type': "whatsapp_api", 'delete': False})
+    if integrations:
+        raise HTTPException(status_code=400, detail="Phone number already exists")
+    
+    phone_number_info = confirm_phone_number_id(api_key, phone_number_id)
+    print(phone_number_info)
+    
+    if not phone_number_info["success"]:
+        raise HTTPException(status_code=400, detail=phone_number_info["error"]) 
+    phone_number = phone_number_info["data"]["display_phone_number"]
+    new_integration = add_new_integration(company_id=company_id, created_by=request_id, instance_name=api_key, phone_number=phone_number, type="whatsapp_api", phone_number_id=phone_number_id)
+    
+    if not new_integration:
+        raise HTTPException(status_code=400, detail="Failed to create integration")
+    
+    return {
+        "success": True,
+        "data": new_integration
+    }
+    # if integrations:
+    #     raise HTTPException(status_code=400, detail="Phone number already exists")
+    # new_integration = add_new_integration(company_id=company_id, created_by=request_id, instance_name=api_key, phone_number=phone_number_id, type="whatsapp_api")
+    # if not new_integration:
+    #     raise HTTPException(status_code=400, detail="Failed to create integration")
+    # return {
+    #     "success": True,
+    #     "data": new_integration
+    # }

@@ -21,9 +21,11 @@ google-api-python-client==2.185.0
 langchain-openai==1.0.1
 langchain==1.0.2
 httpx==0.28.1
+requests==2.32.3
 tiktoken==0.12.0
 torch==2.9.0
 chromadb==1.2.2
 psycopg2-binary==2.9.11
 sqlalchemy==2.0.44
 alembic==1.17.0
+codecarbon==3.0.8

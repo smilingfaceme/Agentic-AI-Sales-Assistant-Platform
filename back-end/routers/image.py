@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, Body, File, Query, Form
 from middleware.auth import verify_token
 from src.image_vectorize import store_image_embedding, delete_image_embedding
-from src.utils.file_utills import generate_file_hash
+from src.utils.file_utills import generate_file_hash, validate_and_convert_image
 from db.public_table import get_companies
 from db.company_table import *
 import io, asyncio, threading, os
@@ -134,6 +134,13 @@ async def upload_file(
     try:
         file_content = await file.read()
         file_name = file.filename.split("/")[-1].lower()
+
+        # Validate and convert image if needed
+        try:
+            file_content, file_name = validate_and_convert_image(file_content, file_name, output_format="JPEG")
+        except ValueError as ve:
+            raise HTTPException(status_code=400, detail=str(ve))
+
         file_hash = generate_file_hash(file_content)
         match_field = match_field.strip("'").replace(" ", "_").replace("-", "_").replace("/", "_").replace("(", "_").replace(")", "_").replace(".", "_").lower()
         existing_file = get_same_image_from_table(company_id=company_schema, file_hash=file_hash)
@@ -142,7 +149,7 @@ async def upload_file(
             existing_file_name = [i["file_name"] for i in existing_file]
             if file_name in existing_file_name:
                 raise HTTPException(status_code=400, detail="Existed already in the system")
-            
+
             full_path = existing_file[0]["full_path"]
             status = existing_file[0]["status"]
         else:

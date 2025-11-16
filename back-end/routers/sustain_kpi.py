@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from middleware.auth import verify_token
 from db.public_table import get_companies
-from src.utils.sustainability import generate_kpi_data
+from utils.sustainability import generate_kpi_data
 
 router = APIRouter()
 

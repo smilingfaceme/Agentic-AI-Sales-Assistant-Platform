@@ -7,6 +7,7 @@ from db.company_table import *
 from utils.whatsapp import send_message_whatsapp
 from src.response.generate import generate_response_with_search, generate_response_with_image_search
 from src.image_vectorize import search_similar_images
+from src.utils.file_utills import validate_and_convert_image
 from utils.stt import speech_to_text
 import threading
 import asyncio
@@ -183,6 +184,15 @@ async def send_image_message(
     if file:
         file_content = await file.read()
         file_name = file.filename
+
+        # Try to validate and convert image
+        try:
+            file_content, file_name = validate_and_convert_image(file_content, file_name, output_format="JPEG")
+            is_image = True
+        except ValueError:
+            # Not an image file, keep as-is
+            is_image = False
+
         # Define local save path
         save_dir = os.path.join("files", "messages-extra")
         os.makedirs(save_dir, exist_ok=True)
@@ -194,7 +204,10 @@ async def send_image_message(
         with open(full_path, "wb") as f:
             f.write(file_content)
         # Insert new message into database
-        extra_data = {"images":[full_path]}
+        if is_image:
+            extra_data = {"images":[full_path]}
+        else:
+            extra_data = {"extra":[full_path]}
     elif files:
         extra_data = {"images":[], "extra":[]}
         image_extensions = {'xbm', 'tif', 'jfif', 'pjp', 'apng', 'jpeg', 'heif', 'ico', 'tiff', 'webp', 'svgz', 'jpg', 'heic', 'gif', 'svg', 'png', 'bmp', 'pjpeg', 'avif'}
@@ -202,6 +215,18 @@ async def send_image_message(
             file_content = await each_file.read()
             file_name = each_file.filename
             file_extension = file_name.split(".")[-1].lower()
+
+            # Try to validate and convert image if it's an image extension
+            if file_extension in image_extensions:
+                try:
+                    file_content, file_name = validate_and_convert_image(file_content, file_name, output_format="JPEG")
+                    is_image = True
+                except ValueError:
+                    # Conversion failed, treat as non-image
+                    is_image = False
+            else:
+                is_image = False
+
             # Define local save path
             save_dir = os.path.join("files", "messages-extra")
             os.makedirs(save_dir, exist_ok=True)
@@ -212,7 +237,7 @@ async def send_image_message(
             # Save the file locally
             with open(full_path, "wb") as f:
                 f.write(file_content)
-            if file_extension in image_extensions:
+            if is_image:
                 extra_data["images"].append(full_path)
             else:
                 extra_data["extra"].append(full_path)

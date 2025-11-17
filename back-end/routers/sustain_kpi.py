@@ -5,6 +5,10 @@ from utils.sustainability import generate_kpi_data
 
 router = APIRouter()
 
+# ---------------------------
+# ROUTES
+# ---------------------------
+
 @router.get("/kpi")
 async def get_kpi_data(
     timeperiod: str = Query(..., description="Time period for data aggregation (7d, 30d, 3m, 1y, all)"),

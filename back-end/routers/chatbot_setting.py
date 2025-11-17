@@ -4,6 +4,10 @@ from middleware.auth import verify_token
 
 router = APIRouter()
 
+# ---------------------------
+# ROUTES
+# ---------------------------
+
 @router.get("/status")
 async def status_of_chatbot(user = Depends(verify_token)):
     """

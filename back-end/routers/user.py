@@ -7,6 +7,10 @@ from middleware.auth import verify_token
 # Initialize FastAPI router
 router = APIRouter()
 
+# ---------------------------
+# ROUTES
+# ---------------------------
+
 @router.put("/password")
 async def update_password(data = Body(...), user = Depends(verify_token)):
     """

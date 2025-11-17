@@ -7,9 +7,10 @@ import os
 from collections import defaultdict
 router = APIRouter()
 
-# ----------------------------- #
-# Endpoint: List Files
-# ----------------------------- #
+# ---------------------------
+# ROUTES
+# ---------------------------
+
 @router.get("/list")
 async def get_file_list(
     page_size: int = Query(...),
@@ -75,9 +76,6 @@ async def get_file_list(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ----------------------------- #
-# Endpoint: Upload File
-# ----------------------------- #
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
@@ -145,9 +143,6 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ----------------------------- #
-# Endpoint: Remove File
-# ----------------------------- #
 @router.delete("/remove")
 async def remove_file(
     data=Body(...),
@@ -191,9 +186,6 @@ async def remove_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ----------------------------- #
-# Endpoint: Reprocess File
-# ----------------------------- #
 @router.post("/reprocess")
 async def reprocess_file(
     data=Body(...),

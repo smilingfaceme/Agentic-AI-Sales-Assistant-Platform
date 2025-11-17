@@ -15,6 +15,9 @@ router = APIRouter()
 # Environment variable for webhook verification
 WACA_VERIFY_TOKEN = os.getenv("WACA_VERIFY_TOKEN", "your_verify_token_here")
 
+# ---------------------------
+# ROUTES
+# ---------------------------
 
 @router.get("/{phone_number_id}/webhook")
 async def verify_webhook(

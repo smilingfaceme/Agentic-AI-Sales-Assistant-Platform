@@ -4,9 +4,13 @@ from db.public_table import *
 from utils.whatsapp import start_whatsapp, combine_uuids, logout_whatsapp
 from middleware.auth import verify_token
 from utils.waca import confirm_phone_number_id
-
+import re
 # Initialize FastAPI router
 router = APIRouter()
+
+# ---------------------------
+# ROUTES
+# ---------------------------
 
 @router.get("/")
 async def get_all_integrations(user = Depends(verify_token)):
@@ -126,7 +130,8 @@ async def new_integrations_waca(data = Body(...), user = Depends(verify_token)):
     
     if not phone_number_info["success"]:
         raise HTTPException(status_code=400, detail=phone_number_info["error"]) 
-    phone_number = phone_number_info["data"]["display_phone_number"]
+    phone_number_string = phone_number_info["data"]["display_phone_number"]
+    phone_number = re.sub(r"\D", "", phone_number_string)
     new_integration = add_new_integration(company_id=company_id, created_by=request_id, instance_name=api_key, phone_number=phone_number, type="whatsapp_api", phone_number_id=phone_number_id)
     
     if not new_integration:
@@ -136,12 +141,3 @@ async def new_integrations_waca(data = Body(...), user = Depends(verify_token)):
         "success": True,
         "data": new_integration
     }
-    # if integrations:
-    #     raise HTTPException(status_code=400, detail="Phone number already exists")
-    # new_integration = add_new_integration(company_id=company_id, created_by=request_id, instance_name=api_key, phone_number=phone_number_id, type="whatsapp_api")
-    # if not new_integration:
-    #     raise HTTPException(status_code=400, detail="Failed to create integration")
-    # return {
-    #     "success": True,
-    #     "data": new_integration
-    # }

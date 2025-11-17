@@ -64,7 +64,7 @@ def search_vectors_with_query(query: str, company_id: str, conversation_id: str,
         conversationId=conversation_id,
         top_k=5
     )
-    print(differentiating_features)
+    
     if differentiating_features and len(differentiating_features) > 3:
         extra_info_conversations[conversation_id] = {}
         return f"Need more details. Please clarify: {differentiating_features}"

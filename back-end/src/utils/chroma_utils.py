@@ -160,7 +160,7 @@ def search_vectors_by_embedding(index_name: str, company_id: str, query_embeddin
 
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=10000,
+        n_results=1000,
         where=extra_filter,
         include=["embeddings", "metadatas", "documents", "distances"],
         # where_document=where_filter
@@ -270,8 +270,6 @@ def extract_differentiating_features(retrieved_items: List[Dict], query: str) ->
     Returns:
         Optional[Dict]: Extracted differentiating features in JSON structure.
     """
-    for i in retrieved_items:
-        print(i.get('score', 'N/A'))
     
     text_result = [item["metadata"].get('pc_text', '') for item in retrieved_items]
     
@@ -415,7 +413,6 @@ def search_vectors_product(index_name: str, query_text: str, company_id: str, co
             - diverse_results: Selected diverse product records
             - differentiating_features: Extracted distinguishing features
     """
-    print(query_text)
     # Step 1: Generate query embedding
     query_embedding = generate_embeddings([query_text])[0]
     
@@ -438,7 +435,6 @@ def search_vectors_product(index_name: str, query_text: str, company_id: str, co
         filter_info = filter_info[0]
     else:
         filter_info = {}
-    print(filter_info)
     # Step 2: Retrieve top matches from ChromaDB
     initial_results = search_vectors_by_embedding(index_name, company_id, query_embedding, file_name, filter_info)
     
@@ -446,8 +442,7 @@ def search_vectors_product(index_name: str, query_text: str, company_id: str, co
         vectors_for_each_conversation[conversationId] = []
         return [], None
     doc_vectors = [r['values'] for r in initial_results if r.get('values') is not None]
-    
-    print("=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/=/")
+
     
     # Step 3: Apply MMR for diverse selection
     if doc_vectors:
@@ -460,6 +455,6 @@ def search_vectors_product(index_name: str, query_text: str, company_id: str, co
     
     # Step 4: Extract differentiating features
     differentiating_features = extract_differentiating_features(initial_results, query_text) if initial_results else None
-    print(differentiating_features)
+    
     return search_vector_result, differentiating_features
 

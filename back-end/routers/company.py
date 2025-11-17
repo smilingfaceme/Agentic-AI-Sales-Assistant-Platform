@@ -4,6 +4,10 @@ from middleware.auth import verify_token
 
 router = APIRouter()
 
+# ---------------------------
+# ROUTES
+# ---------------------------
+
 @router.put("/update")
 async def update_company(data = Body(...), user = Depends(verify_token)):
     """

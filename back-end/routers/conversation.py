@@ -6,6 +6,10 @@ from db.company_table import add_new_conversation, get_all_conversations, get_un
 # Initialize FastAPI router for conversation-related routes
 router = APIRouter()
 
+# ---------------------------
+# ROUTES
+# ---------------------------
+
 @router.get("/")
 async def get_conversations(user = Depends(verify_token)):
     """

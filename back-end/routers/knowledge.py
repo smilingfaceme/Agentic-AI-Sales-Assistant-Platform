@@ -42,6 +42,10 @@ async def vectorize_in_background(file_content: bytes, file_name: str, company_i
         print(f"Vectorization failed: {str(e)}")
         update_knowledge_status_by_id(company_schema, record_id, "Failed")
 
+# ---------------------------
+# ROUTES
+# ---------------------------
+
 @router.get("/list")
 async def get_file_list(
     user = Depends(verify_token)

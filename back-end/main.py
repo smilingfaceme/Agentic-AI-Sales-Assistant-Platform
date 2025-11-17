@@ -31,22 +31,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 os.makedirs("files", exist_ok=True)
-app.mount("/api/files", StaticFiles(directory="files"), name="files")
+app.mount("/files", StaticFiles(directory="files"), name="files")
 # Include routers
-app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(user.router, prefix="/api/user", tags=["user"])
-app.include_router(company.router, prefix="/api/company", tags=["company"])
-app.include_router(invite.router, prefix="/api/invite", tags=["invite"])
-app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
-app.include_router(image.router, prefix="/api/image", tags=["image"])
-app.include_router(conversation.router, prefix="/api/conversation", tags=["conversation"])
-app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
-app.include_router(integration.router, prefix="/api/integration", tags=["integration"])
-app.include_router(chatbot_setting.router, prefix="/api/personality", tags=["personality"])
-app.include_router(extra.router, prefix="/api/document", tags=["document"])
-app.include_router(workflow.router, prefix="/api/workflow", tags=["workflow"])
-app.include_router(sustain_kpi.router, prefix="/api/sustainability", tags=["sustainability"])
-app.include_router(waca.router, prefix="/api/waca", tags=["waca"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(user.router, prefix="/user", tags=["user"])
+app.include_router(company.router, prefix="/company", tags=["company"])
+app.include_router(invite.router, prefix="/invite", tags=["invite"])
+app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
+app.include_router(image.router, prefix="/image", tags=["image"])
+app.include_router(conversation.router, prefix="/conversation", tags=["conversation"])
+app.include_router(chat.router, prefix="/chat", tags=["chat"])
+app.include_router(integration.router, prefix="/integration", tags=["integration"])
+app.include_router(chatbot_setting.router, prefix="/personality", tags=["personality"])
+app.include_router(extra.router, prefix="/document", tags=["document"])
+app.include_router(workflow.router, prefix="/workflow", tags=["workflow"])
+app.include_router(sustain_kpi.router, prefix="/sustainability", tags=["sustainability"])
+app.include_router(waca.router, prefix="/waca", tags=["waca"])
 
 # Add exception handlers
 add_exception_handlers(app)
@@ -63,7 +63,6 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
         port=port,
         reload=os.getenv("NODE_ENV") == "development"
     )

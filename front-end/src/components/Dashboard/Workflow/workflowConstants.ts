@@ -90,14 +90,12 @@ export const block_data: Record<string, BlockDataItem> = {
     // Example with multiple pairs: first pair for count, second pair for time range
     operator: [
       ['is', 'is gte', 'is lte'],  // operators for first pair
-      ['within', 'before', 'after']  // operators for second pair
     ],
     value: [
       {},  // value for first pair (count)
-      {}   // value for second pair (time range)
     ],
-    format: ['input', 'input'],  // both are input fields
-    type: ['number', 'date'],    // first is number, second is date
+    format: ['input'],  // both are input fields
+    type: ['number'],    // first is number, second is date
   },
   "conversation_started": {
     label: 'Conversation Started',
@@ -113,14 +111,12 @@ export const block_data: Record<string, BlockDataItem> = {
     // Example with multiple pairs: platform type and version
     operator: [
       ['is', 'is not'],           // operators for platform type
-      ['equals', 'greater than']  // operators for version
     ],
     value: [
-      { options: ['WhatsApp', 'Telegram', 'SMS'] },  // options for platform
-      {}                                              // value for version
+      { options: ['WhatsApp', 'WACA'] },  // options for platform
     ],
-    format: ['static', 'input'],  // first is static select, second is input
-    type: ['select', 'text'],     // first is select, second is text
+    format: ['static'],  // first is static select, second is input
+    type: ['select'],     // first is select, second is text
   },
   "integrated_phone_number": {
     label: 'Integrated Phone Number',
@@ -164,6 +160,15 @@ export const block_data: Record<string, BlockDataItem> = {
     format: ['input','input', 'input'],
     type: ['text','textarea', 'multifile'],
     sublabels: ['To','Message', 'Attachment']
+  },
+  "book_meeting": {
+    label: 'Book Meeting',
+    enable: ['action'],
+    operator: [['is']],
+    value: [{}],
+    format: ['input'],
+    type: ['text'],
+    sublabels: ['Calendar Link']
   },
   "delay": {
     label: 'Delay',

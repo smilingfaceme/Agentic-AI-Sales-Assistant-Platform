@@ -123,9 +123,11 @@ const BlockSettings = ({
                 {settings.value !== undefined &&
                   settings.value !== null &&
                   settings.value !== '' && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs text-gray-500 font-medium">Value:</span>
-                      <span className="text-xs font-semibold text-gray-900">{String(settings.value)}</span>
+                      <span className="text-xs font-semibold text-gray-900 break-all">
+                        {String(settings.value)}
+                      </span>
                     </div>
                   )}
 

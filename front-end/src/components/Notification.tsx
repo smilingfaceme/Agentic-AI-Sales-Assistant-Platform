@@ -20,7 +20,7 @@ const typeStyles: Record<NotificationType, string> = {
 
 const Notification: React.FC<NotificationProps> = ({ message, type, onClose, autoClose, progress, isProgress }) => (
   <div
-    className={`border-l-4 p-4 shadow-lg rounded-md flex items-center gap-2 min-w-[250px] ${typeStyles[type]}`}
+    className={`border-l-4 p-4 shadow-lg rounded-md flex items-center gap-2 min-w-[250px] max-w-[750px] ${typeStyles[type]}`}
     role="alert"
   >
     <div className="flex-1">

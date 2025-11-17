@@ -342,6 +342,15 @@ export const integrationApi = {
     if (!res.ok) throw new Error('Failed to connect to WhatsApp');
     return res.json();
   },
+  new_waca: async (phone_number_id: string, api_key:string) => {
+    const res = await apiRequest(`/integration/new-waca`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ "phoneNumberId": phone_number_id, 'apiKey':api_key })
+    });
+    // if (!res.ok) throw new Error('Failed to connect to WACA');
+    return res.json();
+  },
 };
 
 // Dashboard APIs

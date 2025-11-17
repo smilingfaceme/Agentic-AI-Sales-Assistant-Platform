@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaBolt, FaLeaf, FaChartLine, FaRobot, FaSolarPanel, FaFilePdf } from 'react-icons/fa';
+import { FaBolt, FaLeaf, FaChartLine, FaRobot, FaSolarPanel, FaFilePdf, FaSyncAlt } from 'react-icons/fa';
 import KPICard from './KPICard';
 import StatusIndicator from './StatusIndicator';
 import FilterPanel from './FilterPanel';
@@ -130,7 +130,7 @@ export default function KPIStatusAnalysis() {
     );
   }
 
-  if (!kpiData) {
+  if (!kpiData ) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-gray-600">No KPI data available</div>
@@ -154,6 +154,15 @@ export default function KPIStatusAnalysis() {
 
           {/* Export Buttons */}
           <div className="flex gap-2">
+            <button
+              className="px-3 py-1 hover:bg-gray-200 rounded text-sm flex items-center disabled:opacity-50"
+              onClick={fetchKPIData}
+              disabled={isLoadingList}
+            >
+              <Loading isLoading={isLoadingList} type="button" text="Refreshing..." size="small">
+                <FaSyncAlt className="mr-2" /> Refresh
+              </Loading>
+            </button>
             <button
               onClick={() => handleExportPDF('data')}
               disabled={isExporting}

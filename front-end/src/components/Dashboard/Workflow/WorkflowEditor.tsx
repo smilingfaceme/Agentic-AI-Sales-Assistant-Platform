@@ -599,7 +599,7 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
       setIsSaving(false);
     }
   };
-  
+
   const testWorkflow = async () => {
     setIsSaving(true);
 
@@ -1303,7 +1303,6 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                   const firstFormat = selected?.format?.[0];
                                   const firstType = selected?.type?.[0];
                                   const firstOperators = selected?.operator?.[0];
-
                                   if (selected && firstFormat === 'input') {
                                     return (
                                       <div className="space-y-2">
@@ -1323,7 +1322,7 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                           </div>
                                         )}
                                         <div>
-                                          <label className="text-sm text-gray-600">Value</label>
+                                          <label className="text-sm text-gray-600">{selected.sublabels?.[0] || 'Value'}</label>
                                           <input
                                             className="w-full py-1 px-2 border rounded"
                                             type={firstType || 'text'}
@@ -1338,6 +1337,14 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                   }
 
                                   if (selected && (firstFormat === 'static' || firstFormat === 'calling_api') && firstType === 'select') {
+                                    // Get options from the first value item if it's an array
+                                    const firstValueItem = Array.isArray(selected.value) ? selected.value[0] : null;
+                                    const options = firstFormat === 'calling_api'
+                                      ? addBlockCandidates
+                                      : (firstValueItem && typeof firstValueItem === 'object' && 'options' in firstValueItem
+                                          ? (firstValueItem.options as unknown[])
+                                          : []);
+
                                     return (
                                       <div className="space-y-2">
                                         {/* Operator select for top-level select field */}
@@ -1364,8 +1371,8 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                             required
                                           >
                                             <option value="">Select {selected.label}...</option>
-                                            {(firstFormat === 'calling_api' ? addBlockCandidates : []).map((opt) => (
-                                              <option key={opt} value={opt}>{String(opt)}</option>
+                                            {options.map((opt) => (
+                                              <option key={String(opt)} value={String(opt)}>{String(opt)}</option>
                                             ))}
                                           </select>
                                         </div>

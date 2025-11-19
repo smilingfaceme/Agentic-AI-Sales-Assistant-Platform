@@ -58,9 +58,9 @@ export default function TestChatBotPanel({ chatMessages }: TestChatPanelProps) {
                     <div className={`rounded-tl-xl rounded-tr-xl px-4 py-3 ${msg.sender_type != "customer" ? "bg-gray-200 text-gray-900 rounded-br-xl" : "bg-[#23263b] text-white rounded-bl-xl"}`}>
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                       {/* Show images if message.extra is a list of image URLs */}
-                      {Array.isArray(msg.extra.images) && msg.extra.images.length > 0 && (
+                      {Array.isArray(msg.extra?.images) && msg.extra?.images.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {msg.extra.images?.map((imgUrl: string, imgIdx: number) => (
+                          {msg.extra?.images?.map((imgUrl: string, imgIdx: number) => (
                             <div key={imgIdx} className="rounded overflow-hidden">
                               <Image
                                 src={`${API_BASE}/${imgUrl}`}
@@ -74,9 +74,9 @@ export default function TestChatBotPanel({ chatMessages }: TestChatPanelProps) {
                           ))}
                         </div>
                       )}
-                      {Array.isArray(msg.extra.extra) && msg.extra.extra.length > 0 && (
+                      {Array.isArray(msg.extra?.extra) && msg.extra?.extra.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {msg.extra.extra?.map((docUrl: string) => (
+                          {msg.extra?.extra?.map((docUrl: string) => (
                             <div key={docUrl} className="rounded overflow-hidden">
                               <a href={`${API_BASE}/${docUrl}`} target="_blank" rel="noopener noreferrer">
                                 <FaFile size={60} className="mb-2" />{docUrl.split('\\').pop()}

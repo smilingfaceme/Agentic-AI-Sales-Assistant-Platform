@@ -16,7 +16,7 @@ export type ChatMessage = {
   content: string;
   created_at?: string;
   extra: {
-    images?: string[];
+    // images?: string[];
     [key: string]: unknown;
   };
 };
@@ -56,8 +56,18 @@ export default function TestChatbotPage() {
       // For image message, you may want to upload the image and get a URL
       // Here, we assume chatApi.sendImageMessage returns the uploaded image URL
       const data = await chatApi.sendImageMessage(currentConversationId, image, sender_type, message);
+
       if (data.messages) {
-        setChatMessages([...chatMessages, ...data.messages]);
+        const reply_messages = data.messages.map((i:ChatMessage) => {
+          const e = {
+            images: i.extra?.images ?? [],
+            extra: i.extra?.extra ?? [],
+          };
+          i.extra = e;
+          return i;
+        });
+        console.log(reply_messages)
+        setChatMessages([...chatMessages, ...reply_messages]);
       }
       return;
     } else {

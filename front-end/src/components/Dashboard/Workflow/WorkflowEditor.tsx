@@ -1195,7 +1195,7 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                     disabled={!addBlockKey}
                                     className="flex-1 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
-                                    Add Filter
+                                    Add {node.label}
                                   </button>
                                   <button
                                     onClick={() => {
@@ -1537,7 +1537,7 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                               }}
                               className="px-3 py-2 border rounded text-sm bg-blue-500 text-white hover:bg-blue-600 transition-colors w-full"
                             >
-                              + Add Filter
+                              + Add {node.label}
                             </button>
                           )}
                         </div>

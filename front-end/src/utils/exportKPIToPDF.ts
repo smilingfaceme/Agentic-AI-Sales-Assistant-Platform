@@ -182,10 +182,10 @@ export async function exportKPIToPDF(
       pdf.circle(cardX + 5, cardY + 5, 2, 'F');
 
       // Title
-      pdf.setFontSize(8);
+      pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
       const titleLines = pdf.splitTextToSize(metric.title, cardWidth - 12);
-      pdf.text(titleLines, cardX + 3, cardY + 10);
+      pdf.text(titleLines, cardX + 8, cardY + 6.5);
 
       // Current value
       pdf.setFontSize(14);
@@ -198,7 +198,7 @@ export async function exportKPIToPDF(
       pdf.text(`Target: ${metric.target.toFixed(4)} ${metric.unit}`, cardX + 3, cardY + 21);
 
       // Trend
-      const trendSymbol = metric.trend.isPositive ? '↑' : '↓';
+      const trendSymbol = metric.trend.isPositive ? 'Up' : 'Down';
       const trendColor: [number, number, number] = metric.trend.isPositive ? [34, 197, 94] : [239, 68, 68];
       pdf.setTextColor(...trendColor);
       pdf.text(`${trendSymbol} ${Math.abs(metric.trend.value).toFixed(1)}%`, cardX + cardWidth - 20, cardY + 21);
@@ -220,7 +220,7 @@ export async function exportKPIToPDF(
 
     // Table headers
     const colWidths = [30, 28, 28, 28, 28, 28];
-    const headers = ['Period', 'Energy (kWh)', 'Carbon (kg CO₂)', 'Renewable %', 'Efficiency %', 'Status'];
+    const headers = ['Period', 'Energy (kWh)', 'Carbon (kg)', 'Renewable %', 'Efficiency %', 'Status'];
     
     pdf.setFillColor(59, 130, 246);
     pdf.setTextColor(255, 255, 255);
@@ -395,7 +395,7 @@ export async function exportKPIToPDF(
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(30, 64, 175);
-    pdf.text('📊 Key Insights', margin + 3, yPosition + 6);
+    pdf.text('Key Insights', margin + 3, yPosition + 6);
 
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
@@ -415,7 +415,7 @@ export async function exportKPIToPDF(
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(21, 128, 61);
-    pdf.text('💡 Recommendations', margin + 3, yPosition + 6);
+    pdf.text('Recommendations', margin + 3, yPosition + 6);
 
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
@@ -437,19 +437,19 @@ export async function exportKPIToPDF(
     // Achievement cards
     const achievements = [
       {
-        icon: '🎯',
+        icon: 'Target / Goal',
         value: `${kpiData.emissionsSavings.current.toFixed(2)}%`,
         label: 'Emissions Saved This Year',
         color: [34, 197, 94],
       },
       {
-        icon: '⚡',
+        icon: 'Energy',
         value: `${kpiData.renewableEnergy.current.toFixed(2)}g/kwh`,
         label: 'Renewable Energy Contribution',
         color: [59, 130, 246],
       },
       {
-        icon: '🌍',
+        icon: 'Environment',
         value: `${kpiData.carbonFootprint.current.toFixed(4)} kg`,
         label: 'CO₂ per 1K Conversations',
         color: [168, 85, 247],
@@ -464,7 +464,7 @@ export async function exportKPIToPDF(
       pdf.setLineWidth(0.5);
       pdf.rect(achievementX, yPosition, achievementCardWidth, 20);
 
-      pdf.setFontSize(16);
+      pdf.setFontSize(14);
       pdf.text(achievement.icon, achievementX + 3, yPosition + 8);
 
       pdf.setFontSize(14);
@@ -487,27 +487,27 @@ export async function exportKPIToPDF(
     checkAndAddPage(50);
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('🏆 Milestones & Progress', margin, yPosition);
+    pdf.text('Milestones & Progress', margin, yPosition);
     yPosition += 8;
 
     const milestones = [
       {
         title: `Renewable Energy Target: ${kpiData.renewableEnergy.target}g/kwh`,
         current: `Current: ${kpiData.renewableEnergy.current.toFixed(2)}g/kwh`,
-        status: kpiData.renewableEnergy.current >= kpiData.renewableEnergy.target ? '✓ Target Achieved!' :
+        status: kpiData.renewableEnergy.current >= kpiData.renewableEnergy.target ? '- Target Achieved!' :
                 `${((kpiData.renewableEnergy.current / kpiData.renewableEnergy.target) * 100).toFixed(0)}% complete`,
         achieved: kpiData.renewableEnergy.current >= kpiData.renewableEnergy.target,
       },
       {
-        title: `Carbon Footprint Target: ${kpiData.carbonFootprint.target} kg CO₂`,
-        current: `Current: ${kpiData.carbonFootprint.current.toFixed(4)} kg CO₂`,
+        title: `Carbon Footprint Target: ${kpiData.carbonFootprint.target} kg`,
+        current: `Current: ${kpiData.carbonFootprint.current.toFixed(4)} kg`,
         status: `Status: ${kpiData.carbonFootprint.status}`,
         achieved: kpiData.carbonFootprint.status === 'on-track',
       },
       {
         title: `Emissions Savings Target: ${kpiData.emissionsSavings.target}%`,
         current: `Current: ${kpiData.emissionsSavings.current.toFixed(1)}%`,
-        status: kpiData.emissionsSavings.current >= kpiData.emissionsSavings.target ? '✓ Target Achieved!' :
+        status: kpiData.emissionsSavings.current >= kpiData.emissionsSavings.target ? '- Target Achieved!' :
                 `${((kpiData.emissionsSavings.current / kpiData.emissionsSavings.target) * 100).toFixed(0)}% complete`,
         achieved: kpiData.emissionsSavings.current >= kpiData.emissionsSavings.target,
       },

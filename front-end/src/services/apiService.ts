@@ -46,7 +46,7 @@ export const projectApi = {
 // Chat APIs
 export const chatApi = {
   getConversations: async () => {
-    const res = await apiRequest(`/conversation`, {
+    const res = await apiRequest(`/conversation/list`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -308,7 +308,7 @@ export const chatbotApi = {
 // WhatsApp APIs
 export const integrationApi = {
   get: async () => {
-    const res = await apiRequest(`/integration`, {
+    const res = await apiRequest(`/integration/list`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });

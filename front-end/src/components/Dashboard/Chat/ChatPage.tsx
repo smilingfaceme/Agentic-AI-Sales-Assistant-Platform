@@ -57,22 +57,37 @@ export default function ChatPage() {
       return chatChannels
     } else {
       const whatsappConversations: Conversation[] = chatChannels.filter(
-        (convo: Conversation) => convo.source.toLowerCase() === filter_key.toLowerCase()
+        (convo: Conversation) => {
+          if (filter_key.toLowerCase() == "whatsapp"){
+            if (convo.source.toLowerCase() === filter_key.toLowerCase() || convo.source.toLowerCase() == "waca") return convo
+          }
+          else {
+            if (convo.source.toLowerCase() === filter_key.toLowerCase())
+              return convo
+          }
+        }
       );
       return whatsappConversations
     }
   }
 
   const countBySource = (projects: Conversation[]) => {
-    const counts: Record<string, number> = projects.reduce<Record<string, number>>((acc, { source }) => {
+    let counts = {
+      'Unassigned': 0,
+      'WhatsApp': 0,
+      'Test': 0,
+      'WACA': 0
+    }
+    const con_counts: Record<string, number> = projects.reduce<Record<string, number>>((acc, { source }) => {
       acc[source] = (acc[source] || 0) + 1;
       return acc;
     }, {});
-
+    counts = {...counts, ...con_counts}
+    console.log(counts)
     const notifiesObj = {
       All: projects.length,
       Unassigned: counts['Unassigned'] || 0,
-      WhatsApp: counts['WhatsApp'] || 0,
+      WhatsApp: (counts['WhatsApp'] + counts['WACA'])|| 0,
       Test: counts['Test'] || 0
     };
 
@@ -156,12 +171,12 @@ export default function ChatPage() {
                     >
                       <div className="flex">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center">
-                          {channel.source == "WhatsApp" ? <FaWhatsapp size={30} color="oklch(62.7% 0.194 149.214)" /> : <FaGlobe size={28} />}
+                          {channel.source == "WhatsApp" || channel.source == "WACA" ? <FaWhatsapp size={30} color="oklch(62.7% 0.194 149.214)" /> : <FaGlobe size={28} />}
                         </div>
                         <div className="flex-1 text-left ml-2">
-                          <div className="font-semibold text-sm text-gray-800">{channel.conversation_name} - {channel.phone_number}</div>
+                          <div className="font-semibold text-sm text-gray-800">{channel.conversation_name}{channel.phone_number != "" && ` - ${channel.phone_number}`}</div>
                           <div className="text-xs text-gray-500">Source: {channel.source} </div>
-                          <div className="text-xs text-gray-500">AI Reply: {channel.ai_reply ? "Yes" : "No"}</div>
+                          <div className={`text-xs text-gray-500`}>AI Reply: {channel.ai_reply ? "Yes" : "No"}</div>
                         </div>
                       </div>
                       <div className="text-xs text-gray-400">{channel.started_at ? new Date(channel.started_at).toLocaleString() : ""}</div>

@@ -22,6 +22,7 @@ export type WACA = {
 }
 
 export default function WhatsAppConnectPage() {
+  const [wabaID, setWabaID] = useState("");
   const [phoneNumberID, setPhoneNumberID] = useState("");
   const [integrationData, setIntegrationData] = useState<WACA | null>(null);;
   const [apiKey, setApiKey] = useState("");
@@ -29,12 +30,12 @@ export default function WhatsAppConnectPage() {
   const { isLoading: isSavingIntegration, execute: executeSaveIntegration } = useApiCall();
 
   const saveWacaIntegration = async () => {
-    if (!phoneNumberID || !apiKey) {
-      showNotification("Please enter phone number ID and API key", 'error', true);
+    if (!wabaID || !phoneNumberID || !apiKey) {
+      showNotification("Please enter WABA ID, Phone Number ID and API key", 'error', true);
       return;
     }
     const result = await executeSaveIntegration(async () => {
-      return await integrationApi.new_waca(phoneNumberID, apiKey);
+      return await integrationApi.new_waca(wabaID, phoneNumberID, apiKey);
     });
     if (result.success) {
       setIntegrationData(result.data)
@@ -200,6 +201,15 @@ export default function WhatsAppConnectPage() {
             <div className="border rounded px-3 py-2">{integrationData?.id}</div>
           </div> :
           <div className="mt-6 md:mt-0 flex flex-col md:w-[40%]">
+            <label>
+              WABA ID
+            </label>
+            <input
+              type="text"
+              className="border rounded px-3 py-2"
+              onChange={(e) => { setWabaID(e.target.value) }}
+              required
+            />
             <label>
               Phone Number ID
             </label>

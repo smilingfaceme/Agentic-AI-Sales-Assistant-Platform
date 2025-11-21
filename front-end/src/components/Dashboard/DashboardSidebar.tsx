@@ -32,7 +32,7 @@ export default function DashboardSidebar() {
   }, [currentUser, setCurrentUser, router]);
 
   return (
-    <div className="w-full md:w-auto absolute md:relative" onClick={() => setSidebarHidden(true)}>
+    <div className="w-full md:w-auto absolute fixed md:relative z-200" onClick={() => setSidebarHidden(true)}>
       <aside
         className={`flex flex-col h-screen ${sidebarHidden ? "w-0 md:w-16" : "w-55"} bg-gray-100 border-r border-gray-300 shadow-lg pt-3 p-0 relative text-gray-900 transition-all duration-300
       ${sidebarHidden ? "overflow-hidden" : ""}

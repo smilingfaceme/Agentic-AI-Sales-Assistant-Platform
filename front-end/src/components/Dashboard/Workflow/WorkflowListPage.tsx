@@ -131,8 +131,7 @@ export default function WorkflowListPage() {
                       value = {workflow.except_case}
                       disabled = {isExceptCaseLoading}
                     >
-                      <option value= "sample">Sample</option>
-                      <option value= "move">Move to Agent</option>
+                      <option value= "sample">Sample Processing</option>
                       <option value= "ignore">Ignore</option>
                     </select>
                   </div>

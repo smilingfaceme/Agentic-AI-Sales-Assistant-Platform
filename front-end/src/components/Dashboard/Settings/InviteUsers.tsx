@@ -33,7 +33,6 @@ export default function InviteUsers() {
   const { isLoading: isInviting, error: inviteError, execute: executeInvite } = useApiCall();
   const { execute: executeResend } = useApiCall();
   const { execute: executeRole } = useApiCall();
-  const [inviteSuccess, setInviteSuccess] = useState("");
   const [resendLoading, setResendLoading] = useState<Record<string, boolean>>({});
   const [revokeLoading, setRevokeLoading] = useState<Record<string, boolean>>({});
 
@@ -148,7 +147,6 @@ export default function InviteUsers() {
   // Send Invitation Function
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    setInviteSuccess("");
 
     if (!inviteEmail) {
       return;
@@ -168,6 +166,9 @@ export default function InviteUsers() {
       setInviteRole(roles[0].id || "");
       setShowInviteModal(false);
     }
+    if (inviteError) {
+      showNotification(inviteError || 'Failed to send invitation!', 'error', true);
+    }
     fetchInvitedUsers(); // Refresh the list
   };
 
@@ -182,7 +183,6 @@ export default function InviteUsers() {
           <button
             onClick={() => {
               setShowInviteModal(true);
-              setInviteSuccess("");
               fetchroles()
             }}
             className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
@@ -274,15 +274,6 @@ export default function InviteUsers() {
                   ))}
                 </select>
               </div>
-
-
-              {inviteError && (
-                <div className="text-red-600 text-sm bg-red-50 p-3 rounded">{inviteError}</div>
-              )}
-
-              {inviteSuccess && (
-                <div className="text-green-600 text-sm bg-green-50 p-3 rounded">{inviteSuccess}</div>
-              )}
 
               <div className="flex gap-3 pt-4">
                 <button

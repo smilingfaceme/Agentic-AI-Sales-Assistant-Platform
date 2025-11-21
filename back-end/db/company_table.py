@@ -2,46 +2,23 @@
 SQLAlchemy-based database functions for company-specific schema tables
 """
 from db.db_connection import db
-from models.schema import *
+from db.alembic_helpers import create_company_schema_with_tables
 from sqlalchemy import text
 import json
 from uuid import UUID
 
 
 def create_company_tables(company_id: str):
-    """Create schema and tables for a new company"""
-    try:
-        # Create schema
-        schema_query = f"CREATE SCHEMA IF NOT EXISTS {company_id}"
-        db.execute_raw(schema_query)
+    """
+    Create schema and tables for a new company using Alembic helpers.
 
-        # Create conversations table
-        conversations_query = COMPANY_CONVERSATION_TABLE.format(company_id=company_id)
-        db.execute_raw(conversations_query)
+    Args:
+        company_id: The schema name for the company (e.g., 'company_1234567890')
 
-        # Create messages table
-        messages_query = COMPANY_MESSAGE_TABLE.format(company_id=company_id)
-        db.execute_raw(messages_query)
-
-        # Create images table
-        images_query = COMPANY_IMAGE_TABLE.format(company_id=company_id)
-        db.execute_raw(images_query)
-
-        # Create documents table
-        extra_query = COMPANY_EXTRA_TABLE.format(company_id=company_id)
-        db.execute_raw(extra_query)
-
-        # Create KNOWLEDGE table
-        knowledge_query = COMPANY_KNOWLEDGE_TABLE.format(company_id=company_id)
-        db.execute_raw(knowledge_query)
-        
-        workflow_query = COMPANY_WORKFLOW_TABLE.format(company_id=company_id)
-        db.execute_raw(workflow_query)
-
-        return {"status": "success", "message": "Company tables created"}
-    except Exception as e:
-        print(f"Error creating company tables: {e}")
-        return {"status": "error", "message": str(e)}
+    Returns:
+        dict: Status dictionary with 'status' and 'message' keys
+    """
+    return create_company_schema_with_tables(company_id)
 
 # ==================== CONVERSATIONS ====================
 

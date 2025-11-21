@@ -38,10 +38,10 @@ async def logout_whatsapp(instance_name:str):
 async def send_message_whatsapp(instance_name:str, to:str, message:str, extra_info:dict):
     attachmentUrls = []
     for i in extra_info.get('images', []):
-        url_i = f'{BACKEND_URL}/api/{i}'
+        url_i = f'{BACKEND_URL}/{i}'
         attachmentUrls.append({"url":url_i, "type":'image'})
     for i in extra_info.get("extra", []):
-        url_i = f'{BACKEND_URL}/api/{i}'
+        url_i = f'{BACKEND_URL}/{i}'
         attachmentUrls.append({"url":url_i, "type":'document'})
     async with httpx.AsyncClient(timeout=httpx.Timeout(max([5*len(attachmentUrls), 10]))) as client:
         response = await client.post(

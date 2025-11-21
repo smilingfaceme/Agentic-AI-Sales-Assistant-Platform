@@ -121,7 +121,7 @@ async def invite_user(data = Body(...), user = Depends(verify_token)):
     )
     
     if not re:
-        update_invitation_by_id(new_record_invitation['id'], {"status": 'Failed'})
+        update_invitation_by_id(new_record_invitation['id'], {"status": 'failed'})
         raise HTTPException(status_code=400, detail="Failed to send invitation")
     
     return {
@@ -157,7 +157,7 @@ async def resend_invitation(invitationId = Query(...), user = Depends(verify_tok
     token_hash = create_access_token(token_data, period=24*3)
     
     # Update invitation
-    updated_invitation = update_invitation_by_id(invitationId, {"token_hash": token_hash, "status": 'Pending'})
+    updated_invitation = update_invitation_by_id(invitationId, {"token_hash": token_hash, "status": 'pending'})
     
     if updated_invitation is None:
         raise HTTPException(status_code=400, detail="Failed to update invitation")
@@ -172,7 +172,7 @@ async def resend_invitation(invitationId = Query(...), user = Depends(verify_tok
     )
     
     if not re:
-        update_invitation_by_id(invitationId, {"status": 'Failed'})
+        update_invitation_by_id(invitationId, {"status": 'falied'})
         raise HTTPException(status_code=400, detail="Failed to resend invitation")
     
     return {

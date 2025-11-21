@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, Body
 from db.public_table import *
 from utils.whatsapp import start_whatsapp, combine_uuids, logout_whatsapp
 from middleware.auth import verify_token
-from utils.waca import confirm_phone_number_id
+from utils.waca import confirm_phone_number_id, logout_waca
 import re
 # Initialize FastAPI router
 router = APIRouter()
@@ -12,7 +12,7 @@ router = APIRouter()
 # ROUTES
 # ---------------------------
 
-@router.get("/")
+@router.get("/list")
 async def get_all_integrations(user = Depends(verify_token)):
     if not user['permission'].get("integration", False):
         raise HTTPException(status_code=400, detail="You are not authorized to perform this action")
@@ -23,10 +23,11 @@ async def get_all_integrations(user = Depends(verify_token)):
         }
     
     for i in integrations:
-        try:
-            await start_whatsapp(i["company_id"], i["created_by"], i["instance_name"])
-        except:
-            pass
+        if i["type"] == "whatsapp_web":
+            try:
+                await start_whatsapp(i["company_id"], i["created_by"], i["instance_name"])
+            except:
+                pass
     return {
         "integrations":integrations
     }
@@ -97,9 +98,11 @@ async def new_integrations(data = Body(...), user = Depends(verify_token)):
     
     if not integration:
         raise HTTPException(status_code=400, detail="integration not found")
-    print(integration[0]['instance_name'])
-    response = await logout_whatsapp(integration[0]['instance_name'])
-    print(response)
+    if integration[0]['type'] == "whatsapp_web":
+        response = await logout_whatsapp(integration[0]['instance_name'])
+    else:
+        response = logout_waca(integration[0]['instance_name'], integration[0]['waba_id'])
+    
     if response["success"] == True:
         update_integration_by_id(integrationId, {"delete": True})
         raise HTTPException(status_code=400, detail="Failed to update integration")
@@ -113,6 +116,7 @@ async def new_integrations_waca(data = Body(...), user = Depends(verify_token)):
     if not user['permission'].get("integration", False):
         raise HTTPException(status_code=400, detail="You are not authorized to perform this action")
     
+    waba_id = data["wabaId"]
     phone_number_id = data["phoneNumberId"]
     api_key = data["apiKey"]
     

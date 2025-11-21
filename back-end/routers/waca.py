@@ -1,4 +1,4 @@
-import os
+import os, io
 import json
 import threading
 import asyncio
@@ -9,11 +9,9 @@ from db.company_table import (
     add_new_conversation,
     add_new_message
 )
-
+from utils.waca import get_media_with_id, download_whatsapp_media
+from utils.stt import speech_to_text_with_path
 router = APIRouter()
-
-# Environment variable for webhook verification
-WACA_VERIFY_TOKEN = os.getenv("WACA_VERIFY_TOKEN", "your_verify_token_here")
 
 # ---------------------------
 # ROUTES
@@ -86,7 +84,7 @@ async def handle_webhook(phone_number_id: str, request: Request):
                         messages = value.get("messages", [])
                         metadata = value.get("metadata", {})
                         webhook_phone_number_id = metadata.get("phone_number_id")
-
+                        contacts = value.get("contacts", [])
                         # Verify that the phone_number_id in the webhook matches the URL parameter
                         if webhook_phone_number_id != phone_number_id:
                             print(f"⚠️ Phone number ID mismatch: URL={phone_number_id}, Webhook={webhook_phone_number_id}")
@@ -96,7 +94,7 @@ async def handle_webhook(phone_number_id: str, request: Request):
                             # Process message in background
                             thread = threading.Thread(
                                 target=process_waca_message,
-                                args=(message, phone_number_id)
+                                args=(message, contacts, phone_number_id)
                             )
                             thread.daemon = True
                             thread.start()
@@ -115,7 +113,7 @@ async def handle_webhook(phone_number_id: str, request: Request):
         return {"status": "error", "message": str(e)}
 
 
-def process_waca_message(message: dict, phone_number_id: str):
+def process_waca_message(message: dict, contacts:list[dict], phone_number_id: str):
     """
     Process incoming WhatsApp message in a background thread.
 
@@ -123,10 +121,10 @@ def process_waca_message(message: dict, phone_number_id: str):
         message: The message object from WhatsApp
         phone_number_id: The phone number ID that received the message
     """
-    asyncio.run(process_waca_message_async(message, phone_number_id))
+    asyncio.run(process_waca_message_async(message, contacts, phone_number_id))
 
 
-async def process_waca_message_async(message: dict, phone_number_id: str):
+async def process_waca_message_async(message: dict, contacts:list[dict], phone_number_id: str):
     """
     Async function to process WhatsApp message.
     """
@@ -147,7 +145,7 @@ async def process_waca_message_async(message: dict, phone_number_id: str):
 
         company_id = integration['company_id']
         api_key = integration['instance_name']  # API key is stored in instance_name for WACA
-
+        phone_number_id = integration['phone_number_id']
         # Get company info
         company_info = get_companies("id", company_id)
         if not company_info:
@@ -164,7 +162,8 @@ async def process_waca_message_async(message: dict, phone_number_id: str):
 
         # Extract message content based on type
         content = ""
-
+        file_images = []
+        file_content = ""
         if message_type == "text":
             content = message.get("text", {}).get("body", "")
 
@@ -173,8 +172,21 @@ async def process_waca_message_async(message: dict, phone_number_id: str):
             image_data = message.get("image", {})
             image_id = image_data.get("id")
             caption = image_data.get("caption", "")
+            media = get_media_with_id(api_key, phone_number_id, image_id)
+            if not media["success"]:
+                print(media["error"])
+                return
+            # Define local save path
+            save_dir = os.path.join("files", "messages-extra")
+            os.makedirs(save_dir, exist_ok=True)
+            file_name = f'{image_id}.jpg'
+            full_path = os.path.join(save_dir, file_name)
             content = caption or "Image received"
-
+            if not download_whatsapp_media(media["data"]["url"], api_key, full_path):
+                return
+            with open(full_path, "rb") as f:
+                file_content = f.read()
+            file_images.append(full_path)
             # Download image and process
             # TODO: Implement image download and processing
             print(f"📷 Image message received: {image_id}")
@@ -183,8 +195,18 @@ async def process_waca_message_async(message: dict, phone_number_id: str):
             # Handle voice messages
             audio_data = message.get("audio") or message.get("voice", {})
             audio_id = audio_data.get("id")
-            content = "Voice message received"
-
+            media = get_media_with_id(api_key, phone_number_id, audio_id)
+            if not media["success"]:
+                print(media["error"])
+                return
+            # Define local save path
+            save_dir = os.path.join("files", "messages-extra")
+            os.makedirs(save_dir, exist_ok=True)
+            file_name = f'{audio_id}.wav'
+            full_path = os.path.join(save_dir, file_name)
+            if not download_whatsapp_media(media["data"]["url"], api_key, full_path):
+                return
+            content = speech_to_text_with_path(full_path)
             # TODO: Implement voice message download and transcription
             print(f"🎤 Voice message received: {audio_id}")
 
@@ -208,10 +230,12 @@ async def process_waca_message_async(message: dict, phone_number_id: str):
         if not conversation:
             # Create new conversation
             contact_name = message.get("profile", {}).get("name", from_number)
+            if contacts:
+                contact_name = contacts[0].get("profile", {}).get("name", from_number)
             new_conversation = add_new_conversation(
                 company_schema,
                 contact_name,
-                "WhatsApp",
+                "WACA",
                 from_number,
                 phone_number_id
             )
@@ -225,7 +249,9 @@ async def process_waca_message_async(message: dict, phone_number_id: str):
         else:
             conversation_id = conversation[0]['conversation_id']
             conversation_ai_reply = conversation[0]['ai_reply']
-
+        # Insert new message into database
+        extra_data = {"images":file_images}
+        extra_data = f'{extra_data}'.replace('\'', '\"')
         # Add message to database
         messages = add_new_message(
             company_id=company_schema,
@@ -233,7 +259,7 @@ async def process_waca_message_async(message: dict, phone_number_id: str):
             sender_email="",
             sender_type="customer",
             content=content,
-            extra='[]'
+            extra=extra_data
         )
 
         if not messages:
@@ -243,8 +269,14 @@ async def process_waca_message_async(message: dict, phone_number_id: str):
         # Generate AI response if enabled
         if conversation_ai_reply:
             if message_type == "image":
-                # TODO: Implement image response handling
-                print("📷 Image response handling not yet implemented")
+                file_io = io.BytesIO(file_content)
+                # Start vectorization in background thread
+                thread = threading.Thread(
+                    target=run_response_for_image_in_thread,
+                    args=(conversation_id, company_id, company_schema, content, phone_number_id, from_number, "WACA", file_io)
+                )
+                thread.daemon = True
+                thread.start()
             else:
                 # Generate text response
                 thread = threading.Thread(

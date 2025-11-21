@@ -10,7 +10,7 @@ router = APIRouter()
 # ROUTES
 # ---------------------------
 
-@router.get("/")
+@router.get("/list")
 async def get_conversations(user = Depends(verify_token)):
     """
     Retrieve all conversations for the authenticated user's company.

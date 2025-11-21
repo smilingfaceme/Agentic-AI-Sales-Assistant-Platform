@@ -56,10 +56,10 @@ def send_image_message_by_waca(api_key:str, phone_number_id:str, to:str, content
 
         attachmentUrls = []
         for i in extra_info.get('images', []):
-            url_i = f'{BACKEND_URL}/api/{i}'
+            url_i = f'{BACKEND_URL}/{i}'
             attachmentUrls.append({"url":url_i, "type":'image'})
         for i in extra_info.get("extra", []):
-            url_i = f'{BACKEND_URL}/api/{i}'
+            url_i = f'{BACKEND_URL}/{i}'
             attachmentUrls.append({"url":url_i, "type":'document'})
             
         for i, attachment in enumerate(attachmentUrls):
@@ -92,6 +92,7 @@ def send_image_message_by_waca(api_key:str, phone_number_id:str, to:str, content
                     "type": "document",
                     "document": {
                         "link": attachment["url"],
+                        "filename": attachment["url"].split("/")[-1],
                         "caption": file_content
                     }
                 }
@@ -209,3 +210,74 @@ def confirm_phone_number_id(api_key:str, phone_number_id:str) -> dict:
      
     return test_message_result
 
+def get_media_with_id(api_key:str, phone_number_id:str, media_id:str):
+    try:
+        version = "v24.0"
+        url = f"https://graph.facebook.com/{version}//{media_id}?phone_number_id={phone_number_id}"
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+                
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return {
+                "success": True,
+                "data": response.json()
+            }
+        else:
+            return {
+                "success": False, 
+                "error": response.json().get("error", {}).get("message", "") or "Failed Retrieve Media URL",
+            }
+    except Exception as e:
+        print("❌ Error:", e)
+        return {
+            "success": False,
+            "error": "WhatsApp is currently experiencing an issue. Please try again shortly." 
+        }
+
+def download_whatsapp_media(media_url: str, api_key: str, output_file: str):
+    headers = {
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    response = requests.get(media_url, headers=headers, stream=True)
+
+    if response.status_code != 200:
+        return False
+
+    with open(output_file, "wb") as f:
+        for chunk in response.iter_content(1024):
+            f.write(chunk)
+
+    return True
+
+def logout_waca(api_key: str, waba_id: str):
+    try:
+        version = "v24.0"
+        url = f"https://graph.facebook.com/{version}/{waba_id}/subscribed_apps"
+
+        params = {
+            "access_token": api_key
+        }
+
+        response = requests.delete(url, params=params, timeout=10)
+        if response.status_code == 200:
+            return {
+                "success": True,
+                "data": response.json()
+            }
+        else:
+            return {
+                "success": False, 
+                "error": response.json().get("error", {}).get("message", "") or "Failed Logout",
+                "data" : response.json()
+            }
+    except Exception as e:
+        print("❌ Error:", e)
+        return {
+            "success": False,
+            "error": "WhatsApp is currently experiencing an issue. Please try again shortly." 
+        }

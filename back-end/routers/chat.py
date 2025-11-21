@@ -2,9 +2,10 @@ import os, json, io
 import httpx
 from fastapi import APIRouter, HTTPException, Depends, Query, Body, Form, File, UploadFile
 from middleware.auth import verify_token
-from db.public_table import get_companies
+from db.public_table import get_companies, get_integration_by_phone_number_id
 from db.company_table import *
 from utils.whatsapp import send_message_whatsapp
+from utils.waca import send_text_message_by_waca, send_image_message_by_waca
 from src.response.generate import generate_response_with_search, generate_response_with_image_search
 from src.image_vectorize import search_similar_images
 from src.utils.file_utills import validate_and_convert_image
@@ -69,6 +70,13 @@ async def send_message(data = Body(...), user = Depends(verify_token)):
     # If conversation source is WhatsApp, send message via WhatsApp Bot
     if current_conversation['source'] == 'WhatsApp':
         result = await send_message_whatsapp(current_conversation["instance_name"], current_conversation['phone_number'], content, {'images':[]})
+        if not result:
+            raise HTTPException(status_code=500, detail="Error sending message")
+    elif current_conversation['source'] == 'WACA':
+        integration = get_integration_by_phone_number_id(current_conversation["instance_name"])
+        api_key = integration.get("instance_name", None)
+        phone_number_id = current_conversation["instance_name"]
+        result = send_text_message_by_waca(api_key, phone_number_id, current_conversation['phone_number'], content)
         if not result:
             raise HTTPException(status_code=500, detail="Error sending message")
     
@@ -245,6 +253,13 @@ async def send_image_message(
     # If conversation source is WhatsApp, send message via WhatsApp Bot
     if current_conversation['source'] == 'WhatsApp' and sender_type == "agent":
         result = await send_message_whatsapp(current_conversation["instance_name"], current_conversation['phone_number'], content, extra_data)
+        if not result:
+            raise HTTPException(status_code=500, detail="Error sending message")
+    elif current_conversation['source'] == 'WACA':
+        integration = get_integration_by_phone_number_id(current_conversation["instance_name"])
+        api_key = integration.get("instance_name", None)
+        phone_number_id = current_conversation["instance_name"]
+        result = send_image_message_by_waca(api_key, phone_number_id, current_conversation['phone_number'], content, extra_data)
         if not result:
             raise HTTPException(status_code=500, detail="Error sending message")
         

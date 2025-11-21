@@ -39,6 +39,7 @@ class Company(Base):
     schema_name = Column(String, nullable=False, unique=True)
     active = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    delete = Column(Boolean, nullable=False, default=False)
 
     # Relationships
     users = relationship("User", back_populates="company")
@@ -59,6 +60,7 @@ class User(Base):
     invited_by = Column(UUID(as_uuid=True), ForeignKey("public.users.id"), nullable=True)
     role = Column(UUID(as_uuid=True), ForeignKey("public.roles.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    active = Column(Boolean, nullable=False, default=True)
 
     # Relationships
     company = relationship("Company", back_populates="users")
@@ -118,6 +120,7 @@ class Integration(Base):
     phone_number = Column(String, nullable=False, unique=True)
     instance_name = Column(String, nullable=False, unique=True)
     phone_number_id = Column(String, nullable=True)
+    waba_id = Column(String, nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("public.users.id"), nullable=False)
     delete = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
@@ -152,9 +155,11 @@ class Message(Base):
     conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.conversation_id"), nullable=False)
     sender_type = Column(String, nullable=False)
     sender_email = Column(String, nullable=True)
-    content = Column(Text, nullable=False)
+    content = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=True, default=datetime.utcnow)
     extra = Column(JSON, nullable=True)
+    energy = Column(BigInteger, nullable=True)
+    carbon = Column(BigInteger, nullable=True)
 
     # Relationships
     conversation = relationship("Conversation", back_populates="messages")
@@ -170,6 +175,7 @@ class Image(Base):
     file_hash = Column(String, nullable=False)
     full_path = Column(String, nullable=False)
     status = Column(String, nullable=False)
+    extra = Column(JSON, nullable=True)
     match_field = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
 
@@ -203,3 +209,17 @@ class Knowledge(Base):
     extra = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
 
+
+class Workflow(Base):
+    """Workflow model for {company_id}.workflows table"""
+    __tablename__ = "workflows"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False)
+    nodes = Column(JSON, nullable=False)
+    edges = Column(JSON, nullable=False)
+    status = Column(String, nullable=False)
+    enable_workflow = Column(Boolean, nullable=False)
+    except_case = Column(String, nullable=False)
+    extra = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)

@@ -500,6 +500,8 @@ def get_integrations(filters: dict):
                     'type': integration.type,
                     'is_active': integration.is_active,
                     'phone_number': integration.phone_number,
+                    'phone_number_id': integration.phone_number_id,
+                    'waba_id': integration.waba_id,
                     'instance_name': integration.instance_name,
                     'created_by': str(integration.created_by),
                     'delete': integration.delete,
@@ -515,7 +517,7 @@ def get_integrations(filters: dict):
         session.close()
 
 
-def add_new_integration(company_id: str, created_by: str, instance_name: str, phone_number: str, type: str = "whatsapp_web", phone_number_id:str = None):
+def add_new_integration(company_id: str, created_by: str, instance_name: str, phone_number: str, type: str = "whatsapp_web", phone_number_id:str = None, waba_id:str = None):
     """Add a new integration"""
     session = db.get_session()
     try:
@@ -527,7 +529,8 @@ def add_new_integration(company_id: str, created_by: str, instance_name: str, ph
             type=type,
             is_active=True,
             delete=False,
-            phone_number_id = phone_number_id
+            phone_number_id = phone_number_id,
+            waba_id=waba_id
         )
         session.add(new_integration)
         session.commit()
@@ -543,6 +546,7 @@ def add_new_integration(company_id: str, created_by: str, instance_name: str, ph
             'created_by': str(new_integration.created_by),
             'delete': new_integration.delete,
             'phone_number_id': new_integration.phone_number_id,
+            'waba_id': new_integration.waba_id,
             'created_at': new_integration.created_at.isoformat() if new_integration.created_at else None
         }
     except Exception as e:

@@ -2,12 +2,15 @@
 SQLAlchemy database connection and session management for Bot Admin Panel
 """
 import os
+import logging
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 # PostgreSQL connection parameters
 DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
@@ -43,7 +46,22 @@ class DatabaseClient:
         return self.SessionLocal()
 
     def execute_raw(self, query: str, params: dict = None):
-        """Execute raw SQL query (for DDL statements like CREATE TABLE)"""
+        """
+        DEPRECATED: Execute raw SQL query (for DDL statements like CREATE TABLE).
+
+        This method is deprecated and should not be used for DDL operations.
+        All schema changes should be managed through Alembic migrations.
+
+        For company schema creation, use: db.alembic_helpers.create_company_schema_with_tables()
+        For public schema changes, create an Alembic migration.
+
+        This method is kept for backward compatibility but will log a warning.
+        """
+        logger.warning(
+            "DEPRECATED: execute_raw() is deprecated. "
+            "Use Alembic migrations for schema changes. "
+            "For company schemas, use db.alembic_helpers.create_company_schema_with_tables()"
+        )
         session = self.get_session()
         try:
             if params:
@@ -54,7 +72,7 @@ class DatabaseClient:
             return True
         except Exception as e:
             session.rollback()
-            print(f"Error executing raw query: {e}")
+            logger.error(f"Error executing raw query: {e}")
             return False
         finally:
             session.close()

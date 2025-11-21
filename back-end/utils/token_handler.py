@@ -28,7 +28,7 @@ def verify_password(plain_password: str, db_password: str) -> bool:
     else:
         return False
 
-def create_access_token(data: dict, period: int = 1):
+def create_access_token(data: dict, period: int = 3):
     """
     Creates a JWT access token with user data.
 

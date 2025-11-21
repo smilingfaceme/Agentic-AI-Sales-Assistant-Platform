@@ -70,26 +70,30 @@ async def generate_response_with_search(
                 print("Pass each nodes Processing")
                 if node["type"] == "trigger":
                     print("Pass trigger nodes Processing")
-                    result = trigger_workflow_function(node["config"]["blocks"], company_schema, conversation_id, query, message_type)
-                    if not result or len(result) == 0:
-                        worflow_process_flag = False
-                        break
-                    messages = result
-                    memory = await get_history(messages)
+                    if node.get("config", {}).get("blocks", []):
+                        result = trigger_workflow_function(node["config"]["blocks"], company_schema, conversation_id, query, message_type)
+                        if not result or len(result) == 0:
+                            worflow_process_flag = False
+                            break
+                        messages = result
+                        memory = await get_history(messages)
                 if node["type"] == "condition":
                     print("Pass condition nodes Processing")
-                    result = condition_workflow_function(node["config"]["blocks"], from_phone_number, source_phone_number, messages, query, message_type, platform)
-                    if not result:
-                        worflow_process_flag = False
-                        break
+                    if node.get("config", {}).get("blocks", []):
+                        result = condition_workflow_function(node["config"]["blocks"], from_phone_number, source_phone_number, messages, query, message_type, platform)
+                        if not result:
+                            worflow_process_flag = False
+                            break
                 if node["type"] == "action":
                     print("Pass action nodes Processing")
-                    workflow_response = await action_workflow_function(node["config"]["blocks"],company_id, company_schema, conversation_id, memory, from_phone_number, instance_name, query, message_type, platform, workflow["id"], [])
-                    if workflow_response:
-                        active_workflows_response.extend(workflow_response)
+                    if node.get("config", {}).get("blocks", []):
+                        workflow_response = await action_workflow_function(node["config"]["blocks"],company_id, company_schema, conversation_id, memory, from_phone_number, instance_name, query, message_type, platform, workflow["id"], [])
+                        if workflow_response:
+                            active_workflows_response.extend(workflow_response)
                 if node["type"] == "delay":
                     print("Pass delay nodes Processing")
-                    result = delay_workflow_function(node["config"]["blocks"])
+                    if node.get("config", {}).get("blocks", []):
+                        result = delay_workflow_function(node["config"]["blocks"])
             if not worflow_process_flag:
                 except_case.append(workflow["except_case"])
     else:

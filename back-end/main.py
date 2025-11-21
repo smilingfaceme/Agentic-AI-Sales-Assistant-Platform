@@ -12,15 +12,20 @@ load_dotenv()
 from routers import auth, user, company, invite, knowledge, conversation, chat, integration, image, chatbot_setting, extra, workflow, sustain_kpi, waca
 from middleware.error_handler import add_exception_handlers
 from utils.validate_env import validate_env
+from db.init_db import initialize_database
 
 app = FastAPI(
     title="Bot Admin Backend",
     version="1.0.0",
-    description="FastAPI backend for bot administration"
+    description="FastAPI backend for bot administration",
+    redirect_slashes=False
 )
 
 # Validate environment variables
 validate_env()
+
+# Initialize database (create tables if they don't exist)
+initialize_database()
 
 # CORS configuration - Allow all origins
 app.add_middleware(

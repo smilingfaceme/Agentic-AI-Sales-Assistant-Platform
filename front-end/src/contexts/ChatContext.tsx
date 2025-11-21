@@ -11,19 +11,19 @@ export type ChatMessage = {
   created_at?: string;
 };
 
-export type Project = {
+export type Conversation = {
   conversation_id: string;
-  project_id: string;
   conversation_name: string;
   ai_reply: boolean;
   started_at: string;
   ended_at: string | null;
   source: string;
+  phone_number:string;
 };
 
 interface ChatContextType {
-  activeConversation: Project | null;
-  setActiveConversation: (conversation: Project | null) => void;
+  activeConversation: Conversation | null;
+  setActiveConversation: (conversation: Conversation | null) => void;
   chatMessages: ChatMessage[];
   setChatMessages: (messages: ChatMessage[]) => void;
   agentMessage: string;
@@ -33,7 +33,7 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [activeConversation, setActiveConversation] = useState<Project | null>(null);
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [agentMessage, setAgentMessage] = useState("");
 

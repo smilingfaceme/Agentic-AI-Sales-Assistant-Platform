@@ -5,16 +5,21 @@ export type ChatMessage = {
   message_id: number;
   conversation_id: string;
   sender_type: 'customer' | 'bot' | 'agent';
-  user_id?: string | null;
-  email?: string | null;
+  sender_email?: string | null;
   content: string;
   created_at?: string;
+  extra: {
+    images?: string[];
+    extra?: string[];
+    [key: string]: unknown;
+  };
 };
 
 export type ChatHistory = {
   conversation_name: string;
   conversation_id: string;
   source: string;
+  ai_reply: boolean;
   [key: string]: unknown;
 };
 

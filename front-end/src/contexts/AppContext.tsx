@@ -1,9 +1,29 @@
 "use client";
 import { createContext, useContext, useState, ReactNode } from 'react';
 
+export type User = {
+  name: string;
+  email: string;
+  company_name: string;
+  company_description: string;
+  role: string;
+  permissions: {
+    [key:string]:unknown
+  };
+};
+
+export type Role = {
+  "id": string;
+  "name": string;
+  "permissions": object;
+  [key: string]: unknown;
+}
+
 interface AppContextType {
-  projectId: string;
-  setProjectId: (id: string) => void;
+  currentUser: User;
+  setCurrentUser: (user: User) => void;
+  companyId:string;
+  setCompanyId: (id: string) => void;
   activeKey: string;
   setActiveKey: (key: string) => void;
   sidebarHidden: boolean;
@@ -13,14 +33,24 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [projectId, setProjectId] = useState<string>("");
+  const [currentUser, setCurrentUser] = useState<User>({
+    name: '',
+    email: '',
+    company_description: '',
+    company_name: '',
+    role: '',
+    permissions: {}
+  });
+  const [companyId, setCompanyId] = useState<string>("");
   const [activeKey, setActiveKey] = useState('chats');
   const [sidebarHidden, setSidebarHidden] = useState(false);
 
   return (
     <AppContext.Provider value={{
-      projectId,
-      setProjectId,
+      currentUser,
+      setCurrentUser,
+      companyId,
+      setCompanyId,
       activeKey,
       setActiveKey,
       sidebarHidden,

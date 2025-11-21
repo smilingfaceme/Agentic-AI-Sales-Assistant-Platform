@@ -1,5 +1,5 @@
-import KnowledgeArea from "@/components/Dashboard/Chatbot/knowledgeArea";
+import { redirect } from 'next/navigation';
 
-export default function KnowledgePage() {
-  return <KnowledgeArea />;
+export default function ChatbotPageRoute() {
+  redirect('/dashboard/chatbot/knowledge/product');
 }

@@ -39,4 +39,13 @@ pnpm-debug.log*
 
 # Back-end
 __pycache__
+back-end/.env
+back-end/.DS_Store
+session_auth_*
+credentials.json
+token.json
+
+# VectorDB
+chroma_data/
+files/
 session_auth_*

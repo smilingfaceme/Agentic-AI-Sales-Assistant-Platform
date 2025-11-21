@@ -4,9 +4,8 @@ import sys
 def validate_env():
     """Validate required environment variables"""
     required_vars = [
-        "SUPABASE_URL",
-        "SUPABASE_KEY", 
-        "JWT_SECRET"
+        "JWT_SECRET",
+        "OPENAI_API_KEY"
     ]
     
     missing_vars = []

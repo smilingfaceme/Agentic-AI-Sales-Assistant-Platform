@@ -105,7 +105,7 @@ export default function UnansweredQuestionArea() {
       </LoadingWrapper>
       {/* Modal */}
       <div
-        className={`fixed inset-0 bg-[#00000096] flex items-center justify-end z-50 transition-opacity duration-500 ${showModal ? "opacity-100 visible" : "opacity-0 invisible"
+        className={`fixed inset-0 bg-[#00000096] flex items-center justify-end z-250 transition-opacity duration-500 ${showModal ? "opacity-100 visible" : "opacity-0 invisible"
           }`}
         onClick={() => setShowModal(false)}
       >

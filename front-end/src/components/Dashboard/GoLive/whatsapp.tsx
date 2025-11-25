@@ -35,7 +35,7 @@ export default function WhatsAppConnectPage() {
     const interval = setInterval(() => {
       console.log("⏰ Interval running...");
       connectWhatsapp();
-    }, 2000);
+    }, 15000);
 
     return () => clearInterval(interval); // cleanup on unmount
   }, [connectWhatsapp]);

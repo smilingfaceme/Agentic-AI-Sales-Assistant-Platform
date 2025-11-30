@@ -481,17 +481,17 @@ def get_integrations(filters: dict):
     """Get integrations by multiple filter criteria"""
     session = db.get_session()
     try:
-        query = session.query(Integration)
+        query = session.query(Integration).join(User, Integration.created_by == User.id)
 
         # Apply filters
         for key, value in filters.items():
             if hasattr(Integration, key):
                 if key == "company_id":
-                    query = query.filter_by(**{key: UUID(value)})
+                    query = query.filter(Integration.company_id == UUID(value))
                 else:
-                    query = query.filter_by(**{key: value})
+                    query = query.filter(getattr(Integration, key) == value)
 
-        integrations = query.all()
+        integrations = query.order_by(Integration.created_at).all()
         if integrations:
             return [
                 {
@@ -504,6 +504,8 @@ def get_integrations(filters: dict):
                     'waba_id': integration.waba_id,
                     'instance_name': integration.instance_name,
                     'created_by': str(integration.created_by),
+                    'created_by_name': integration.integrated_user.name,
+                    'created_by_email': integration.integrated_user.email,
                     'delete': integration.delete,
                     'created_at': integration.created_at.isoformat() if integration.created_at else None
                 }

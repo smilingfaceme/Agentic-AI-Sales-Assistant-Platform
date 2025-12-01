@@ -70,7 +70,7 @@ export default function ChatArea() {
   return (
     <section className="flex-1 flex flex-col bg-gray-50 h-full">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 md:px-6 py-4">
+      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 pr-10 md:px-10 py-4">
         <div className="flex items-center gap-3">
           {activeChatHistory.source === 'WhatsApp' || activeChatHistory.source === "WACA" ? <FaWhatsapp size={30} color="oklch(62.7% 0.194 149.214)" /> : <FaGlobe size={28} />}
           <div>

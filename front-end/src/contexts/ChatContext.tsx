@@ -19,6 +19,8 @@ export type Conversation = {
   ended_at: string | null;
   source: string;
   phone_number:string;
+  agent_id: string;
+  customer_id: string;
 };
 
 interface ChatContextType {

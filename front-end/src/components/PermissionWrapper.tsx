@@ -12,6 +12,7 @@ interface PermissionWrapperProps {
 // Define protected routes and their required permissions
 const PROTECTED_ROUTES = {
   '/dashboard/chats': ['chat'],
+  '/dashboard/customer': ['customer'],
   '/dashboard/chatbot/knowledge/product': ['knowledge'],
   '/dashboard/chatbot/knowledge/image': ['knowledge'],
   '/dashboard/chatbot/knowledge': ['knowledge'],
@@ -24,6 +25,7 @@ const PROTECTED_ROUTES = {
 
 const REDIRECT_ROUTES = {
   '/dashboard/chats': '/dashboard/chatbot/knowledge',
+  '/dashboard/customer': '/dashboard/chatbot/knowledge',
   '/dashboard/chatbot/knowledge': '/dashboard/chatbot/unanswered',
   '/dashboard/chatbot/unanswered': '/dashboard/chatbot/knowledge',
   '/dashboard/go-live': '/dashboard/chatbot/knowledge',

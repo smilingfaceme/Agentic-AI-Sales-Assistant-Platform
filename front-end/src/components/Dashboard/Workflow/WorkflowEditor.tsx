@@ -2,7 +2,7 @@
 
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { FaSave, FaTimes, FaPlay } from 'react-icons/fa';
+import { FaSave, FaTimes, FaPlay, FaFileExport, FaFileImport } from 'react-icons/fa';
 import Link from 'next/link';
 import { useAppContext } from '@/contexts/AppContext';
 import { apiRequest } from '@/utils';
@@ -643,6 +643,73 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
       setIsSaving(false);
     }
   };
+
+  // Export workflow data as JSON
+  const exportWorkflow = () => {
+    try {
+      const workflowData = {
+        name: workflowName,
+        nodes: nodes,
+        edges: edges
+      };
+
+      const dataStr = JSON.stringify(workflowData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${workflowName.replace(/\s+/g, '_')}_${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showNotification('Workflow exported successfully!', 'success', true);
+    } catch (error) {
+      console.error('Error exporting workflow:', error);
+      showNotification('Failed to export workflow', 'error', true);
+    }
+  };
+
+  // Import workflow data from JSON
+  const importWorkflow = () => {
+    try {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json';
+      input.onchange = async (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        const file = target.files?.[0];
+        if (!file) return;
+
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+
+          // Validate the imported data structure
+          if (!data.name || !data.nodes || !data.edges) {
+            showNotification('Invalid workflow file format', 'error', true);
+            return;
+          }
+
+          // Update the workflow state
+          setWorkflowName(data.name);
+          setNodes(data.nodes);
+          setEdges(data.edges);
+
+          showNotification('Workflow imported successfully!', 'success', true);
+        } catch (error) {
+          console.error('Error parsing workflow file:', error);
+          showNotification('Failed to import workflow. Invalid JSON format.', 'error', true);
+        }
+      };
+      input.click();
+    } catch (error) {
+      console.error('Error importing workflow:', error);
+      showNotification('Failed to import workflow', 'error', true);
+    }
+  };
+
   // Helper: get possible blocks for a node type
   const getPossibleBlocks = (node_type: string) =>
     Object.entries(block_data).filter(([, item]) => item.enable.includes(node_type));
@@ -921,10 +988,26 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
           <div className="flex gap-3">
             <button
               onClick={testWorkflow}
-              className="flex items-center gap-2 px-2 md:px-4 md:py-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 md:rounded-lg rounded transition-colors font-medium text-sm"
+              className="flex items-center gap-2 px-2 md:px-4 md:py-2 py-1 bg-amber-500 hover:bg-amber-600 text-white md:rounded-lg rounded transition-colors font-medium text-sm"
             >
               <FaPlay size={10} />
               <span className='md:block hidden'>Test</span>
+            </button>
+            <button
+              onClick={importWorkflow}
+              className="flex items-center gap-2 px-2 md:px-4 md:py-2 py-1 bg-purple-600 hover:bg-purple-700 text-white md:rounded-lg rounded transition-colors font-medium text-sm"
+              title="Import workflow from JSON"
+            >
+              <FaFileImport />
+              <span className='md:block hidden'>Import</span>
+            </button>
+            <button
+              onClick={exportWorkflow}
+              className="flex items-center gap-2 px-2 md:px-4 md:py-2 py-1 bg-green-600 hover:bg-green-700 text-white md:rounded-lg rounded transition-colors font-medium text-sm"
+              title="Export workflow as JSON"
+            >
+              <FaFileExport />
+              <span className='md:block hidden'>Export</span>
             </button>
             <Loading isLoading={isLoadingSaving} type="button" text="Saving..." theme="dark">
               <button
@@ -1342,8 +1425,8 @@ export default function WorkflowEditor({ workflow_Id }: WorkflowEditorProps) {
                                     const options = firstFormat === 'calling_api'
                                       ? addBlockCandidates
                                       : (firstValueItem && typeof firstValueItem === 'object' && 'options' in firstValueItem
-                                          ? (firstValueItem.options as unknown[])
-                                          : []);
+                                        ? (firstValueItem.options as unknown[])
+                                        : []);
 
                                     return (
                                       <div className="space-y-2">

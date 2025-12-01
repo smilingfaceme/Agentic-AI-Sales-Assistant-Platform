@@ -8,6 +8,7 @@ import { useChatContext, Conversation } from '@/contexts/ChatContext';
 import { useChatAreaContext } from '@/contexts/ChatAreaContext'
 import { chatApi } from "@/services/apiService";
 import { useApiCall } from "@/hooks/useApiCall";
+import CustomerEditPage from "@/components/Dashboard/Customer/customerSetting";
 
 type NotifyKey = 'All' | 'Unassigned' | 'WhatsApp' | 'Test';
 
@@ -30,6 +31,7 @@ export default function ChatPage() {
     'Test': 0
   });
   const [showModal, setShowModal] = useState(false)
+  const [showCustomerModal, setShowCustomerModal] = useState(false)
 
   const [active, setActive] = useState<NotifyKey>('All');
   const [chatChannels, setChatChannels] = useState<Conversation[]>([]);
@@ -56,9 +58,12 @@ export default function ChatPage() {
     if (filter_key === 'All') {
       return chatChannels
     } else {
+      if (filter_key.toLowerCase() === 'unassigned') {
+        return chatChannels.filter((convo: Conversation) => convo.agent_id == null && convo.source.toLowerCase() != "test")
+      }
       const whatsappConversations: Conversation[] = chatChannels.filter(
         (convo: Conversation) => {
-          if (filter_key.toLowerCase() == "whatsapp"){
+          if (filter_key.toLowerCase() == "whatsapp") {
             if (convo.source.toLowerCase() === filter_key.toLowerCase() || convo.source.toLowerCase() == "waca") return convo
           }
           else {
@@ -78,16 +83,19 @@ export default function ChatPage() {
       'Test': 0,
       'WACA': 0
     }
-    const con_counts: Record<string, number> = projects.reduce<Record<string, number>>((acc, { source }) => {
+    const con_counts: Record<string, number> = projects.reduce<Record<string, number>>((acc, { agent_id, source }) => {
       acc[source] = (acc[source] || 0) + 1;
+      if (agent_id == null && source.toLowerCase() != "test") {
+        acc['Unassigned'] = (acc['Unassigned'] || 0) + 1;
+      }
       return acc;
     }, {});
-    counts = {...counts, ...con_counts}
+    counts = { ...counts, ...con_counts }
     console.log(counts)
     const notifiesObj = {
       All: projects.length,
       Unassigned: counts['Unassigned'] || 0,
-      WhatsApp: (counts['WhatsApp'] + counts['WACA'])|| 0,
+      WhatsApp: (counts['WhatsApp'] + counts['WACA']) || 0,
       Test: counts['Test'] || 0
     };
 
@@ -169,14 +177,32 @@ export default function ChatPage() {
                         setShowModal(true);
                       }}
                     >
-                      <div className="flex">
+                      <div className="flex w-full">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center">
                           {channel.source == "WhatsApp" || channel.source == "WACA" ? <FaWhatsapp size={30} color="oklch(62.7% 0.194 149.214)" /> : <FaGlobe size={28} />}
                         </div>
                         <div className="flex-1 text-left ml-2">
                           <div className="font-semibold text-sm text-gray-800">{channel.conversation_name}{channel.phone_number != "" && ` - ${channel.phone_number}`}</div>
-                          <div className="text-xs text-gray-500">Source: {channel.source} </div>
-                          <div className={`text-xs text-gray-500`}>AI Reply: {channel.ai_reply ? "Yes" : "No"}</div>
+                          <div className="flex justify-between">
+                            <div>
+                              <div className="text-xs text-gray-500">Source: {channel.source} </div>
+                              <div className={`text-xs text-gray-500`}>AI Reply: {channel.ai_reply ? "Yes" : "No"}</div>
+                            </div>
+                            <div>
+                              {channel.source != "Test" && <button
+                                className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded"
+                                onClick={() => {
+                                  setActiveConversation(channel);
+                                  setActiveChatHistory(channel);
+                                  setShowCustomerModal(true);
+                                }}
+                              >
+                                Customer Info
+                              </button>}
+                              
+                            </div>
+                          </div>
+
                         </div>
                       </div>
                       <div className="text-xs text-gray-400">{channel.started_at ? new Date(channel.started_at).toLocaleString() : ""}</div>
@@ -198,6 +224,29 @@ export default function ChatPage() {
             <FaTimes />
           </button>
           {activeConversation && <ChatArea />}
+        </div>
+
+        {/* Add/Edit Customer Modal */}
+        <div
+          className={`fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-end z-50 transition-all duration-300 ${showCustomerModal ? "opacity-100 visible" : "opacity-0 invisible"
+            }`}
+          onClick={() => {
+            setShowCustomerModal(false);
+          }}
+        >
+          <div
+            className={`w-full md:w-[480px] lg:w-[520px] h-full bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col ${showCustomerModal ? "translate-x-0" : "translate-x-full"
+              }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute top-4 right-2 rounded-full hover:bg-gray-100 flex items-center justify-center w-10 h-10"
+              onClick={() => setShowCustomerModal(false)}
+            >
+              <FaTimes />
+            </button>
+            <CustomerEditPage key={activeConversation?.conversation_id} conversation={activeConversation || undefined} />
+          </div>
         </div>
       </main>
     </div>

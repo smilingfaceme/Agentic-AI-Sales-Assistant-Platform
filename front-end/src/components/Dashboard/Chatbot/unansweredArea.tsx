@@ -53,7 +53,7 @@ export default function UnansweredQuestionArea() {
           "Send At": item.created_at,
           'Actions': [{
             label: "View",
-            disabled:false,
+            disabled: false,
             onClick: () => { setActiveChatHistory(item); setShowModal(true) },
             className: "flex items-center px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors",
             icon: <FaEdit />
@@ -105,14 +105,16 @@ export default function UnansweredQuestionArea() {
       </LoadingWrapper>
       {/* Modal */}
       <div
-        className={`fixed inset-0 bg-[#00000096] flex items-center justify-end z-250 transition-opacity duration-500 ${showModal ? "opacity-100 visible" : "opacity-0 invisible"
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-end z-50 transition-all duration-300 ${showModal ? "opacity-100 visible" : "opacity-0 invisible"
           }`}
-        onClick={() => setShowModal(false)}
+        onClick={() => {
+          setShowModal(false);
+        }}
       >
         <div
-          className={`w-full md:w-[50%] h-full mr-0 bg-white shadow-lg transform transition-transform duration-500 ease-in-out ${showModal ? "translate-x-0" : "translate-x-full"
+          className={`w-full md:w-[45%] h-full bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col ${showModal ? "translate-x-0" : "translate-x-full"
             }`}
-          onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
+          onClick={(e) => e.stopPropagation()}
         >
           <button
             className="absolute top-4 right-2 rounded-full hover:bg-gray-100 flex items-center justify-center w-10 h-10"

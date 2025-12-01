@@ -383,6 +383,15 @@ export const userApi = {
     });
     if (!res.ok) throw new Error('Failed to update password');
     return res.json();
+  },
+
+  getUsersByRole: async (roleName: string) => {
+    const res = await apiRequest(`/user/by-role?role=${encodeURIComponent(roleName)}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch users by role');
+    return res.json();
   }
 };
 
@@ -645,5 +654,102 @@ export const sustainabilityApi = {
     });
     if (!res.ok) throw new Error('Failed to export KPI data');
     return res.blob();
+  }
+};
+
+// Customer APIs
+export const customerApi = {
+  // Get all customers
+  getAllCustomers: async () => {
+    const res = await apiRequest('/customer/all', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch customers');
+    return res.json();
+  },
+
+  // Get customer by ID
+  getCustomerById: async (conversationId: string) => {
+    const res = await apiRequest(`/customer/get/${conversationId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch customer');
+    return res.json();
+  },
+
+  // Search customers by email
+  searchByEmail: async (email: string) => {
+    const res = await apiRequest(`/customer/search/email?email=${encodeURIComponent(email)}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to search customer by email');
+    return res.json();
+  },
+
+  // Search customers by phone
+  searchByPhone: async (phone: string) => {
+    const res = await apiRequest(`/customer/search/phone?phone=${encodeURIComponent(phone)}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to search customer by phone');
+    return res.json();
+  },
+
+  // Get customer by conversation ID
+  getByConversation: async (conversationId: string) => {
+    const res = await apiRequest(`/customer/search/conversation/${conversationId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to fetch customer by conversation');
+    return res.json();
+  },
+
+  // Create new customer
+  createCustomer: async (customerData: {
+    customer_name: string;
+    customer_email?: string;
+    customer_phone?: string;
+    conversation_id?: string;
+    agent_id?: string;
+  }) => {
+    const res = await apiRequest('/customer/new', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(customerData)
+    });
+    if (!res.ok) throw new Error('Failed to create customer');
+    return res.json();
+  },
+
+  // Update customer
+  updateCustomer: async (customerId: string, customerData: {
+    customer_name?: string;
+    customer_email?: string;
+    customer_phone?: string;
+    conversation_id?: string;
+    agent_id?: string;
+  }) => {
+    const res = await apiRequest(`/customer/update/${customerId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(customerData)
+    });
+    if (!res.ok) throw new Error('Failed to update customer');
+    return res.json();
+  },
+
+  // Delete customer
+  deleteCustomer: async (customerId: string) => {
+    const res = await apiRequest(`/customer/${customerId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to delete customer');
+    return res.json();
   }
 };

@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import routes
-from routers import auth, user, company, invite, knowledge, conversation, chat, integration, image, chatbot_setting, extra, workflow, sustain_kpi, waca
+from routers import auth, user, company, invite, knowledge, conversation, chat, integration, image, chatbot_setting, extra, workflow, sustain_kpi, waca, customer
 from middleware.error_handler import add_exception_handlers
 from utils.validate_env import validate_env
 from db.init_db import initialize_database
@@ -52,6 +52,7 @@ app.include_router(extra.router, prefix="/document", tags=["document"])
 app.include_router(workflow.router, prefix="/workflow", tags=["workflow"])
 app.include_router(sustain_kpi.router, prefix="/sustainability", tags=["sustainability"])
 app.include_router(waca.router, prefix="/waca", tags=["waca"])
+app.include_router(customer.router, prefix="/customer", tags=["customer"])
 
 # Add exception handlers
 add_exception_handlers(app)

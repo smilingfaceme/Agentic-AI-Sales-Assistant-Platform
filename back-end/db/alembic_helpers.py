@@ -28,6 +28,20 @@ def create_company_schema_with_tables(company_schema_name: str):
             connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {company_schema_name}"))
             logger.info(f"✅ Schema created: {company_schema_name}")
             
+            # Create customers table
+            connection.execute(text(f"""
+                CREATE TABLE IF NOT EXISTS {company_schema_name}.customers (
+                    customer_id uuid NOT NULL DEFAULT gen_random_uuid(),
+                    customer_name text NULL,
+                    customer_email text NULL,
+                    customer_phone text NULL,
+                    created_at timestamp with time zone NOT NULL DEFAULT now(),
+                    CONSTRAINT customers_pkey PRIMARY KEY (customer_id)
+                )
+            """))
+            
+            logger.info(f"✅ Created customers table in {company_schema_name}")
+            
             # Create conversations table
             connection.execute(text(f"""
                 CREATE TABLE IF NOT EXISTS {company_schema_name}.conversations (
@@ -39,7 +53,13 @@ def create_company_schema_with_tables(company_schema_name: str):
                     source text NOT NULL,
                     phone_number text NULL,
                     instance_name text NULL,
-                    CONSTRAINT conversations_pkey PRIMARY KEY (conversation_id)
+                    customer_id uuid NULL,
+                    agent_id uuid NULL,
+                    CONSTRAINT conversations_pkey PRIMARY KEY (conversation_id),
+                    CONSTRAINT conversations_customer_id_fkey FOREIGN KEY (customer_id) 
+                        REFERENCES {company_schema_name}.customers (customer_id),
+                    CONSTRAINT conversations_agent_id_fkey FOREIGN KEY (agent_id) 
+                        REFERENCES public.users (id)
                 )
             """))
             logger.info(f"✅ Created conversations table in {company_schema_name}")
@@ -133,7 +153,7 @@ def create_company_schema_with_tables(company_schema_name: str):
                 )
             """))
             logger.info(f"✅ Created workflows table in {company_schema_name}")
-        
+
         logger.info(f"✅ Successfully created all tables for {company_schema_name}")
         return {"status": "success", "message": f"Company schema {company_schema_name} created successfully"}
 

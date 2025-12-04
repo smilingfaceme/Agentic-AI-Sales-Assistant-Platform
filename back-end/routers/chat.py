@@ -311,7 +311,6 @@ async def send_image_message(
     else:
         raise HTTPException(status_code=500, detail="Failed to add message")
 
-
 @router.get("/history")
 async def get_chats(conversation_id: str = Query(...), user = Depends(verify_token)):
     """
@@ -342,8 +341,6 @@ async def get_chats(conversation_id: str = Query(...), user = Depends(verify_tok
     
     # Retrieve all messages from the database
     messages = get_all_messages(company_schema, conversation_id)
-    if not messages:
-        raise HTTPException(status_code=500, detail="Failed to retrieve messages")
     
     return {
         "status": 'success',
@@ -370,7 +367,6 @@ async def response_in_background(conversation_id: str, company_id: str, company_
 
 def run_response_in_thread(conversation_id, company_id, company_schema, query, instance_name, phone_number, message_type, platform):
     asyncio.run(response_in_background(conversation_id, company_id, company_schema, query, instance_name, phone_number, message_type, platform))
-
 
 async def response_for_image_in_background(conversation_id: str, company_id: str, company_schema: str, query: str, instance_name:str, phone_number:str, platform:str, file_io:io.BytesIO):
     try:

@@ -180,6 +180,7 @@ def get_users(key: str, value):
                 'company_id': str(user.company_id),
                 'invited_by': str(user.invited_by) if user.invited_by else None,
                 'role': str(user.role),
+                'active': user.active,
                 'created_at': user.created_at.isoformat() if user.created_at else None
             }
         return None
@@ -251,6 +252,46 @@ def update_user_by_id(id: str, data: dict):
         session.rollback()
         print(f"Error updating user: {e}")
         return None
+    finally:
+        session.close()
+
+
+def get_users_by_role(role_name: str, company_id: str):
+    """Get all users by role name for a specific company"""
+    session = db.get_session()
+    try:
+        # First get the role ID by role name
+        role = session.query(Role).filter_by(name=role_name).first()
+        if not role:
+            return []
+
+        # Query users with the role ID and company ID, only active users
+        users = session.query(User).filter(
+            and_(
+                User.role == role.id,
+                User.company_id == UUID(company_id),
+                User.active == True
+            )
+        ).all()
+
+        if users:
+            return [
+                {
+                    'id': str(user.id),
+                    'name': user.name,
+                    'email': user.email,
+                    'company_id': str(user.company_id),
+                    'invited_by': str(user.invited_by) if user.invited_by else None,
+                    'role': str(user.role),
+                    'active': user.active,
+                    'created_at': user.created_at.isoformat() if user.created_at else None
+                }
+                for user in users
+            ]
+        return []
+    except Exception as e:
+        print(f"Error getting users by role: {e}")
+        return []
     finally:
         session.close()
 

@@ -147,7 +147,8 @@ class Conversation(Base):
     source = Column(String, nullable=False)
     phone_number = Column(String, nullable=True)
     instance_name = Column(String, nullable=True)
-
+    customer_id = Column(UUID(as_uuid=True), nullable=True)
+    agent_id = Column(UUID(as_uuid=True), nullable=True)
     # Relationships
     messages = relationship("Message", back_populates="conversation")
 

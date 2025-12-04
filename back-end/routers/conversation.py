@@ -33,11 +33,14 @@ async def get_conversations(user = Depends(verify_token)):
     company_schema = company_info["schema_name"]
 
     # Fetch all conversations for this company
-    all_companies = get_all_conversations(company_schema)
-
+    all_conversations = get_all_conversations(company_schema)
+    if user["role"] == "admin":
+        pass
+    else:
+        all_conversations = [i for i in all_conversations if i['agent_id'] == user['id']]
     return {
         "status": 'success',
-        "conversations": all_companies
+        "conversations": all_conversations
     }
 
 
@@ -64,11 +67,14 @@ async def get_unanswered_questions(user = Depends(verify_token)):
     company_schema = company_info["schema_name"]
 
     # Fetch unanswered conversations/messages
-    all_companies = get_unanswered_conversations(company_schema)
-
+    all_conversations = get_unanswered_conversations(company_schema)
+    if user["role"] == "admin":
+        pass
+    else:
+        all_conversations = [i for i in all_conversations if i['agent_id'] == user['id']]
     return {
         "status": 'success',
-        "messages": all_companies
+        "messages": all_conversations
     }
 
 

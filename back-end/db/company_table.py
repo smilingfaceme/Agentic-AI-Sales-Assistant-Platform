@@ -3,6 +3,7 @@ SQLAlchemy-based database functions for company-specific schema tables
 """
 from db.db_connection import db
 from db.alembic_helpers import create_company_schema_with_tables
+from db.models import Conversation
 from sqlalchemy import text
 import json
 from uuid import UUID
@@ -133,6 +134,31 @@ def get_conversatin_by_phone_integration(company_id: str, phone_number: str, ins
         return []
     finally:
         session.close()
+
+
+def update_conversation_by_id(company_id: str, conversation_id: str, update_fields: dict):
+    """Update a conversation"""
+    session = db.get_session()
+    try:
+        update_query = []
+        params = {"conversation_id": conversation_id}
+        for key, value in update_fields.items():
+            if hasattr(Conversation, key):
+                update_query.append(f"{key} = :{key}")
+                params[key] = value
+
+        query = text(f"UPDATE {company_id}.conversations SET {', '.join(update_query)} WHERE conversation_id = :conversation_id RETURNING *")
+        result = session.execute(query, params).fetchone()
+        session.commit()
+        if result:
+            return [dict(result._mapping)]
+        return []
+    except Exception as e:
+        session.rollback()
+        print(f"Error updating conversation: {e}")
+        return []
+    finally:
+        session.close() 
 
 # ==================== MESSAGES ====================
 
@@ -873,6 +899,129 @@ def get_carbon_energy_from_messages(company_id: str, timespace: str, period: str
         return []
     except Exception as e:
         print(f"Error getting carbon and energy: {e}")
+        return []
+    finally:
+        session.close()
+
+# ==================== CUSTOMERS ====================
+
+def add_new_customer(company_id: str, customer_name: str, customer_email: str = None, customer_phone: str = None):
+    """Add a new customer"""
+    session = db.get_session()
+    try:
+        query = text(f"""
+            INSERT INTO {company_id}.customers (customer_name, customer_email, customer_phone)
+            VALUES (:customer_name, :customer_email, :customer_phone)
+            RETURNING *
+        """)
+        result = session.execute(query, {
+            "customer_name": customer_name,
+            "customer_email": customer_email,
+            "customer_phone": customer_phone,
+        }).fetchone()
+        session.commit()
+        if result:
+            return [dict(result._mapping)]
+        return []
+    except Exception as e:
+        session.rollback()
+        print(f"Error adding customer: {e}")
+        return []
+    finally:
+        session.close()
+
+
+def get_all_customers(company_id: str):
+    """Get all customers for a company"""
+    session = db.get_session()
+    try:
+        from uuid import UUID
+        query = text(f"""SELECT *
+            FROM {company_id}.conversations AS conv
+            LEFT JOIN {company_id}.customers AS cus
+                ON conv.customer_id = cus.customer_id
+            LEFT JOIN public.users AS agent
+                ON conv.agent_id = agent.id
+            ORDER BY conv.conversation_id ASC;
+            """)
+        results = session.execute(query).fetchall()
+        if results:
+            result_list = []
+            for row in results:
+                result_dict = dict(row._mapping)
+                # Convert UUID objects to strings for JSON serialization
+                for key, value in result_dict.items():
+                    if isinstance(value, UUID):
+                        result_dict[key] = str(value)
+                result_list.append(result_dict)
+            return result_list
+        return []
+    except Exception as e:
+        print(f"Error getting customers: {e}")
+        return []
+    finally:
+        session.close()
+
+
+def get_customer_by_id(company_id: str, conversation_id: str):
+    """Get a specific customer by ID"""
+    session = db.get_session()
+    try:
+        query = text(f"""SELECT *
+            FROM {company_id}.conversations AS conv
+            LEFT JOIN {company_id}.customers AS cus
+                ON conv.customer_id = cus.customer_id
+            LEFT JOIN public.users AS agent
+                ON conv.agent_id = agent.id
+            WHERE conv.conversation_id = :conversation_id
+            ORDER BY conv.conversation_id ASC;
+            """)
+        result = session.execute(query, {"conversation_id": conversation_id}).fetchone()
+        if result:
+            return [dict(result._mapping)]
+        return []
+    except Exception as e:
+        print(f"Error getting customer: {e}")
+        return []
+    finally:
+        session.close()
+
+
+def update_customer(company_id: str, customer_id: str, customer_name: str = None, customer_email: str = None, customer_phone: str = None):
+    """Update a customer"""
+    session = db.get_session()
+    try:
+        # Build dynamic update query based on provided parameters
+        update_fields = []
+        params = {"customer_id": customer_id}
+
+        if customer_name is not None:
+            update_fields.append("customer_name = :customer_name")
+            params["customer_name"] = customer_name
+        if customer_email is not None:
+            update_fields.append("customer_email = :customer_email")
+            params["customer_email"] = customer_email
+        if customer_phone is not None:
+            update_fields.append("customer_phone = :customer_phone")
+            params["customer_phone"] = customer_phone
+
+        if not update_fields:
+            return []
+
+        query = text(f"""
+            UPDATE {company_id}.customers
+            SET {', '.join(update_fields)}
+            WHERE customer_id = :customer_id
+            RETURNING *
+        """)
+        result = session.execute(query, params).fetchone()
+        session.commit()
+        if result:
+            return [dict(result._mapping)]
+        return []
+    except Exception as e:
+        session.rollback()
+        print(f"Error updating customer: {e}")
         return []
     finally:
         session.close()

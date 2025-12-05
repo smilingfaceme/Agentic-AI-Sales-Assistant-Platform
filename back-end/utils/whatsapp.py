@@ -6,8 +6,8 @@ WhatsApp_Bot_URL = os.getenv("WhatsApp_Bot_URL")
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 BACKEND_URL = os.getenv('BACKEND_URL')
 
-def combine_uuids(uuid1: str, uuid2: str, order:int) -> str:
-    combined = uuid1 + uuid2 + str(order)
+def combine_uuids(uuid1: str, uuid2: str, order:str) -> str:
+    combined = uuid1 + uuid2 + order
     # SHA256 ensures uniqueness, then we cut down
     hash_str = hashlib.sha256(combined.encode()).hexdigest()
     return hash_str

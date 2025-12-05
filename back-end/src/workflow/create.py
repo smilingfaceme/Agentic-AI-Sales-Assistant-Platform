@@ -13,7 +13,7 @@ image_extensions = {'xbm', 'tif', 'jfif', 'pjp', 'apng', 'jpeg', 'heif', 'ico', 
 def get_workflow_attachment(extra_attachment:str, company_id: str, workflow_id: str):
     attachments_files = {"images": [], "extra": []}
     if not extra_attachment:
-        return None
+        return attachments_files
     save_dir = os.path.join("files", "workflows", str(company_id), str(workflow_id))
     attachments = extra_attachment.split(",")
     # Build full path for the file

@@ -45,7 +45,7 @@ class Company(Base):
     users = relationship("User", back_populates="company")
     invitations = relationship("Invitation", back_populates="company")
     bot_personalities = relationship("BotPersonality", back_populates="company")
-
+    integrations = relationship("Integration", back_populates="company")
 
 class User(Base):
     """User model for public.users table"""
@@ -66,6 +66,7 @@ class User(Base):
     company = relationship("Company", back_populates="users")
     role_obj = relationship("Role", back_populates="users")
     invitations = relationship("Invitation", back_populates="invited_by_user")
+    integrations = relationship("Integration", back_populates="integrated_user")
 
 
 class Invitation(Base):
@@ -124,6 +125,10 @@ class Integration(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("public.users.id"), nullable=False)
     delete = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    
+    # Relationships
+    company = relationship("Company", back_populates="integrations")
+    integrated_user = relationship("User", back_populates="integrations")
 
 
 # ==================== COMPANY SCHEMA MODELS ====================
@@ -142,7 +147,8 @@ class Conversation(Base):
     source = Column(String, nullable=False)
     phone_number = Column(String, nullable=True)
     instance_name = Column(String, nullable=True)
-
+    customer_id = Column(UUID(as_uuid=True), nullable=True)
+    agent_id = Column(UUID(as_uuid=True), nullable=True)
     # Relationships
     messages = relationship("Message", back_populates="conversation")
 

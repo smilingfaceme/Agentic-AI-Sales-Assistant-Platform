@@ -2,12 +2,11 @@
 Database initialization module for Bot Admin Panel.
 Uses Alembic for database migrations.
 """
-from sqlalchemy import text, inspect
+from sqlalchemy import inspect
 from db.db_connection import db, engine
 from alembic.config import Config
 from alembic import command
 import logging
-import os
 from pathlib import Path
 
 # Configure logging
@@ -90,6 +89,72 @@ def run_migrations():
         raise
 
 
+def create_required_tables():
+    """
+    Create required tables if they don't exist using SQLAlchemy models.
+    This is a fallback method when Alembic migrations are not available.
+    """
+    from db.models import Base, Role, Company, User, Invitation, Integration, BotPersonality
+
+    try:
+        logger.info("🔧 Creating required tables if they don't exist...")
+
+        # Create all tables defined in models using SQLAlchemy
+        # Only creates tables that don't already exist
+        Base.metadata.create_all(engine, tables=[
+            Role.__table__,
+            Company.__table__,
+            User.__table__,
+            Invitation.__table__,
+            Integration.__table__,
+            BotPersonality.__table__
+        ])
+
+        # Insert default roles if they don't exist
+        session = db.get_session()
+        try:
+            default_roles = [
+                {
+                    "name": "admin",
+                    "permissions": {
+                        "chat": True, "knowledge": True, "invite": True,
+                        "company": True, "integration": True, "conversation": True, "workflow": True, "customer": True
+                    }
+                },
+                {
+                    "name": "knowledge_manager",
+                    "permissions": {
+                        "chat": False, "knowledge": True, "invite": False,
+                        "company": False, "integration": False, "conversation": False, "workflow": True, "customer": False
+                    }
+                },
+                {
+                    "name": "agent",
+                    "permissions": {
+                        "chat": True, "knowledge": False, "invite": False,
+                        "company": False, "integration": True, "conversation": True, "workflow": False, "customer": False
+                    }
+                }
+            ]
+
+            for role_data in default_roles:
+                existing_role = session.query(Role).filter(Role.name == role_data["name"]).first()
+                if not existing_role:
+                    new_role = Role(name=role_data["name"], permissions=role_data["permissions"])
+                    session.add(new_role)
+                    logger.info(f"✅ Created default role: {role_data['name']}")
+
+            session.commit()
+        finally:
+            session.close()
+
+        logger.info("✅ Required tables created successfully")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error creating required tables: {e}")
+        raise
+
+
 
 
 
@@ -97,6 +162,7 @@ def initialize_database():
     """
     Main function to initialize the database using Alembic migrations.
     Checks migration status and runs migrations if necessary.
+    Falls back to creating tables directly if Alembic migrations fail.
     """
     try:
         logger.info("🚀 Starting database initialization...")
@@ -106,12 +172,21 @@ def initialize_database():
             logger.info("✅ Database already initialized and up to date")
             return True
 
-        # Run migrations
-        logger.info("📦 Running database migrations...")
-        run_migrations()
+        # Try running Alembic migrations first
+        try:
+            logger.info("📦 Running database migrations...")
+            run_migrations()
+            logger.info("✅ Database initialization completed successfully!")
+            return True
+        except Exception as migration_error:
+            logger.warning(f"⚠️ Alembic migrations failed: {migration_error}")
+            logger.info("📦 Falling back to creating tables directly...")
 
-        logger.info("✅ Database initialization completed successfully!")
-        return True
+            # Fallback: Create tables directly if Alembic fails
+            create_required_tables()
+
+            logger.info("✅ Database initialization completed using direct table creation!")
+            return True
 
     except Exception as e:
         logger.error(f"❌ Database initialization failed: {e}")

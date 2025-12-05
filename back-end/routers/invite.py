@@ -77,12 +77,14 @@ async def invite_user(data = Body(...), user = Depends(verify_token)):
     # Check if user already exists
     existed_usr = get_users("email", invited_email)
     if existed_usr:
-        raise HTTPException(status_code=400, detail="User already exists")
+        if existed_usr['active'] == True:
+            raise HTTPException(status_code=400, detail="User already exists")
     
     # Check if invitation already exists
     existed_invitation = get_invitations("invited_email", invited_email)
     if existed_invitation:
-        raise HTTPException(status_code=400, detail="Invitation already exists")
+        if existed_invitation[0]['status'] != 'revoked':
+            raise HTTPException(status_code=400, detail="Invitation already exists")
     
     # Get inviter user info
     inviter_user = get_user_with_permission("email", user['email'])
@@ -100,13 +102,20 @@ async def invite_user(data = Body(...), user = Depends(verify_token)):
     # Token valid for 3 days
     token_hash = create_access_token(token_data, period=24*3)
     
-    new_record_invitation = add_invitation(
-        company_id=user['company_id'],
-        email=invited_email,
-        invited_by=user['id'],
-        role=invited_role,
-        token_hash=token_hash
-    )
+    if existed_invitation:
+        new_record_invitation = update_invitation_by_id(existed_invitation[0]['id'], {
+            "token_hash": token_hash,
+            "role": invited_role,
+            "status": 'pending'
+        })
+    else:
+        new_record_invitation = add_invitation(
+            company_id=user['company_id'],
+            email=invited_email,
+            invited_by=user['id'],
+            role=invited_role,
+            token_hash=token_hash
+        )
     
     if not new_record_invitation:
         raise HTTPException(status_code=400, detail="Failed to create invitation")
@@ -193,15 +202,23 @@ async def revoke_invited_user(invitation_id = Query(...), user = Depends(verify_
     if not user['permission'].get("invite", False):
         raise HTTPException(status_code=400, detail="You are not authorized to perform this action")
     
+    existed_invitation = get_invitations("id", invitation_id)
+    if not existed_invitation:
+        raise HTTPException(status_code=400, detail="Invitation already exists")
     # Revoke invitation
     revoke_invitation = update_invitation_by_id(invitation_id, {"status": 'revoked'})
     if not revoke_invitation:
         raise HTTPException(status_code=400, detail="Failed to revoke invitation")
-    else:
-        return {
-            "message": "Invitation revoked successfully!",
-            "invitation": revoke_invitation,
-        }
+    invited_user = get_users("email", existed_invitation[0]['invited_email'])
+    if invited_user:
+        # Deactivate user
+        user_delete = update_user_by_id(invited_user['id'], {"active": False})
+        if not user_delete:
+            raise HTTPException(status_code=400, detail="Failed to revoke invitation")
+    return {
+        "message": "Invitation revoked successfully!",
+        "invitation": revoke_invitation,
+    }
 
 @router.get("/validate")
 async def validate_invitation(token = Query(...)):
@@ -282,7 +299,15 @@ async def complete_invitation(data = Body(...)):
         "invited_by": payload.get('invited_by')
     }
 
-    new_user = add_new_user(name, payload.get('email'), password, payload.get('company_id'), payload.get('role'), payload.get('invited_by'))
+    existed_usr = get_users("email", payload.get('email'))
+    if existed_usr:
+        if existed_usr['active'] == True:
+            raise HTTPException(status_code=400, detail="User already exists")
+    
+    if existed_usr:
+        new_user = update_user_by_id(existed_usr['id'], {"active": True, "password": password, 'role': payload.get('role'), 'invited_by': payload.get('invited_by'), 'company_id': payload.get('company_id'), 'name': name})
+    else:
+        new_user = add_new_user(name, payload.get('email'), password, payload.get('company_id'), payload.get('role'), payload.get('invited_by'))
     if not new_user:
         raise HTTPException(status_code=400, detail="Failed to create user")
     

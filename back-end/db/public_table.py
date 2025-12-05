@@ -143,21 +143,59 @@ def get_roles(key: str = None, value=None):
 # ==================== USERS ====================
 
 def get_user_with_permission(key: str, value):
-    """Get user with permissions (from view)"""
+    """Get user with permissions by joining users, companies, and roles tables"""
     session = db.get_session()
     try:
-        # Query the view - using raw SQL for views
-        from sqlalchemy import text
-        from uuid import UUID
-        query = f"SELECT * FROM public.users_with_permissions WHERE {key} = :value"
-        result = session.execute(text(query), {"value": value}).fetchone()
+        # Build dynamic filter based on key
+        if key == 'user_id':
+            filter_condition = User.id == value
+        elif key == 'email':
+            filter_condition = User.email == value
+        else:
+            filter_condition = getattr(User, key) == value
+
+        # Query with JOINs to replicate the view:
+        # users u LEFT JOIN companies c ON c.id = u.company_id
+        # LEFT JOIN roles r ON r.id = u.role
+        # WHERE c.delete = false AND u.active = true
+        result = session.query(
+            User.id.label('user_id'),
+            User.email,
+            User.name,
+            User.password,
+            User.company_id,
+            Company.active,
+            Company.name.label('company_name'),
+            Company.description.label('company_description'),
+            Role.name.label('role_name'),
+            Role.id.label('role_id'),
+            Role.permissions
+        ).outerjoin(
+            Company, Company.id == User.company_id
+        ).outerjoin(
+            Role, Role.id == User.role
+        ).filter(
+            and_(
+                Company.delete == False,
+                User.active == True,
+                filter_condition
+            )
+        ).first()
+
         if result:
-            result_dict = dict(result._mapping)
-            # Convert UUID objects to strings for JSON serialization
-            for key, value in result_dict.items():
-                if isinstance(value, UUID):
-                    result_dict[key] = str(value)
-            return result_dict
+            return {
+                'user_id': str(result.user_id),
+                'email': result.email,
+                'name': result.name,
+                'password': result.password,
+                'company_id': str(result.company_id) if result.company_id else None,
+                'active': result.active,
+                'company_name': result.company_name,
+                'company_description': result.company_description,
+                'role_name': result.role_name,
+                'role_id': str(result.role_id) if result.role_id else None,
+                'permissions': result.permissions
+            }
         return None
     except Exception as e:
         print(f"Error getting user with permission: {e}")
@@ -299,21 +337,65 @@ def get_users_by_role(role_name: str, company_id: str):
 # ==================== INVITATIONS ====================
 
 def get_invitations_with_users(key: str, value):
-    """Get invitations with user details (from view)"""
+    """Get invitations with user details by joining invitations, roles, users, and companies tables"""
     session = db.get_session()
     try:
-        from sqlalchemy import text
-        query = f"SELECT * FROM public.invitation_with_users WHERE {key} = :value"
-        results = session.execute(text(query), {"value": value}).fetchall()
+        # Build dynamic filter based on key
+        if key == 'company_id':
+            filter_condition = Invitation.company_id == value
+        elif key == 'id':
+            filter_condition = Invitation.id == value
+        else:
+            filter_condition = getattr(Invitation, key) == value
+
+        # Create an alias for User to get invited_by user's name
+        from sqlalchemy.orm import aliased
+        InvitedByUser = aliased(User)
+
+        # Query with JOINs to replicate the view:
+        # invitations i LEFT JOIN roles r ON i.role = r.id
+        # LEFT JOIN users u ON i.invited_by = u.id
+        # LEFT JOIN companies c ON c.id = i.company_id
+        # WHERE i.status != 'revoked'
+        results = session.query(
+            Invitation.id,
+            Invitation.company_id,
+            Company.name.label('company_name'),
+            Invitation.invited_email,
+            InvitedByUser.name.label('invited_by'),
+            Invitation.token_hash,
+            Role.name.label('role'),
+            Role.id.label('role_id'),
+            Invitation.status,
+            Invitation.created_at
+        ).outerjoin(
+            Role, Invitation.role == Role.id
+        ).outerjoin(
+            InvitedByUser, Invitation.invited_by == InvitedByUser.id
+        ).outerjoin(
+            Company, Company.id == Invitation.company_id
+        ).filter(
+            and_(
+                Invitation.status != 'revoked',
+                filter_condition
+            )
+        ).all()
+
         if results:
             result_list = []
             for row in results:
-                result_dict = dict(row._mapping)
-                # Convert UUID objects to strings for JSON serialization
-                for key, value in result_dict.items():
-                    if isinstance(value, UUID):
-                        result_dict[key] = str(value)
-                result_list.append(result_dict)
+                result_list.append({
+                    'id': str(row.id),
+                    'company_id': str(row.company_id) if row.company_id else None,
+                    'company_name': row.company_name,
+                    'invited_email': row.invited_email,
+                    'invited_by': row.invited_by,
+                    'token_hash': row.token_hash,
+                    'role': row.role,
+                    'role_id': str(row.role_id) if row.role_id else None,
+                    'status': row.status,
+                    'created_at': row.created_at.isoformat() if row.created_at else None
+                })
             return result_list
         return None
     except Exception as e:

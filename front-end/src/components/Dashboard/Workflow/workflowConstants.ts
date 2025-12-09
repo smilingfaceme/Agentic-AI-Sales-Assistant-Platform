@@ -127,6 +127,14 @@ export const block_data: Record<string, BlockDataItem> = {
     type: ['select'],
     source: '/workflow/integrated-phones',
   },
+  "check_customer_info": {
+    label: 'Check Customer Info',
+    enable: ['condition'],
+    operator: [['is']],
+    value: [{}],
+    format: ['auto'],
+    type: [''],
+  },
   "customer_phone_number": {
     label: 'Customer Phone Number',
     enable: ['condition'],
@@ -147,10 +155,11 @@ export const block_data: Record<string, BlockDataItem> = {
   "ai_reply": {
     label: 'AI Auto Reply',
     enable: ['action'],
-    operator: [['is']],
+    operator: [['Agentic actions']],
     value: [{}],
-    format: ['auto'],
-    type: [''],
+    format: ['calling_api'],
+    type: ['select'],
+    source: '/workflow/agentic-actions',
   },
   "send_email": {
     label: 'Send Email',

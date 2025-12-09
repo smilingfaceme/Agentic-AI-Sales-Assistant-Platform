@@ -235,3 +235,12 @@ async def get_all_integrations(user = Depends(verify_token)):
     return {
         "values":phone_numbers
     }
+
+@router.get("/agentic-actions")
+async def get_all_agentic_actions(user = Depends(verify_token)):
+    if not user['permission'].get("integration", False):
+        raise HTTPException(status_code=400, detail="You are not authorized to perform this action")
+    agentic_actions = ["Find on product's table", "Find products with images", "Get customer information"]
+    return {
+        "values":agentic_actions
+    }

@@ -2,7 +2,7 @@ from db.company_table import get_all_workflows, get_all_messages, get_linked_ima
 from db.public_table import get_chatbot_personality, get_integration_by_instance_name, get_integration_by_phone_number_id
 from src.utils.chroma_utils import search_vectors_product
 from src.workflow.create import trigger_workflow_function, condition_workflow_function, action_workflow_function, delay_workflow_function
-from src.response.ai_response import ai_response_with_search, ai_response_with_image_search
+from src.response.ai_response import ai_response_with_search, ai_response_with_image_search, combine_all_response_into_one
 from utils.whatsapp import send_message_whatsapp
 from utils.waca import send_text_message_by_waca, send_image_message_by_waca
 from src.image_vectorize import search_similar_images
@@ -80,7 +80,7 @@ async def generate_response_with_search(
                 if node["type"] == "condition":
                     print("Pass condition nodes Processing")
                     if node.get("config", {}).get("blocks", []):
-                        result = condition_workflow_function(node["config"]["blocks"], from_phone_number, source_phone_number, messages, query, message_type, platform)
+                        result = condition_workflow_function(node["config"]["blocks"], from_phone_number, source_phone_number, messages, query, message_type, platform, company_schema, conversation_id)
                         if not result:
                             worflow_process_flag = False
                             break
@@ -99,46 +99,56 @@ async def generate_response_with_search(
     else:
         except_case.append("sample")
     except_case = list(set(except_case))
-    except_response = []
     for i in except_case:
         if i == "sample":
             messages = get_all_messages(company_schema, conversation_id)
             memory = await get_history(messages)
-            
-            final_response, extra_info = await ai_response_with_search(company_id, company_schema, conversation_id, query, memory)
-            if platform == "WhatsApp":
-                sending_result = await send_message_whatsapp(instance_name, from_phone_number, final_response, extra_info)
-                if not sending_result.get("success", False):
-                    break
-            elif platform == "WACA":
-                # Send message via WhatsApp Business API
-                if extra_info.get("images") or extra_info.get("extra"):
-                    sending_result = send_image_message_by_waca(api_key, phone_number_id, from_phone_number, final_response, extra_info)
-                else:
-                    sending_result = send_text_message_by_waca(api_key, phone_number_id, from_phone_number, final_response)
-                if not sending_result.get("success", False):
-                    break
-            
-            # Insert new message into database        
-            add_response = add_new_message(
-                company_id=company_schema, 
-                conversation_id=conversation_id, 
-                sender_email="",
-                sender_type="bot", 
-                content=final_response,
-                extra=json.dumps(extra_info)
-            )
-            
-            if add_response:
-                except_response.append(add_response[0])
+            final_response, extra_info = await ai_response_with_search(company_id, company_schema, conversation_id, query, memory, [])
+            active_workflows_response.append([final_response, extra_info])
         elif i == "move":
             pass
         elif i == "ignore":
             pass
+    
+    if len(active_workflows_response) > 1:
+        responses = [i[0] for i in active_workflows_response]
+        final_combine_response = await combine_all_response_into_one(company_id, conversation_id, memory, responses)
+        images = []
+        extra = []
+        for i in active_workflows_response:
+            images.extend(i[1].get("images", []))
+            extra.extend(i[1].get("extra", []))
+        final_combine_extra_files = {"images": list(set(images)), "extra":list(set(extra))}
+    else:
+        final_combine_response = active_workflows_response[0][0]
+        final_combine_extra_files = active_workflows_response[0][1]
+    store_message = True
+    if platform == "WhatsApp":
+        result = await send_message_whatsapp(instance_name, from_phone_number, final_combine_response, final_combine_extra_files)
+        if not result.get("success", False):
+            store_message = False
+    elif platform == "WACA":
+        # Send message via WhatsApp Business API
+        if final_combine_extra_files and (final_combine_extra_files.get("images") or final_combine_extra_files.get("extra")):
+            result = send_image_message_by_waca(api_key, phone_number_id, from_phone_number, final_combine_response, final_combine_extra_files)
+        else:
+            result = send_text_message_by_waca(api_key, phone_number_id, from_phone_number, final_combine_response)
+        if not result.get("success", False):
+            store_message = False
+    if store_message:
+        add_response = add_new_message(
+            company_id=company_schema, 
+            conversation_id=conversation_id, 
+            sender_email="",
+            sender_type="bot", 
+            content=final_combine_response,
+            extra=json.dumps(final_combine_extra_files)
+        )
+        active_workflows_response = [add_response[0]]
+    
     emissions_kg = tracker.stop()
     energy_kwh = tracker.final_emissions_data.energy_consumed
     update_message_energy(company_schema, conversation_id, energy_kwh, emissions_kg)
-    active_workflows_response.extend(except_response)
     return active_workflows_response
 
 async def generate_response_with_image_search(
@@ -176,7 +186,7 @@ async def generate_response_with_image_search(
                     messages = result
                     memory = await get_history(messages)
                 if node["type"] == "condition":
-                    result = condition_workflow_function(node["config"]["blocks"], from_phone_number, source_phone_number, messages, query, message_type, platform)
+                    result = condition_workflow_function(node["config"]["blocks"], from_phone_number, source_phone_number, messages, query, message_type, platform, company_schema, conversation_id)
                     if not result:
                         worflow_process_flag = False
                         break
@@ -199,37 +209,49 @@ async def generate_response_with_image_search(
             memory = await get_history(messages)
             
             final_response, extra_info = await ai_response_with_image_search(company_id, company_schema, conversation_id, query, memory, matches)
-            if platform == "WhatsApp":
-                sending_result = await send_message_whatsapp(instance_name, from_phone_number, final_response, extra_info)
-                if not sending_result.get("success", False):
-                    break
-            elif platform == "WACA":
-                # Send message via WhatsApp Business API
-                if extra_info.get("images") or extra_info.get("extra"):
-                    sending_result = send_image_message_by_waca(api_key, phone_number_id, from_phone_number, final_response, extra_info)
-                else:
-                    sending_result = send_text_message_by_waca(api_key, phone_number_id, from_phone_number, final_response)
-                if not sending_result.get("success", False):
-                    break
-            
-            # Insert new message into database        
-            add_response = add_new_message(
-                company_id=company_schema, 
-                conversation_id=conversation_id, 
-                sender_email="",
-                sender_type="bot", 
-                content=final_response,
-                extra=json.dumps(extra_info)
-            )
-            
-            if add_response:
-                except_response.append(add_response[0])
+            active_workflows_response.append([final_response, extra_info])
         elif i == "move":
             pass
         elif i == "ignore":
             pass
+    print(active_workflows_response)
+    if len(active_workflows_response) > 1:
+        responses = [i[0] for i in active_workflows_response]
+        final_combine_response = await combine_all_response_into_one(company_id, conversation_id, memory, responses)
+        images = []
+        extra = []
+        for i in active_workflows_response:
+            images.extend(i[1].get("images", []))
+            extra.extend(i[1].get("extra", []))
+        final_combine_extra_files = {"images": list(set(images)), "extra":list(set(extra))}
+    else:
+        final_combine_response = active_workflows_response[0][0]
+        final_combine_extra_files = active_workflows_response[0][1]
+    store_message = True
+    if platform == "WhatsApp":
+        result = await send_message_whatsapp(instance_name, from_phone_number, final_combine_response, final_combine_extra_files)
+        if not result.get("success", False):
+            store_message = False
+    elif platform == "WACA":
+        # Send message via WhatsApp Business API
+        if final_combine_extra_files and (final_combine_extra_files.get("images") or final_combine_extra_files.get("extra")):
+            result = send_image_message_by_waca(api_key, phone_number_id, from_phone_number, final_combine_response, final_combine_extra_files)
+        else:
+            result = send_text_message_by_waca(api_key, phone_number_id, from_phone_number, final_combine_response)
+        if not result.get("success", False):
+            store_message = False
+    if store_message:
+        add_response = add_new_message(
+            company_id=company_schema, 
+            conversation_id=conversation_id, 
+            sender_email="",
+            sender_type="bot", 
+            content=final_combine_response,
+            extra=json.dumps(final_combine_extra_files)
+        )
+        active_workflows_response = [add_response[0]]    
     emissions_kg = tracker.stop()
     energy_kwh = tracker.final_emissions_data.energy_consumed
     update_message_energy(company_schema, conversation_id, energy_kwh, emissions_kg)
-    active_workflows_response.extend(except_response)
-    return except_response
+    
+    return active_workflows_response

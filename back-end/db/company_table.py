@@ -770,7 +770,7 @@ def add_new_workflow(company_id: str, name: str, nodes: str, edges: str, status:
             "status": status,
             "extra": extra,
             "enable_workflow": True,
-            "except_case": "sample"
+            "except_case": "ignore"
         }).fetchone()
         session.commit()
         if result:
@@ -1025,3 +1025,36 @@ def update_customer(company_id: str, customer_id: str, customer_name: str = None
         return []
     finally:
         session.close()
+
+def update_customer_with_key(company_id:str, customer_id: str, data:dict):
+    """Update a customer"""
+    session = db.get_session()
+    try:
+        # Build dynamic update query based on provided parameters
+        update_fields = []
+        params = {"customer_id": customer_id}
+
+        for key, value in data.items():
+            update_fields.append(f"{key} = :{key}")
+            params[key] = value
+
+        if not update_fields:
+            return []
+
+        query = text(f"""
+            UPDATE {company_id}.customers
+            SET {', '.join(update_fields)}
+            WHERE customer_id = :customer_id
+            RETURNING *
+        """)
+        result = session.execute(query, params).fetchone()
+        session.commit()
+        if result:
+            return [dict(result._mapping)]
+        return []
+    except Exception as e:
+        session.rollback()
+        print(f"Error updating customer: {e}")
+        return []
+    finally:
+        session.close() 

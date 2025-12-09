@@ -11,10 +11,10 @@ from pydantic import BaseModel, Field
 from src.utils.chroma_utils import search_vectors_product, search_vectors
 from db.company_table import get_linked_images_from_table, get_linked_extra_from_table
 from db.public_table import get_chatbot_personality
-import os
+import os, json
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-
+from src.action.actions import make_search_tool, get_customer_info_tool
 
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 llm_bot = ChatOpenAI(
@@ -91,20 +91,6 @@ class RetrievalQueryInput(BaseModel):
         description="""The full text query or key points describing the user's product need in feature and value. For example: "'Size': 1.5 | 'Conductor': Copper | 'Sub Category': Unarmoured Power Cables | 'Insulation': PVC | 'Standard': KS".""",
     )
 
-def make_search_tool(company_id: str, conversation_id: str, company_schema: str):
-    return StructuredTool(
-        name="search_vectors_with_query",
-        description="Search the vector database to find the most relevant products based on the user’s natural language query or product requirements. The input query should include as many specific product details as possible to improve search accuracy and relevance.",
-        func=lambda query: search_vectors_with_query(
-            query=query,
-            company_id=company_id,
-            conversation_id=conversation_id,
-            company_schema=company_schema,
-        ),
-        args_schema=RetrievalQueryInput,
-    )
-
-
 def make_system_prompt(company_id: str):
     chatbot_personality = get_chatbot_personality(company_id)
     if not chatbot_personality:
@@ -134,17 +120,25 @@ def make_system_prompt(company_id: str):
     return system_prompt
 
 async def ai_response_with_search(
-    company_id: str, company_schema: str, conversation_id: str, query: str, memory: InMemoryChatMessageHistory
+    company_id: str, company_schema: str, conversation_id: str, query: str, memory: InMemoryChatMessageHistory, acions: list[str]
 ):
     extra_info_conversations[conversation_id] = {"images": [], "extra": []}
     # Make system prompt with chatbot personality
     system_prompt = make_system_prompt(company_id)
-    
+    tools = []
     # Make search tool
-    search_tool = make_search_tool(company_id, conversation_id, company_schema)
- 
+    for i in acions:
+        if i == "Find on product's table":
+            search_tool = make_search_tool(company_id, conversation_id, company_schema)
+            tools.append(search_tool)
+        if i == "Get customer information":
+            extra_prompt, customer_tool = get_customer_info_tool(conversation_id, company_schema)
+            if customer_tool:
+                tools.append(customer_tool)
+            system_prompt = system_prompt + "\n" + extra_prompt
+    print("System prompt: ", system_prompt)
     # Create a tool-calling agent (function-calling mode)
-    agent = create_agent(model=llm_bot, tools=[search_tool], system_prompt=system_prompt)
+    agent = create_agent(model=llm_bot, tools=tools, system_prompt=system_prompt)
 
     with_history = RunnableWithMessageHistory(
         agent,
@@ -207,3 +201,42 @@ async def ai_response_with_image_search(
         config={"configurable": {"session_id": conversation_id}},
     )
     return result.content, extra_info
+
+async def combine_all_response_into_one(company_id: str, conversation_id:str, memory: InMemoryChatMessageHistory, all_responses: list):
+    print("Stop working for final response")
+    system_prompt = make_system_prompt(company_id)
+
+    final_prompt = f"""
+Combine all response messages into one well-written, unified reply.
+
+Role:
+{system_prompt}
+
+Task:
+- Read the list of response messages.
+- Merge them into one clear, natural, and coherent response.
+- Output only the final combined response.
+"""
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", final_prompt),
+        MessagesPlaceholder("history"),
+        ("human", "{input}")
+    ])
+    chain = RunnableSequence(
+            {"input": lambda x: x["query"], "history": lambda x: x["history"]},
+            prompt | llm_bot,
+        )
+    
+    with_history = RunnableWithMessageHistory(
+        chain,
+        lambda session_id: memory,
+        input_messages_key="query",
+        history_messages_key="history",
+    )
+
+    result = with_history.invoke(
+        {"query": f"\nResponses: {all_responses}"},
+        config={"configurable": {"session_id": conversation_id}},
+    )
+    print(result.content)
+    return result.content,

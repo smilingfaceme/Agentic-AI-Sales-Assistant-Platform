@@ -1,4 +1,4 @@
-# Bot Admin Panel
+# Agentic-AI-Sales-Assistant-Platform
 
 A comprehensive WhatsApp Bot Administration Platform with AI-powered chatbot capabilities, knowledge base management, workflow automation, and sustainability KPI tracking.
 

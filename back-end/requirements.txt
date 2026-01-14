@@ -2,27 +2,15 @@ fastapi==0.120.0
 uvicorn==0.38.0
 pydantic==2.12.3
 python-dotenv==1.1.1
-python-jose==3.5.0
 passlib==1.7.4
-python-multipart==0.0.20
-slowapi==0.1.9
-bcrypt==5.0.0
-yagmail==0.15.293
 
 pandas==2.3.3
 numpy==1.26.4
-openpyxl==3.1.5
 
 openai==2.6.1
 transformers==4.57.1
 pillow==12.0.0
 
-google-auth==2.41.1
-google-auth-oauthlib==1.2.2
-google-auth-httplib2==0.2.0
-google-api-python-client==2.185.0
-
-langchain-openai==1.0.1
 langchain==1.0.2
 
 httpx==0.27.2      # replaced 0.28.1 because your env has 0.27.2

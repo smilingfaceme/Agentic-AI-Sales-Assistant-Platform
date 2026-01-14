@@ -243,11 +243,16 @@ def download_whatsapp_media(media_url: str, api_key: str, output_file: str):
         "Authorization": f"Bearer {api_key}"
     }
 
+    if not media_url.startswith(('https://', 'http://')):
+        raise ValueError("Invalid URL: must start with 'https://' or 'http://'")
     response = requests.get(media_url, headers=headers, stream=True)
 
     if response.status_code != 200:
         return False
-
+    
+    if "../" in output_file or "..\\" in output_file:
+        raise Exception("Invalid file path")
+    
     with open(output_file, "wb") as f:
         for chunk in response.iter_content(1024):
             f.write(chunk)

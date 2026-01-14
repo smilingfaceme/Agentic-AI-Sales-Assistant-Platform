@@ -7,6 +7,7 @@ from db.models import Conversation
 from sqlalchemy import text
 import json
 from uuid import UUID
+import re
 
 
 def create_company_tables(company_id: str):
@@ -379,6 +380,8 @@ def get_same_image_from_table_with_id(company_id: str, file_id: str):
 
 def delete_image_from_table(company_id: str, file_id: str):
     """Delete an image"""
+    if not re.match(r'^[a-zA-Z0-9_]+$', str(company_id)):
+        raise ValueError("Invalid input")
     session = db.get_session()
     try:
         query = text(f"DELETE FROM {company_id}.images WHERE id = :file_id")
@@ -395,6 +398,8 @@ def delete_image_from_table(company_id: str, file_id: str):
 
 def update_image_status_on_table(company_id: str, file_id: str, status: str):
     """Update image status"""
+    if not re.match(r'^[a-zA-Z0-9_]+$', str(company_id)):
+        raise ValueError("Invalid input")
     session = db.get_session()
     try:
         query = text(f"UPDATE {company_id}.images SET status = :status WHERE id = :file_id RETURNING *")
@@ -413,6 +418,8 @@ def update_image_status_on_table(company_id: str, file_id: str, status: str):
 
 def update_image_status_on_table_by_hash(company_id: str, file_hash: str, status: str):
     """Update image status by file hash"""
+    if not re.match(r'^[a-zA-Z0-9_]+$', str(company_id)):
+        raise ValueError("Invalid input")
     session = db.get_session()
     try:
         query = text(f"UPDATE {company_id}.images SET status = :status WHERE file_hash = :file_hash RETURNING *")
@@ -451,6 +458,8 @@ def get_linked_images_from_table(company_id: str, product_id: str):
 
 def add_new_document(company_id: str, file_name: str, file_type: str, file_hash: str, full_path: str, status: str, match_field: str):
     """Add a new document"""
+    if not re.match(r'^[a-zA-Z0-9_]+$', str(company_id)):
+        raise ValueError("Invalid input")
     session = db.get_session()
     try:
         query = text(f"""
@@ -509,6 +518,8 @@ def get_documents_from_table(company_id: str, page_size: int = 50, page_start: i
 
 def get_all_documents_from_table(company_id: str):
     """Get count of all documents"""
+    if not re.match(r'^[a-zA-Z0-9_]+$', str(company_id)):
+        raise ValueError("Invalid input")
     session = db.get_session()
     try:
         query = text(f"SELECT count(*) as count FROM {company_id}.documents")
@@ -525,6 +536,8 @@ def get_all_documents_from_table(company_id: str):
 
 def get_same_documents_from_table(company_id: str, file_hash: str):
     """Get documents by file hash"""
+    if not re.match(r'^[a-zA-Z0-9_]+$', str(company_id)):
+        raise ValueError("Invalid input")
     session = db.get_session()
     try:
         from uuid import UUID
@@ -550,6 +563,8 @@ def get_same_documents_from_table(company_id: str, file_hash: str):
 
 def get_same_documents_from_table_with_id(company_id: str, file_id: str):
     """Get document by ID"""
+    if not re.match(r'^[a-zA-Z0-9_]+$', str(company_id)):
+        raise ValueError("Invalid input")
     session = db.get_session()
     try:
         from uuid import UUID
@@ -572,6 +587,8 @@ def get_same_documents_from_table_with_id(company_id: str, file_id: str):
 
 def delete_documents_from_table(company_id: str, file_id: str):
     """Delete a document"""
+    if not re.match(r'^[a-zA-Z0-9_]+$', str(company_id)):
+        raise ValueError("Invalid input")
     session = db.get_session()
     try:
         query = text(f"DELETE FROM {company_id}.documents WHERE id = :file_id")
@@ -624,6 +641,8 @@ def update_documents_status_on_table_by_hash(company_id: str, file_hash: str, st
 
 def get_linked_extra_from_table(company_id: str, product_id: str):
     """Get linked images for a product"""
+    if not re.match(r'^[a-zA-Z0-9_]+$', str(company_id)):
+        raise ValueError("Invalid input")
     session = db.get_session()
     try:
         query = text(f"""
@@ -706,6 +725,8 @@ def get_knowledge_by_id(company_id: str, knowledge_id: str):
 
 def get_knowledge_by_file_hash(company_id: str, file_hash: str):
     """Get a specific knowledge by file hash"""
+    if not re.match(r'^[a-zA-Z0-9_]+$', str(company_id)):
+        raise ValueError("Invalid input")
     session = db.get_session()
     try:
         query = text(f"SELECT * FROM {company_id}.knowledges WHERE file_hash = :file_hash")
